@@ -14,7 +14,7 @@ import { AngelOneService } from '../../services/angel-one.service';
 import { MarketService } from '../../services/market.service';
 
 import { Gainer } from '../../models/gainer';
-import { TradingConfiguration } from '../../models/trading-configruation';
+import { TradingConfiguration } from '../../models/trading-configuration';
 import { Router } from '@angular/router';
 
 @Component({

@@ -23,7 +23,7 @@ import { MatCardModule } from '@angular/material/card';
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastService } from '../../../../../services/toast.service';
-import { TradingConfiguration } from '../../../models/trading-configruation';
+import { TradingConfiguration } from '../../../models/trading-configuration';
 import { AngelOneService } from '../../../services/angel-one.service';
 
 @Component({

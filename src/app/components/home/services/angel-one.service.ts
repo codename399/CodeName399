@@ -12,7 +12,7 @@ import { AngelOneLoginData } from '../models/angel-one-login-response';
 import { DashboardSummary } from '../models/dashboard-summary';
 
 import { Gainer } from '../models/gainer';
-import { TradingConfiguration } from '../models/trading-configruation';
+import { TradingConfiguration } from '../models/trading-configuration';
 
 @Injectable({
   providedIn: 'root',
