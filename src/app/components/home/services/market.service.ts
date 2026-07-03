@@ -3,38 +3,28 @@ import * as signalR from '@microsoft/signalr';
 import { API_CONSTANTS } from '../../../../injectors/common-injector';
 
 @Injectable({
-    providedIn: 'root'
+  providedIn: 'root',
 })
 export class MarketService {
-    #apiConstants = inject(API_CONSTANTS);
-    private hub!: signalR.HubConnection;
+  #apiConstants = inject(API_CONSTANTS);
+  private hub!: signalR.HubConnection;
 
-    gainers: any[] = [];
+  gainers: any[] = [];
 
-    startConnection(
-        callback: (data: any[]) => void
-    ) {
-        this.hub =
-            new signalR.HubConnectionBuilder()
-                .withUrl(
-                    this.#apiConstants.getUrl(
-                        this.#apiConstants.marketHub,
-                        false
-                    ),
-                    {
-                        transport:
-                            signalR.HttpTransportType.WebSockets
-                    }
-                )
-                .withAutomaticReconnect()
-                .build();
+  async startConnection(callback: (data: any[]) => void) {
+    if (this.hub?.state === signalR.HubConnectionState.Connected) return;
 
-        this.hub.start();
+    this.hub = new signalR.HubConnectionBuilder()
+      .withUrl(this.#apiConstants.getUrl(this.#apiConstants.marketHub, false))
+      .withAutomaticReconnect()
+      .build();
 
-        this.hub.on(
-            'GainersUpdated',
-            (data) => {
-                callback(data);
-            });
-    }
+    this.hub.on('GainersUpdated', (data) => {
+      callback(data);
+    });
+
+    await this.hub.start();
+
+    console.log('SignalR Connected');
+  }
 }
