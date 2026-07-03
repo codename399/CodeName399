@@ -1,134 +1,178 @@
 <div class="page-shell">
   <header class="page-top">
-    <div class="page-details">
-      <p class="eyebrow">Live Watchlist</p>
-      <h1>Angel One Dashboard</h1>
-      <p class="hero-copy">Track market momentum, review your active strategy, and manage core trading signals.</p>
-    </div>
-
     <div class="page-actions">
       <div class="action-buttons">
-        <button class="pill-button" type="button" (click)="toggleSummary()">
-          {{ showSummary() ? 'Hide Summary' : 'Show Summary' }}
+        <button
+          class="pill-button"
+          type="button"
+          (click)="toggleSummary()"
+          [title]="showSummary() ? 'Hide Summary' : 'Show Summary'"
+          [attr.aria-label]="showSummary() ? 'Hide Summary' : 'Show Summary'"
+        >
+          <span class="material-icons">{{ showSummary() ? 'visibility_off' : 'visibility' }}</span>
         </button>
 
-        <button class="pill-button" type="button" (click)="toggleMarket()">
-          {{ showMarket() ? 'Hide Market' : 'Show Market' }}
+        <button
+          class="pill-button"
+          type="button"
+          (click)="toggleMarket()"
+          [title]="showMarket() ? 'Hide Market' : 'Show Market'"
+          [attr.aria-label]="showMarket() ? 'Hide Market' : 'Show Market'"
+        >
+          <span class="material-icons">show_chart</span>
         </button>
 
-        <button class="pill-button accent" type="button" (click)="openSettings()">Settings</button>
+        <button
+          class="pill-button accent"
+          type="button"
+          (click)="openSettings()"
+          title="Settings"
+          aria-label="Settings"
+        >
+          <span class="material-icons">settings</span>
+        </button>
 
-        <button class="pill-button" type="button" (click)="refresh()">Refresh</button>
+        <button
+          class="pill-button"
+          type="button"
+          (click)="refresh()"
+          title="Refresh"
+          aria-label="Refresh"
+        >
+          <span class="material-icons">refresh</span>
+        </button>
       </div>
 
       <div class="search-box" *ngIf="filteredGainers().length > 0">
-          <input
-            type="text"
-            placeholder="Search symbol"
-            [value]="searchText()"
-            (input)="searchText.set($any($event.target).value)"
-          />
-        </div>
+        <input
+          type="text"
+          placeholder="Search symbol"
+          [value]="searchText()"
+          (input)="searchText.set($any($event.target).value)"
+        />
+      </div>
     </div>
   </header>
 
   <section class="summary-grid" *ngIf="showSummary()">
-      <article class="summary-card">
-        <div class="summary-icon">💵</div>
-        <div>
-          <div class="summary-title">Available Cash</div>
-          <div class="summary-value">₹ {{ availableCash() | number: '1.2-2' }}</div>
+    <article class="summary-card">
+      <div class="summary-icon">💵</div>
+      <div>
+        <div class="summary-title">Available Cash</div>
+        <div class="summary-value">
+          ₹ {{ availableCash() | number: "1.2-2" }}
         </div>
-      </article>
+      </div>
+    </article>
 
-      <article class="summary-card">
-        <div class="summary-icon">📈</div>
-        <div>
-          <div class="summary-title">Strategy</div>
-          <div class="summary-value">{{ configuration()?.strategy }}</div>
-        </div>
-      </article>
+    <article class="summary-card">
+      <div class="summary-icon">📈</div>
+      <div>
+        <div class="summary-title">Strategy</div>
+        <div class="summary-value">{{ configuration()?.strategy }}</div>
+      </div>
+    </article>
 
-      <article class="summary-card">
-        <div class="summary-icon">🤖</div>
-        <div>
-          <div class="summary-title">Auto Trading</div>
-          <div class="summary-value">{{ configuration()?.enableAutoTrading ? 'Enabled' : 'Disabled' }}</div>
+    <article class="summary-card">
+      <div class="summary-icon">🤖</div>
+      <div>
+        <div class="summary-title">Auto Trading</div>
+        <div class="summary-value">
+          {{ configuration()?.enableAutoTrading ? "Enabled" : "Disabled" }}
         </div>
-      </article>
+      </div>
+    </article>
 
-      <article class="summary-card">
-        <div class="summary-icon">📝</div>
-        <div>
-          <div class="summary-title">Paper Trading</div>
-          <div class="summary-value">{{ configuration()?.paperTrading ? 'Enabled' : 'Disabled' }}</div>
+    <article class="summary-card">
+      <div class="summary-icon">📝</div>
+      <div>
+        <div class="summary-title">Paper Trading</div>
+        <div class="summary-value">
+          {{ configuration()?.paperTrading ? "Enabled" : "Disabled" }}
         </div>
-      </article>
+      </div>
+    </article>
 
-      <article class="summary-card">
-        <div class="summary-icon">⏱️</div>
-        <div>
-          <div class="summary-title">Ignore Market Hours</div>
-          <div class="summary-value">{{ configuration()?.ignoreMarketHours ? 'Yes' : 'No' }}</div>
+    <article class="summary-card">
+      <div class="summary-icon">⏱️</div>
+      <div>
+        <div class="summary-title">Ignore Market Hours</div>
+        <div class="summary-value">
+          {{ configuration()?.ignoreMarketHours ? "Yes" : "No" }}
         </div>
-      </article>
+      </div>
+    </article>
 
-      <article class="summary-card">
-        <div class="summary-icon">⚠️</div>
-        <div>
-          <div class="summary-title">Risk Per Trade</div>
-          <div class="summary-value">{{ configuration()?.riskPercentage }}%</div>
-        </div>
-      </article>
+    <article class="summary-card">
+      <div class="summary-icon">⚠️</div>
+      <div>
+        <div class="summary-title">Risk Per Trade</div>
+        <div class="summary-value">{{ configuration()?.riskPercentage }}%</div>
+      </div>
+    </article>
 
-      <article class="summary-card">
-        <div class="summary-icon">💰</div>
-        <div>
-          <div class="summary-title">Capital / Trade</div>
-          <div class="summary-value">₹ {{ configuration()?.maxCapitalPerTrade | number: '1.0-0' }}</div>
+    <article class="summary-card">
+      <div class="summary-icon">💰</div>
+      <div>
+        <div class="summary-title">Capital / Trade</div>
+        <div class="summary-value">
+          ₹ {{ configuration()?.maxCapitalPerTrade | number: "1.0-0" }}
         </div>
-      </article>
+      </div>
+    </article>
 
-      <article class="summary-card">
-        <div class="summary-icon">📉</div>
-        <div>
-          <div class="summary-title">Max Daily Loss</div>
-          <div class="summary-value">₹ {{ configuration()?.maxDailyLoss | number: '1.0-0' }}</div>
+    <article class="summary-card">
+      <div class="summary-icon">📉</div>
+      <div>
+        <div class="summary-title">Max Daily Loss</div>
+        <div class="summary-value">
+          ₹ {{ configuration()?.maxDailyLoss | number: "1.0-0" }}
         </div>
-      </article>
+      </div>
+    </article>
 
-      <article class="summary-card">
-        <div class="summary-icon">🔔</div>
-        <div>
-          <div class="summary-title">Notifications</div>
-          <div class="summary-value">{{ configuration()?.enableNotification ? 'Enabled' : 'Disabled' }}</div>
+    <article class="summary-card">
+      <div class="summary-icon">🔔</div>
+      <div>
+        <div class="summary-title">Notifications</div>
+        <div class="summary-value">
+          {{ configuration()?.enableNotification ? "Enabled" : "Disabled" }}
         </div>
-      </article>
-    </section>
+      </div>
+    </article>
+  </section>
 
   <section class="market-panel" *ngIf="showMarket()">
-      <div class="market-card status-card">
-        <div class="market-pill" [class.open]="marketStatus() === 'OPEN'" [class.closed]="marketStatus() === 'CLOSED'">
-          {{ marketStatus() === 'OPEN' ? 'Market Open' : 'Market Closed' }}
-        </div>
-        <div class="market-time">{{ marketTimer() }}</div>
+    <div class="market-card status-card">
+      <div
+        class="market-pill"
+        [class.open]="marketStatus() === 'OPEN'"
+        [class.closed]="marketStatus() === 'CLOSED'"
+      >
+        {{ marketStatus() === "OPEN" ? "Market Open" : "Market Closed" }}
       </div>
+      <div class="market-time">{{ marketTimer() }}</div>
+    </div>
 
-      <div class="market-card detail-card">
-        <div class="market-card-item">
-          <span>Strategy</span>
-          <strong>{{ configuration()?.strategy }}</strong>
-        </div>
-        <div class="market-card-item">
-          <span>Auto Trading</span>
-          <strong>{{ configuration()?.enableAutoTrading ? 'Enabled' : 'Disabled' }}</strong>
-        </div>
-        <div class="market-card-item">
-          <span>Paper Trading</span>
-          <strong>{{ configuration()?.paperTrading ? 'Enabled' : 'Disabled' }}</strong>
-        </div>
+    <div class="market-card detail-card">
+      <div class="market-card-item">
+        <span>Strategy</span>
+        <strong>{{ configuration()?.strategy }}</strong>
       </div>
-    </section>
+      <div class="market-card-item">
+        <span>Auto Trading</span>
+        <strong>{{
+          configuration()?.enableAutoTrading ? "Enabled" : "Disabled"
+        }}</strong>
+      </div>
+      <div class="market-card-item">
+        <span>Paper Trading</span>
+        <strong>{{
+          configuration()?.paperTrading ? "Enabled" : "Disabled"
+        }}</strong>
+      </div>
+    </div>
+  </section>
 
   <section class="table-shell">
     <div class="table-header">
@@ -159,43 +203,66 @@
         </thead>
 
         <tbody>
-          <tr *ngFor="let stock of filteredGainers()" [class.owned-row]="stock.isOwned">
-              <td class="center-cell">
-                <span *ngIf="stock.isOwned">★</span>
-              </td>
+          <tr
+            *ngFor="let stock of filteredGainers()"
+            [class.owned-row]="stock.isOwned"
+          >
+            <td class="center-cell">
+              <span *ngIf="stock.isOwned">★</span>
+            </td>
 
-              <td class="symbol">{{ stock.symbol }}</td>
-              <td>₹{{ stock.currentPrice | number: '1.2-2' }}</td>
-              <td [class.positive]="stock.changePercent >= 0" [class.negative]="stock.changePercent < 0">
-                {{ stock.changePercent | number: '1.2-2' }}%
-              </td>
-              <td>{{ stock.vwap | number: '1.2-2' }}</td>
-              <td>{{ stock.emA9 | number: '1.2-2' }}</td>
-              <td>{{ stock.emA21 | number: '1.2-2' }}</td>
-              <td>{{ stock.rsi | number: '1.0-0' }}</td>
-              <td>{{ stock.volumeMultiplier | number: '1.1-1' }}×</td>
-              <td>{{ stock.pullbackDistance | number: '1.1-1' }}%</td>
-              <td>
-                <div class="score-badge" [class.excellent]="stock.score >= 80" [class.good]="stock.score >= 60 && stock.score < 80" [class.average]="stock.score < 60">
-                  {{ stock.score }}
-                </div>
-              </td>
-              <td>
-                <div class="signal-pill" [ngClass]="{
+            <td class="symbol">{{ stock.symbol }}</td>
+            <td>₹{{ stock.currentPrice | number: "1.2-2" }}</td>
+            <td
+              [class.positive]="stock.changePercent >= 0"
+              [class.negative]="stock.changePercent < 0"
+            >
+              {{ stock.changePercent | number: "1.2-2" }}%
+            </td>
+            <td>{{ stock.vwap | number: "1.2-2" }}</td>
+            <td>{{ stock.emA9 | number: "1.2-2" }}</td>
+            <td>{{ stock.emA21 | number: "1.2-2" }}</td>
+            <td>{{ stock.rsi | number: "1.0-0" }}</td>
+            <td>{{ stock.volumeMultiplier | number: "1.1-1" }}×</td>
+            <td>{{ stock.pullbackDistance | number: "1.1-1" }}%</td>
+            <td>
+              <div
+                class="score-badge"
+                [class.excellent]="stock.score >= 80"
+                [class.good]="stock.score >= 60 && stock.score < 80"
+                [class.average]="stock.score < 60"
+              >
+                {{ stock.score }}
+              </div>
+            </td>
+            <td>
+              <div
+                class="signal-pill"
+                [ngClass]="{
                   buy: stock.signal === 'BUY',
                   sell: stock.signal === 'SELL',
                   hold: stock.signal === 'HOLD',
-                  setup: stock.signal === 'SETUP'
-                }">
-                  <span class="signal-emoji">{{ stock.signal === 'BUY' ? '🟢' : stock.signal === 'SELL' ? '🔴' : stock.signal === 'HOLD' ? '🟡' : '⚪' }}</span>
-                  <span class="signal-label">{{ stock.signal }}</span>
-                </div>
-              </td>
-              <td>₹{{ stock.stopLoss | number: '1.2-2' }}</td>
-              <td>₹{{ stock.targetPrice | number: '1.2-2' }}</td>
-              <td class="reason">{{ stock.reason }}</td>
-            </tr>
+                  setup: stock.signal === 'SETUP',
+                }"
+              >
+                <span class="signal-emoji">{{
+                  stock.signal === "BUY"
+                    ? "🟢"
+                    : stock.signal === "SELL"
+                      ? "🔴"
+                      : stock.signal === "HOLD"
+                        ? "🟡"
+                        : "⚪"
+                }}</span>
+                <span class="signal-label">{{ stock.signal }}</span>
+              </div>
+            </td>
+            <td>₹{{ stock.stopLoss | number: "1.2-2" }}</td>
+            <td>₹{{ stock.targetPrice | number: "1.2-2" }}</td>
+            <td class="reason">{{ stock.reason }}</td>
+          </tr>
         </tbody>
       </table>
     </div>
-
+  </section>
+</div>
