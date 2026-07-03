@@ -121,7 +121,18 @@ export class TradingSettingsComponent implements OnInit {
     marketOpenTime: ['09:15', Validators.required],
 
     marketCloseTime: ['15:30', Validators.required],
+
+    excludedSymbols: [[]],
+
     watchListRefreshMinutes: [2, Validators.required],
+
+    minPrice: [50, Validators.required],
+
+    minVolume: [500000, Validators.required],
+
+    minChangePercent: [1, Validators.required],
+
+    maxCandidates: [100, Validators.required],
   });
 
   enableAutoTradingFormControl = this.form?.controls?.enableAutoTrading;
@@ -226,6 +237,14 @@ export class TradingSettingsComponent implements OnInit {
         marketCloseTime: this.toTimeInput(configuration.marketCloseTime),
 
         watchListRefreshMinutes: configuration.watchListRefreshMinutes,
+
+        minPrice: configuration.minPrice,
+
+        minVolume: configuration.minVolume,
+
+        minChangePercent: configuration.minChangePercent,
+
+        maxCandidates: configuration.maxCandidates,
       },
       {
         emitEvent: false,
@@ -332,6 +351,14 @@ export class TradingSettingsComponent implements OnInit {
       marketCloseTime: this.toTimeSpan(value.marketCloseTime),
 
       watchListRefreshMinutes: Number(value.watchListRefreshMinutes),
+
+      minPrice: Number(value.minPrice ?? 50),
+
+      minVolume: Number(value.minVolume ?? 500000),
+
+      minChangePercent: Number(value.minChangePercent ?? 1),
+
+      maxCandidates: Number(value.maxCandidates ?? 100),
     };
 
     this.#angel

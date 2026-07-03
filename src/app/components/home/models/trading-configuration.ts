@@ -40,4 +40,12 @@ export interface TradingConfiguration {
   marketCloseTime: string;
 
   watchListRefreshMinutes: number;
+
+  minPrice: number;
+
+  minVolume: number;
+
+  minChangePercent: number;
+
+  maxCandidates: number;
 }

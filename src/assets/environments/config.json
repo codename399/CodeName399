@@ -4,6 +4,5 @@
     "toast_delay": 3000,
     "profilePictureUrl": "../../../../../assets/images/default-avatar.png",
     "pageSize": 5,
-    "loadGridImages":false,
-    "kiteApiKey": "2q4fjnywlzryi1jp"
+    "loadGridImages":false
 }

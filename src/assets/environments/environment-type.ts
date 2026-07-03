@@ -5,5 +5,4 @@ export interface IEnvironment {
     profilePictureUrl: string;
     pageSize: number;
     loadGridImages: boolean;
-    kiteApiKey: string;
 }
