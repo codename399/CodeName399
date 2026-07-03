@@ -1,60 +1,94 @@
 <div class="page-shell">
-  <header class="page-top">
-    <div class="page-actions">
-      <div class="action-buttons">
-        <button
-          class="pill-button"
-          type="button"
-          (click)="toggleSummary()"
-          [title]="showSummary() ? 'Hide Summary' : 'Show Summary'"
-          [attr.aria-label]="showSummary() ? 'Hide Summary' : 'Show Summary'"
-        >
-          <span class="material-icons">{{ showSummary() ? 'visibility_off' : 'visibility' }}</span>
-        </button>
+  <div class="page-layout">
+    <div
+      class="sidebar-backdrop"
+      *ngIf="showSettings()"
+      (click)="toggleSettings()"
+      aria-hidden="true"
+    ></div>
 
+    <aside class="page-sidebar" [class.open]="showSettings()">
+      <div class="sidebar-header">
+        <div class="sidebar-title">Dashboard Controls</div>
         <button
-          class="pill-button"
+          class="icon-button"
           type="button"
-          (click)="toggleMarket()"
-          [title]="showMarket() ? 'Hide Market' : 'Show Market'"
-          [attr.aria-label]="showMarket() ? 'Hide Market' : 'Show Market'"
+          (click)="toggleSettings()"
+          title="Close controls"
+          aria-label="Close controls"
         >
-          <span class="material-icons">show_chart</span>
+          <span class="material-icons">chevron_left</span>
         </button>
+      </div>
 
+      <div class="page-actions">
+        <div class="action-buttons">
+          <button
+            class="pill-button"
+            type="button"
+            (click)="toggleSummary()"
+            [title]="showSummary() ? 'Hide Summary' : 'Show Summary'"
+            [attr.aria-label]="showSummary() ? 'Hide Summary' : 'Show Summary'"
+          >
+            <span class="material-icons">{{ showSummary() ? 'visibility_off' : 'visibility' }}</span>
+          </button>
+
+          <button
+            class="pill-button"
+            type="button"
+            (click)="toggleMarket()"
+            [title]="showMarket() ? 'Hide Market' : 'Show Market'"
+            [attr.aria-label]="showMarket() ? 'Hide Market' : 'Show Market'"
+          >
+            <span class="material-icons">show_chart</span>
+          </button>
+
+          <button
+            class="pill-button accent"
+            type="button"
+            (click)="toggleSettings()"
+            title="Toggle controls"
+            aria-label="Toggle controls"
+          >
+            <span class="material-icons">settings</span>
+          </button>
+
+          <button
+            class="pill-button"
+            type="button"
+            (click)="refresh()"
+            title="Refresh"
+            aria-label="Refresh"
+          >
+            <span class="material-icons">refresh</span>
+          </button>
+        </div>
+
+        <div class="search-box" *ngIf="filteredGainers().length > 0">
+          <input
+            type="text"
+            placeholder="Search symbol"
+            [value]="searchText()"
+            (input)="searchText.set($any($event.target).value)"
+          />
+        </div>
+      </div>
+    </aside>
+
+    <main class="page-main">
+      <div class="page-top">
         <button
           class="pill-button accent"
           type="button"
-          (click)="openSettings()"
-          title="Settings"
-          aria-label="Settings"
+          (click)="toggleSettings()"
+          [title]="showSettings() ? 'Hide controls' : 'Show controls'"
+          [attr.aria-label]="showSettings() ? 'Hide controls' : 'Show controls'"
         >
-          <span class="material-icons">settings</span>
-        </button>
-
-        <button
-          class="pill-button"
-          type="button"
-          (click)="refresh()"
-          title="Refresh"
-          aria-label="Refresh"
-        >
-          <span class="material-icons">refresh</span>
+          <span class="material-icons">{{ showSettings() ? 'close' : 'menu' }}</span>
         </button>
       </div>
 
-      <div class="search-box" *ngIf="filteredGainers().length > 0">
-        <input
-          type="text"
-          placeholder="Search symbol"
-          [value]="searchText()"
-          (input)="searchText.set($any($event.target).value)"
-        />
-      </div>
-    </div>
-  </header>
-
-  <section class="summary-grid" *ngIf="showSummary()">
+      <section class="summary-grid" *ngIf="showSummary()">
     <article class="summary-card">
       <div class="summary-icon">💵</div>
       <div>
@@ -265,4 +299,5 @@
       </table>
     </div>
   </section>
-</div>
+    </main>
+  </div>
