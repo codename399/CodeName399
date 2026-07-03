@@ -1,13 +1,7 @@
 <div class="settings-page">
-  <!-- ===================================================== -->
-  <!-- Header -->
-  <!-- ===================================================== -->
-
   <div class="page-header">
     <div>
-      <button mat-stroked-button color="primary" (click)="cancel()">
-        ← Dashboard
-      </button>
+      <button class="nav-button" type="button" (click)="cancel()">← Dashboard</button>
 
       <h1>Trading Configuration</h1>
 
@@ -15,24 +9,13 @@
     </div>
 
     <div class="header-actions">
-      <button
-        mat-stroked-button
-        color="primary"
-        (click)="reset()"
-        [disabled]="loading"
-      >
+      <button class="secondary-button" type="button" (click)="reset()" [disabled]="loading">
         Reset
       </button>
 
-      <button
-        mat-flat-button
-        color="primary"
-        (click)="save()"
-        [disabled]="form.invalid || saving"
-      >
+      <button class="primary-button" type="button" (click)="save()" [disabled]="form.invalid || saving">
         @if (saving) {
           Saving...
-
         } @else {
           Save Configuration
         }
@@ -40,322 +23,233 @@
     </div>
   </div>
 
-  <mat-divider></mat-divider>
-
   @if (loading) {
     <div class="loading">Loading Trading Configuration...</div>
-
   } @else {
     <form class="settings-form" [formGroup]="form">
       <div class="settings-grid">
-        <!-- ===================================================== -->
-        <!-- Trading -->
-        <!-- ===================================================== -->
+        <section class="settings-card">
+          <div class="card-header">
+            <div>
+              <h2>Trading</h2>
+              <p>Trading behaviour</p>
+            </div>
+          </div>
 
-        <mat-card class="settings-card">
-          <mat-card-header>
-            <mat-card-title> Trading </mat-card-title>
+          <div class="card-body">
+            <label class="toggle-field">
+              <input type="checkbox" formControlName="enableAutoTrading" />
+              <span>Enable Auto Trading</span>
+            </label>
+            <label class="toggle-field">
+              <input type="checkbox" formControlName="paperTrading" />
+              <span>Paper Trading</span>
+            </label>
+            <label class="toggle-field">
+              <input type="checkbox" formControlName="ignoreMarketHours" />
+              <span>Ignore Market Hours</span>
+            </label>
 
-            <mat-card-subtitle> Trading behaviour </mat-card-subtitle>
-          </mat-card-header>
-
-          <mat-card-content>
-            <mat-slide-toggle formControlName="enableAutoTrading">
-              Enable Auto Trading
-            </mat-slide-toggle>
-
-            <mat-slide-toggle formControlName="paperTrading">
-              Paper Trading
-            </mat-slide-toggle>
-
-            <mat-slide-toggle formControlName="ignoreMarketHours">
-              Ignore Market Hours
-            </mat-slide-toggle>
-
-            <mat-form-field appearance="outline">
-              <mat-label> Trading Strategy </mat-label>
-
-              <mat-select formControlName="strategy">
+            <div class="field-row">
+              <label class="field-label" for="strategy">Strategy</label>
+              <select id="strategy" formControlName="strategy" class="field-input">
                 @for (strategy of strategies; track strategy.value) {
-                  <mat-option [value]="strategy.value">
-                    {{ strategy.text }}
-                  </mat-option>
+                  <option [value]="strategy.value">{{ strategy.text }}</option>
                 }
-              </mat-select>
-            </mat-form-field>
-          </mat-card-content>
-        </mat-card>
+              </select>
+            </div>
+          </div>
+        </section>
 
-        <!-- ===================================================== -->
-        <!-- Risk Management -->
-        <!-- ===================================================== -->
+        <section class="settings-card">
+          <div class="card-header">
+            <div>
+              <h2>Risk Management</h2>
+              <p>Capital allocation</p>
+            </div>
+          </div>
 
-        <mat-card class="settings-card">
-          <mat-card-header>
-            <mat-card-title> Risk Management </mat-card-title>
+          <div class="card-body grid-2">
+            <div class="field-row">
+              <label class="field-label" for="riskPercentage">Risk Percentage</label>
+              <div class="input-with-suffix">
+                <input id="riskPercentage" type="number" formControlName="riskPercentage" class="field-input" />
+                <span class="suffix">%</span>
+              </div>
+            </div>
 
-            <mat-card-subtitle> Capital allocation </mat-card-subtitle>
-          </mat-card-header>
+            <div class="field-row">
+              <label class="field-label" for="maxCapitalPerTrade">Max Capital Per Trade</label>
+              <div class="input-with-suffix">
+                <span class="prefix">₹</span>
+                <input id="maxCapitalPerTrade" type="number" formControlName="maxCapitalPerTrade" class="field-input" />
+              </div>
+            </div>
 
-          <mat-card-content>
-            <mat-form-field appearance="outline">
-              <mat-label> Risk Percentage </mat-label>
+            <div class="field-row">
+              <label class="field-label" for="maxDailyLoss">Max Daily Loss</label>
+              <div class="input-with-suffix">
+                <span class="prefix">₹</span>
+                <input id="maxDailyLoss" type="number" formControlName="maxDailyLoss" class="field-input" />
+              </div>
+            </div>
 
-              <input matInput type="number" formControlName="riskPercentage" />
+            <div class="field-row">
+              <label class="field-label" for="maxDailyTrades">Max Daily Trades</label>
+              <input id="maxDailyTrades" type="number" formControlName="maxDailyTrades" class="field-input" />
+            </div>
+          </div>
+        </section>
 
-              <span matTextSuffix>%</span>
-            </mat-form-field>
+        <section class="settings-card">
+          <div class="card-header">
+            <div>
+              <h2>Scanner</h2>
+              <p>Market scanning configuration</p>
+            </div>
+          </div>
 
-            <mat-form-field appearance="outline">
-              <mat-label> Max Capital Per Trade </mat-label>
+          <div class="card-body grid-2">
+            <div class="field-row">
+              <label class="field-label" for="scanIntervalSeconds">Scan Interval (Seconds)</label>
+              <input id="scanIntervalSeconds" type="number" formControlName="scanIntervalSeconds" class="field-input" />
+            </div>
 
-              <input
-                matInput
-                type="number"
-                formControlName="maxCapitalPerTrade"
-              />
+            <div class="field-row">
+              <label class="field-label" for="cooldownMinutes">Cooldown (Minutes)</label>
+              <input id="cooldownMinutes" type="number" formControlName="cooldownMinutes" class="field-input" />
+            </div>
 
-              <span matTextPrefix>₹&nbsp;</span>
-            </mat-form-field>
+            <div class="field-row">
+              <label class="field-label" for="watchListRefreshMinutes">Watchlist Refresh (Minutes)</label>
+              <input id="watchListRefreshMinutes" type="number" formControlName="watchListRefreshMinutes" class="field-input" />
+            </div>
 
-            <mat-form-field appearance="outline">
-              <mat-label> Max Daily Loss </mat-label>
+            <div class="field-row">
+              <label class="field-label" for="maxCandidates">Max Candidates</label>
+              <input id="maxCandidates" type="number" formControlName="maxCandidates" class="field-input" />
+            </div>
 
-              <input matInput type="number" formControlName="maxDailyLoss" />
+            <div class="field-row">
+              <label class="field-label" for="minPrice">Min Price</label>
+              <input id="minPrice" type="number" formControlName="minPrice" class="field-input" />
+            </div>
 
-              <span matTextPrefix>₹&nbsp;</span>
-            </mat-form-field>
+            <div class="field-row">
+              <label class="field-label" for="minVolume">Min Volume</label>
+              <input id="minVolume" type="number" formControlName="minVolume" class="field-input" />
+            </div>
 
-            <mat-form-field appearance="outline">
-              <mat-label> Max Daily Trades </mat-label>
+            <div class="field-row">
+              <label class="field-label" for="minChangePercent">Min Change %</label>
+              <div class="input-with-suffix">
+                <input id="minChangePercent" type="number" formControlName="minChangePercent" class="field-input" />
+                <span class="suffix">%</span>
+              </div>
+            </div>
+          </div>
+        </section>
 
-              <input matInput type="number" formControlName="maxDailyTrades" />
-            </mat-form-field>
-          </mat-card-content>
-        </mat-card>
+        <section class="settings-card">
+          <div class="card-header">
+            <div>
+              <h2>Stop Loss & Target</h2>
+              <p>Risk protection</p>
+            </div>
+          </div>
 
-        <!-- ===================================================== -->
-        <!-- Scanner -->
-        <!-- ===================================================== -->
+          <div class="card-body grid-2">
+            <label class="toggle-field">
+              <input type="checkbox" formControlName="enableTrailingStop" />
+              <span>Enable Trailing Stop</span>
+            </label>
 
-        <mat-card class="settings-card">
-          <mat-card-header>
-            <mat-card-title> Scanner </mat-card-title>
+            <div class="field-row">
+              <label class="field-label" for="trailingStopPercentage">Trailing Stop %</label>
+              <input id="trailingStopPercentage" type="number" formControlName="trailingStopPercentage" class="field-input" />
+            </div>
 
-            <mat-card-subtitle>
-              Market scanning configuration
-            </mat-card-subtitle>
-          </mat-card-header>
+            <div class="field-row">
+              <label class="field-label" for="stopLossMultiplier">Stop Loss Multiplier</label>
+              <input id="stopLossMultiplier" type="number" formControlName="stopLossMultiplier" class="field-input" />
+            </div>
 
-          <mat-card-content>
-            <mat-form-field appearance="outline">
-              <mat-label> Scan Interval (Seconds) </mat-label>
+            <div class="field-row">
+              <label class="field-label" for="targetMultiplier">Target Multiplier</label>
+              <input id="targetMultiplier" type="number" formControlName="targetMultiplier" class="field-input" />
+            </div>
+          </div>
+        </section>
 
-              <input
-                matInput
-                type="number"
-                formControlName="scanIntervalSeconds"
-              />
-            </mat-form-field>
+        <section class="settings-card">
+          <div class="card-header">
+            <div>
+              <h2>Market Hours</h2>
+              <p>Trading schedule</p>
+            </div>
+          </div>
 
-            <mat-form-field appearance="outline">
-              <mat-label> Cooldown (Minutes) </mat-label>
+          <div class="card-body grid-2">
+            <div class="field-row">
+              <label class="field-label" for="marketOpenTime">Market Open</label>
+              <input id="marketOpenTime" type="time" formControlName="marketOpenTime" class="field-input" />
+            </div>
 
-              <input matInput type="number" formControlName="cooldownMinutes" />
-            </mat-form-field>
+            <div class="field-row">
+              <label class="field-label" for="marketCloseTime">Market Close</label>
+              <input id="marketCloseTime" type="time" formControlName="marketCloseTime" class="field-input" />
+            </div>
 
-            <mat-form-field appearance="outline">
-              <mat-label> Watchlist Refresh (Minutes) </mat-label>
+            <label class="toggle-field full-width">
+              <input type="checkbox" formControlName="autoSquareOff" />
+              <span>Auto Square Off</span>
+            </label>
+          </div>
+        </section>
 
-              <input
-                matInput
-                type="number"
-                formControlName="watchListRefreshMinutes"
-              />
-            </mat-form-field>
+        <section class="settings-card">
+          <div class="card-header">
+            <div>
+              <h2>Notifications</h2>
+              <p>Alerts & updates</p>
+            </div>
+          </div>
 
-            <mat-form-field appearance="outline">
-              <mat-label> Min Price </mat-label>
-
-              <input matInput type="number" formControlName="minPrice" />
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label> Min Volume </mat-label>
-
-              <input matInput type="number" formControlName="minVolume" />
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label> Min Change % </mat-label>
-
-              <input matInput type="number" formControlName="minChangePercent" />
-
-              <span matTextSuffix>%</span>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label> Max Candidates </mat-label>
-
-              <input matInput type="number" formControlName="maxCandidates" />
-            </mat-form-field>
-          </mat-card-content>
-        </mat-card>
-
-        <!-- ===================================================== -->
-        <!-- Stop Loss -->
-        <!-- ===================================================== -->
-
-        <mat-card class="settings-card">
-          <mat-card-header>
-            <mat-card-title> Stop Loss & Target </mat-card-title>
-
-            <mat-card-subtitle> Risk protection </mat-card-subtitle>
-          </mat-card-header>
-
-          <mat-card-content>
-            <mat-slide-toggle formControlName="enableTrailingStop">
-              Enable Trailing Stop
-            </mat-slide-toggle>
-
-            <mat-form-field appearance="outline">
-              <mat-label> Trailing Stop % </mat-label>
-
-              <input
-                matInput
-                type="number"
-                formControlName="trailingStopPercentage"
-              />
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label> Stop Loss Multiplier </mat-label>
-
-              <input
-                matInput
-                type="number"
-                formControlName="stopLossMultiplier"
-              />
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label> Target Multiplier </mat-label>
-
-              <input
-                matInput
-                type="number"
-                formControlName="targetMultiplier"
-              />
-            </mat-form-field>
-          </mat-card-content>
-        </mat-card>
-
-        <!-- ===================================================== -->
-        <!-- Market Hours -->
-        <!-- ===================================================== -->
-
-        <mat-card class="settings-card">
-          <mat-card-header>
-            <mat-card-title> Market Hours </mat-card-title>
-
-            <mat-card-subtitle> Trading schedule </mat-card-subtitle>
-          </mat-card-header>
-
-          <mat-card-content>
-            <mat-form-field appearance="outline">
-              <mat-label> Market Open </mat-label>
-
-              <input matInput type="time" formControlName="marketOpenTime" />
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label> Market Close </mat-label>
-
-              <input matInput type="time" formControlName="marketCloseTime" />
-            </mat-form-field>
-
-            <mat-slide-toggle formControlName="autoSquareOff">
-              Auto Square Off
-            </mat-slide-toggle>
-          </mat-card-content>
-        </mat-card>
-
-        <!-- ===================================================== -->
-        <!-- Notifications -->
-        <!-- ===================================================== -->
-
-        <mat-card class="settings-card">
-          <mat-card-header>
-            <mat-card-title> Notifications </mat-card-title>
-
-            <mat-card-subtitle> Alerts & updates </mat-card-subtitle>
-          </mat-card-header>
-
-          <mat-card-content>
-            <mat-slide-toggle formControlName="enableNotification">
-              Enable Notifications
-            </mat-slide-toggle>
-          </mat-card-content>
-        </mat-card>
+          <div class="card-body">
+            <label class="toggle-field">
+              <input type="checkbox" formControlName="enableNotification" />
+              <span>Enable Notifications</span>
+            </label>
+          </div>
+        </section>
       </div>
-
-      <!-- ===================================================== -->
-      <!-- Sticky Footer -->
-      <!-- ===================================================== -->
 
       <div class="settings-footer">
         <div class="footer-left">
           @if (form.dirty) {
-            <div class="unsaved">
-              <mat-icon color="warn"> warning </mat-icon>
-
-              <span> You have unsaved changes </span>
+            <div class="status-pill status-warning">
+              ⚠️<span>You have unsaved changes</span>
             </div>
-
           } @else {
-            <div class="saved">
-              <mat-icon color="primary"> check_circle </mat-icon>
-
-              <span> Configuration is up to date </span>
+            <div class="status-pill status-success">
+              ✅<span>Configuration is up to date</span>
             </div>
           }
         </div>
 
         <div class="footer-right">
-          <button
-            mat-stroked-button
-            color="primary"
-            type="button"
-            (click)="reset()"
-            [disabled]="loading || saving"
-          >
+          <button class="secondary-button" type="button" (click)="reset()" [disabled]="loading || saving">
             Reset
           </button>
 
-          <button
-            mat-button
-            type="button"
-            (click)="cancel()"
-            [disabled]="saving"
-          >
+          <button class="secondary-button" type="button" (click)="cancel()" [disabled]="saving">
             Cancel
           </button>
 
-          <button
-            mat-flat-button
-            color="primary"
-            type="button"
-            (click)="save()"
-            [disabled]="saving || form.invalid"
-          >
+          <button class="primary-button" type="button" (click)="save()" [disabled]="saving || form.invalid">
             @if (saving) {
-              <mat-icon> hourglass_top </mat-icon>
-
               Saving...
-
             } @else {
-              <mat-icon> save </mat-icon>
-
               Save Configuration
             }
           </button>

@@ -1,262 +1,308 @@
 :host {
   display: block;
-
-  height: 100%;
-
-  background: #f4f7fb;
+  min-height: 100%;
+  background: #eef4fb;
 }
 
 .settings-page {
   display: flex;
-
   flex-direction: column;
-
-  height: 100%;
-
-  padding: 28px;
-
+  min-height: 100%;
+  padding: 28px 24px;
   gap: 24px;
-
   box-sizing: border-box;
 }
 
-/* ===========================================
-   Header
-=========================================== */
-
 .page-header {
   display: flex;
-
   justify-content: space-between;
-
   align-items: flex-start;
-
   gap: 24px;
-
   flex-wrap: wrap;
 }
 
 .page-header h1 {
-  margin: 20px 0 6px;
-
-  font-size: 34px;
-
-  font-weight: 700;
-
-  color: #0f172a;
+  margin: 0 0 8px;
+  font-size: 32px;
+  font-weight: 800;
+  color: #102a43;
 }
 
 .page-header p {
   margin: 0;
-
-  color: #64748b;
-
+  color: #627d98;
   font-size: 15px;
+  line-height: 1.6;
 }
 
 .header-actions {
   display: flex;
-
   gap: 12px;
-
-  align-items: center;
+  flex-wrap: wrap;
 }
 
-/* ===========================================
-   Loading
-=========================================== */
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 999px;
+  padding: 0.85rem 1.4rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  transition: transform 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.primary-button {
+  background: #2563eb;
+  color: white;
+}
+
+.primary-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #1d4ed8;
+}
+
+.secondary-button,
+.nav-button {
+  background: white;
+  color: #334155;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.secondary-button:hover:not(:disabled),
+.nav-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #f8fafc;
+}
 
 .loading {
-  flex: 1;
-
   display: flex;
-
   justify-content: center;
-
   align-items: center;
-
-  font-size: 20px;
-
-  color: #64748b;
+  min-height: 280px;
+  font-size: 1.1rem;
+  color: #475569;
+  background: white;
+  border-radius: 18px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
 }
-
-/* ===========================================
-   Form
-=========================================== */
 
 .settings-form {
-  flex: 1;
-
   display: flex;
-
   flex-direction: column;
-
-  overflow: hidden;
+  gap: 20px;
 }
-
-/* ==========================================================
-   Settings Grid
-========================================================== */
 
 .settings-grid {
-  flex: 1;
-
-  overflow-y: auto;
-
   display: grid;
-
-  grid-template-columns: repeat(2, minmax(420px, 1fr));
-
-  gap: 24px;
-
-  padding: 24px 4px 12px;
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
+  gap: 20px;
 }
-
-/* ==========================================================
-   Cards
-========================================================== */
 
 .settings-card {
-  display: flex;
-
-  flex-direction: column;
-
-  border-radius: 18px !important;
-
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08) !important;
-
-  transition: 0.25s ease;
-
-  border: 1px solid #e2e8f0;
-
+  background: white;
+  border-radius: 22px;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
   overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.16);
 }
 
-.settings-card:hover {
-  transform: translateY(-3px);
-
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12) !important;
+.card-header {
+  padding: 24px;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef4fb 100%);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
 }
 
-/* ==========================================================
-   Card Header
-========================================================== */
-
-.settings-card mat-card-header {
-  background: #f8fafc;
-
-  padding: 22px;
-
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.settings-card mat-card-title {
-  margin-bottom: 6px !important;
-
+.card-header h2 {
+  margin: 0 0 6px;
   font-size: 20px;
-
-  font-weight: 700;
-
-  color: #0f172a;
+  color: #102a43;
 }
 
-.settings-card mat-card-subtitle {
+.card-header p {
+  margin: 0;
   color: #64748b;
-
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-/* ==========================================================
-   Card Body
-========================================================== */
-
-.settings-card mat-card-content {
+.card-body {
   display: flex;
-
   flex-direction: column;
-
-  gap: 18px;
-
-  padding: 22px !important;
+  gap: 16px;
+  padding: 22px 24px 24px;
 }
 
-/* ==========================================================
-   Material Form Fields
-========================================================== */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
+  gap: 16px;
+}
 
-.settings-card .mat-mdc-form-field {
+.field-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.field-input,
+select {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 14px;
+  border: 1px solid #cbd5e1;
+  padding: 0 14px;
+  background: white;
+  color: #0f172a;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.field-input:focus,
+select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.input-with-suffix,
+.input-with-prefix {
+  display: flex;
+  align-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  overflow: hidden;
+  background: white;
+}
+
+.input-with-suffix .suffix,
+.input-with-prefix .prefix {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  padding: 0 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #475569;
+  background: #f8fafc;
+}
+
+.input-with-suffix input,
+.input-with-prefix input {
+  border: none;
+  outline: none;
+  box-shadow: none;
+  padding: 12px 14px;
   width: 100%;
 }
 
-.settings-card .mat-mdc-text-field-wrapper {
-  background: white;
+.toggle-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-weight: 700;
+  color: #102a43;
 }
 
-.settings-card .mat-mdc-form-field-subscript-wrapper {
-  display: none;
+.toggle-field input {
+  width: 18px;
+  height: 18px;
 }
 
-/* ==========================================================
-   Slide Toggle
-========================================================== */
-
-.settings-card mat-slide-toggle {
-  margin-bottom: 6px;
+.toggle-field.full-width {
+  width: 100%;
 }
 
-.settings-card .mdc-switch {
-  transform: scale(1.05);
+.field-row input[type="time"] {
+  padding: 10px 14px;
 }
-
-/* ==========================================================
-   Footer
-========================================================== */
 
 .settings-footer {
-  position: sticky;
-
-  bottom: 0;
-
   display: flex;
-
   justify-content: space-between;
-
   align-items: center;
-
-  gap: 24px;
-
-  padding: 18px 24px;
-
+  gap: 18px;
+  padding: 18px 22px;
   background: white;
-
-  border-top: 1px solid #e2e8f0;
-
-  box-shadow: 0 -6px 18px rgba(15, 23, 42, 0.08);
-
-  z-index: 100;
+  border-radius: 20px;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  position: sticky;
+  bottom: 0;
 }
-
-/* ==========================================================
-   Footer Left
-========================================================== */
 
 .footer-left {
   display: flex;
-
   align-items: center;
 }
 
-.unsaved,
-.saved {
-  display: flex;
-
+.status-pill {
+  display: inline-flex;
   align-items: center;
-
   gap: 10px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
 
-  font-size: 14px;
+.status-warning {
+  background: #fffbeb;
+  color: #92400e;
+}
 
-  font-weight: 600;
+.status-success {
+  background: #ecfdf5;
+  color: #075985;
+}
+
+.footer-right {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1080px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 660px) {
+  .settings-page {
+    padding: 20px 16px;
+  }
+
+  .settings-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-actions,
+  .footer-right {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .header-actions button,
+  .footer-right button {
+    width: 100%;
+  }
 }
 
 .unsaved {

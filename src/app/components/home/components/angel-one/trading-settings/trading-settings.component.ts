@@ -4,22 +4,6 @@ import { CommonModule } from '@angular/common';
 
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
-import { MatButtonModule } from '@angular/material/button';
-
-import { MatInputModule } from '@angular/material/input';
-
-import { MatFormFieldModule } from '@angular/material/form-field';
-
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-
-import { MatSelectModule } from '@angular/material/select';
-
-import { MatDividerModule } from '@angular/material/divider';
-
-import { MatIconModule } from '@angular/material/icon';
-
-import { MatCardModule } from '@angular/material/card';
-
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastService } from '../../../../../services/toast.service';
@@ -31,26 +15,7 @@ import { AngelOneService } from '../../../services/angel-one.service';
 
   standalone: true,
 
-  imports: [
-    CommonModule,
-
-    ReactiveFormsModule,
-
-    MatButtonModule,
-
-    MatInputModule,
-
-    MatFormFieldModule,
-
-    MatSlideToggleModule,
-
-    MatSelectModule,
-
-    MatDividerModule,
-
-    MatIconModule,
-    MatCardModule,
-  ],
+  imports: [CommonModule, ReactiveFormsModule],
 
   templateUrl: './trading-settings.component.html',
 
