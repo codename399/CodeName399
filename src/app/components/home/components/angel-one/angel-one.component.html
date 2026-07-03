@@ -21,8 +21,7 @@
         <button class="pill-button" type="button" (click)="refresh()">Refresh</button>
       </div>
 
-      @if (filteredGainers().length > 0) {
-        <div class="search-box">
+      <div class="search-box" *ngIf="filteredGainers().length > 0">
           <input
             type="text"
             placeholder="Search symbol"
@@ -30,12 +29,10 @@
             (input)="searchText.set($any($event.target).value)"
           />
         </div>
-      }
     </div>
   </header>
 
-  @if (showSummary()) {
-    <section class="summary-grid">
+  <section class="summary-grid" *ngIf="showSummary()">
       <article class="summary-card">
         <div class="summary-icon">💵</div>
         <div>
@@ -108,10 +105,8 @@
         </div>
       </article>
     </section>
-  }
 
-  @if (showMarket()) {
-    <section class="market-panel">
+  <section class="market-panel" *ngIf="showMarket()">
       <div class="market-card status-card">
         <div class="market-pill" [class.open]="marketStatus() === 'OPEN'" [class.closed]="marketStatus() === 'CLOSED'">
           {{ marketStatus() === 'OPEN' ? 'Market Open' : 'Market Closed' }}
@@ -134,7 +129,6 @@
         </div>
       </div>
     </section>
-  }
 
   <section class="table-shell">
     <div class="table-header">
@@ -165,12 +159,9 @@
         </thead>
 
         <tbody>
-          @for (stock of filteredGainers(); track stock.symbol) {
-            <tr [class.owned-row]="stock.isOwned">
+          <tr *ngFor="let stock of filteredGainers()" [class.owned-row]="stock.isOwned">
               <td class="center-cell">
-                @if (stock.isOwned) {
-                  ★
-                }
+                <span *ngIf="stock.isOwned">★</span>
               </td>
 
               <td class="symbol">{{ stock.symbol }}</td>
@@ -196,17 +187,7 @@
                   hold: stock.signal === 'HOLD',
                   setup: stock.signal === 'SETUP'
                 }">
-                  <span class="signal-emoji">
-                    @if (stock.signal === 'BUY') {
-                      🟢
-                    } @else if (stock.signal === 'SELL') {
-                      🔴
-                    } @else if (stock.signal === 'HOLD') {
-                      🟡
-                    } @else {
-                      ⚪
-                    }
-                  </span>
+                  <span class="signal-emoji">{{ stock.signal === 'BUY' ? '🟢' : stock.signal === 'SELL' ? '🔴' : stock.signal === 'HOLD' ? '🟡' : '⚪' }}</span>
                   <span class="signal-label">{{ stock.signal }}</span>
                 </div>
               </td>
@@ -214,7 +195,6 @@
               <td>₹{{ stock.targetPrice | number: '1.2-2' }}</td>
               <td class="reason">{{ stock.reason }}</td>
             </tr>
-          }
         </tbody>
       </table>
     </div>

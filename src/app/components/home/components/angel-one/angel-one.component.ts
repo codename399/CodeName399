@@ -22,11 +22,11 @@ import { Router } from '@angular/router';
 
   standalone: true,
 
-  imports: [CommonModule, DecimalPipe],
+  imports: [CommonModule],
 
   templateUrl: './angel-one.component.html',
 
-  styleUrl: './angel-one.component.css',
+  styleUrls: ['./angel-one.component.css'],
 })
 export class AngelOneComponent implements OnInit, OnDestroy {
   readonly #angel = inject(AngelOneService);
