@@ -77,6 +77,43 @@
   box-shadow: none;
 }
 
+.sidebar-float-button {
+  position: fixed;
+  right: 24px;
+  bottom: 90px;
+  z-index: 110;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: #2563eb;
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+@media (max-width: 760px) {
+  .sidebar-float-button {
+    bottom: 84px;
+    right: 16px;
+    width: 50px;
+    height: 50px;
+  }
+}
+
+.sidebar-float-button:hover {
+  transform: translateY(-2px);
+  background: #1d4ed8;
+}
+
+.sidebar-float-button .material-icons {
+  font-size: 1.3rem;
+}
+
 .page-details {
   max-width: 720px;
 }

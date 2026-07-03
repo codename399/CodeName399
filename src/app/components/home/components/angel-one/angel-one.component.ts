@@ -167,6 +167,10 @@ export class AngelOneComponent implements OnInit, OnDestroy {
     this.showLogs.update((v) => !v);
   }
 
+  openSettings(): void {
+    this.#router.navigate(['/home/trading-settings']);
+  }
+
   // ======================================================
   // Dashboard Summary
   // ======================================================

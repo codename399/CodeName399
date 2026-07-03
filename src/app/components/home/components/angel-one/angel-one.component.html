@@ -46,9 +46,9 @@
           <button
             class="pill-button accent"
             type="button"
-            (click)="toggleSettings()"
-            title="Toggle controls"
-            aria-label="Toggle controls"
+            (click)="openSettings()"
+            title="Settings"
+            aria-label="Settings"
           >
             <span class="material-icons">settings</span>
           </button>
@@ -76,18 +76,6 @@
     </aside>
 
     <main class="page-main">
-      <div class="page-top">
-        <button
-          class="pill-button accent"
-          type="button"
-          (click)="toggleSettings()"
-          [title]="showSettings() ? 'Hide controls' : 'Show controls'"
-          [attr.aria-label]="showSettings() ? 'Hide controls' : 'Show controls'"
-        >
-          <span class="material-icons">{{ showSettings() ? 'close' : 'menu' }}</span>
-        </button>
-      </div>
-
       <section class="summary-grid" *ngIf="showSummary()">
     <article class="summary-card">
       <div class="summary-icon">💵</div>
@@ -299,5 +287,15 @@
       </table>
     </div>
   </section>
-    </main>
+  </main>
   </div>
+  <button
+    class="sidebar-float-button"
+    type="button"
+    (click)="toggleSettings()"
+    [title]="showSettings() ? 'Close controls' : 'Open controls'"
+    [attr.aria-label]="showSettings() ? 'Close controls' : 'Open controls'"
+  >
+    <span class="material-icons">{{ showSettings() ? 'close' : 'menu' }}</span>
+  </button>
+</div>
