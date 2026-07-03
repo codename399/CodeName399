@@ -208,16 +208,24 @@
           <tr>
             <th>⭐</th>
             <th>Symbol</th>
+            <th>Token</th>
             <th>LTP</th>
+            <th>Prev Close</th>
             <th>Change</th>
             <th>VWAP</th>
             <th>EMA9</th>
             <th>EMA21</th>
             <th>RSI</th>
-            <th>Volume</th>
+            <th>Vol×</th>
             <th>PB%</th>
+            <th>Qty</th>
+            <th>Avg</th>
+            <th>Invested</th>
+            <th>Current</th>
+            <th>P/L</th>
             <th>Score</th>
             <th>Signal</th>
+            <th>Risk</th>
             <th>SL</th>
             <th>Target</th>
             <th>Reason</th>
@@ -234,7 +242,9 @@
             </td>
 
             <td class="symbol">{{ stock.symbol }}</td>
+            <td>{{ stock.symbolToken || "-" }}</td>
             <td>₹{{ stock.currentPrice | number: "1.2-2" }}</td>
+            <td>₹{{ stock.previousClose | number: "1.2-2" }}</td>
             <td
               [class.positive]="stock.changePercent >= 0"
               [class.negative]="stock.changePercent < 0"
@@ -242,11 +252,21 @@
               {{ stock.changePercent | number: "1.2-2" }}%
             </td>
             <td>{{ stock.vwap | number: "1.2-2" }}</td>
-            <td>{{ stock.emA9 | number: "1.2-2" }}</td>
-            <td>{{ stock.emA21 | number: "1.2-2" }}</td>
-            <td>{{ stock.rsi | number: "1.0-0" }}</td>
+            <td>{{ (stock.ema9 ?? stock.emA9 ?? 0) | number: "1.2-2" }}</td>
+            <td>{{ (stock.ema21 ?? stock.emA21 ?? 0) | number: "1.2-2" }}</td>
+            <td>{{ (stock.rsi ?? 0) | number: "1.0-0" }}</td>
             <td>{{ stock.volumeMultiplier | number: "1.1-1" }}×</td>
             <td>{{ stock.pullbackDistance | number: "1.1-1" }}%</td>
+            <td>{{ stock.quantity ?? 0 }}</td>
+            <td>₹{{ (stock.averagePrice ?? 0) | number: "1.2-2" }}</td>
+            <td>₹{{ (stock.investedAmount ?? 0) | number: "1.2-2" }}</td>
+            <td>₹{{ (stock.currentValue ?? 0) | number: "1.2-2" }}</td>
+            <td
+              [class.positive]="(stock.profitLoss ?? 0) >= 0"
+              [class.negative]="(stock.profitLoss ?? 0) < 0"
+            >
+              ₹{{ (stock.profitLoss ?? 0) | number: "1.2-2" }}
+            </td>
             <td>
               <div
                 class="score-badge"
@@ -279,6 +299,7 @@
                 <span class="signal-label">{{ stock.signal }}</span>
               </div>
             </td>
+            <td>{{ stock.risk }}</td>
             <td>₹{{ stock.stopLoss | number: "1.2-2" }}</td>
             <td>₹{{ stock.targetPrice | number: "1.2-2" }}</td>
             <td class="reason">{{ stock.reason }}</td>
