@@ -82,19 +82,26 @@ export class AngelOneComponent implements OnInit, OnDestroy {
   filteredGainers = computed(() => {
     const search = this.searchText().trim().toLowerCase();
 
-    if (!search) {
-      return this.gainers();
-    }
+    const filtered = this.gainers().filter((stock) =>
+      stock.symbol.toLowerCase().includes(search),
+    );
 
-    return this.gainers()
+    return filtered.sort((left, right) => {
+      const leftBucket = this.getGainerSortBucket(left);
+      const rightBucket = this.getGainerSortBucket(right);
 
-      .filter((stock) =>
-        stock.symbol
+      if (leftBucket !== rightBucket) {
+        return leftBucket - rightBucket;
+      }
 
-          .toLowerCase()
+      const scoreDiff = (right.score ?? 0) - (left.score ?? 0);
 
-          .includes(search),
-      );
+      if (scoreDiff !== 0) {
+        return scoreDiff;
+      }
+
+      return left.symbol.localeCompare(right.symbol);
+    });
   });
 
   // ======================================================
@@ -332,6 +339,20 @@ export class AngelOneComponent implements OnInit, OnDestroy {
   // ======================================================
   // Helpers
   // ======================================================
+
+  private getGainerSortBucket(stock: Gainer): number {
+    if (stock.isOwned) {
+      return 0;
+    }
+
+    const signal = (stock.signal ?? '').toUpperCase();
+
+    if (signal === 'BUY' || signal === 'SETUP') {
+      return 1;
+    }
+
+    return 2;
+  }
 
   private getTodayOpen(): Date {
     const date = new Date();
