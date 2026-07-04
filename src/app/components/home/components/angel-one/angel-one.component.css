@@ -13,6 +13,7 @@
   padding: 0 0 24px;
   box-sizing: border-box;
   position: relative;
+  overflow-x: hidden;
 }
 
 .page-layout {
@@ -71,17 +72,14 @@
   width: 100%;
   padding: 0;
   box-sizing: border-box;
-  transition: margin-left 0.25s ease;
+  position: relative;
+  z-index: 1;
+  transition: margin-left 0.25s ease, transform 0.25s ease;
 }
 
 .page-main.sidebar-open {
-  margin-left: 0;
-}
-
-@media (min-width: 1024px) {
-  .page-main.sidebar-open {
-    margin-left: min(320px, 100vw);
-  }
+  margin-left: min(320px, 100vw);
+  transform: translateX(0);
 }
 
 .page-top {
@@ -535,7 +533,19 @@ tbody tr:hover {
 
 @media (max-width: 760px) {
   .page-shell {
-    padding: 18px 16px 24px;
+    padding: 0 0 24px;
+  }
+
+  .page-main {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
+  }
+
+  .page-main.sidebar-open {
+    margin-left: 0;
+    transform: translateX(min(320px, 100vw));
+    width: calc(100% - min(320px, 100vw));
   }
 
   .page-actions,
@@ -572,8 +582,18 @@ tbody tr:hover {
     width: 100%;
   }
 
+  .table-shell {
+    padding: 16px 0;
+    border-radius: 0;
+  }
+
+  .table-header {
+    padding: 0 16px;
+  }
+
   .table-scroll {
     overflow-x: scroll;
+    padding: 0 16px 16px;
   }
 
   th,
