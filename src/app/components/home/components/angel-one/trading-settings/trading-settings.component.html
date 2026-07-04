@@ -54,7 +54,7 @@
               <label class="field-label" for="strategy">Strategy</label>
               <select id="strategy" formControlName="strategy" class="field-input">
                 @for (strategy of strategies; track strategy.value) {
-                  <option [value]="strategy.value">{{ strategy.text }}</option>
+                  <option [ngValue]="strategy.value">{{ strategy.text }}</option>
                 }
               </select>
             </div>

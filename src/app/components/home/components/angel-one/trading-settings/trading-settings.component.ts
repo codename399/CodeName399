@@ -8,6 +8,7 @@ import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastService } from '../../../../../services/toast.service';
 import { TradingConfiguration } from '../../../models/trading-configuration';
+import { TradingStrategy } from '../../../models/enum/trading-strategy';
 import { AngelOneService } from '../../../services/angel-one.service';
 
 @Component({
@@ -171,7 +172,7 @@ export class TradingSettingsComponent implements OnInit {
 
         enableNotification: configuration.enableNotification,
 
-        strategy: configuration.strategy,
+        strategy: this.normalizeStrategy(configuration.strategy),
 
         riskPercentage: configuration.riskPercentage,
 
@@ -227,6 +228,20 @@ export class TradingSettingsComponent implements OnInit {
     }
 
     return value.substring(0, 5);
+  }
+
+  private normalizeStrategy(value: TradingStrategy | string | number): TradingStrategy {
+    if (typeof value === 'string') {
+      const numeric = Number(value);
+
+      if (!Number.isNaN(numeric)) {
+        return numeric as TradingStrategy;
+      }
+
+      return TradingStrategy[value as keyof typeof TradingStrategy];
+    }
+
+    return value as TradingStrategy;
   }
 
   private toTimeSpan(value: string | null): string {

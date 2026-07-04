@@ -30,7 +30,9 @@
             [title]="showSummary() ? 'Hide Summary' : 'Show Summary'"
             [attr.aria-label]="showSummary() ? 'Hide Summary' : 'Show Summary'"
           >
-            <span class="material-icons">{{ showSummary() ? 'visibility_off' : 'visibility' }}</span>
+            <span class="material-icons">{{
+              showSummary() ? "visibility_off" : "visibility"
+            }}</span>
           </button>
 
           <button
@@ -77,238 +79,240 @@
 
     <main class="page-main">
       <section class="summary-grid" *ngIf="showSummary()">
-    <article class="summary-card">
-      <div class="summary-icon">💵</div>
-      <div>
-        <div class="summary-title">Available Cash</div>
-        <div class="summary-value">
-          ₹ {{ availableCash() | number: "1.2-2" }}
-        </div>
-      </div>
-    </article>
+        <article class="summary-card">
+          <div class="summary-icon">💵</div>
+          <div>
+            <div class="summary-title">Available Cash</div>
+            <div class="summary-value">
+              ₹ {{ availableCash() | number: "1.2-2" }}
+            </div>
+          </div>
+        </article>
 
-    <article class="summary-card">
-      <div class="summary-icon">📈</div>
-      <div>
-        <div class="summary-title">Strategy</div>
-        <div class="summary-value">{{ configuration()?.strategy }}</div>
-      </div>
-    </article>
+        <article class="summary-card">
+          <div class="summary-icon">📈</div>
+          <div>
+            <div class="summary-title">Strategy</div>
+            <div class="summary-value">{{ configuration()?.strategy }}</div>
+          </div>
+        </article>
 
-    <article class="summary-card">
-      <div class="summary-icon">🤖</div>
-      <div>
-        <div class="summary-title">Auto Trading</div>
-        <div class="summary-value">
-          {{ configuration()?.enableAutoTrading ? "Enabled" : "Disabled" }}
-        </div>
-      </div>
-    </article>
+        <article class="summary-card">
+          <div class="summary-icon">🤖</div>
+          <div>
+            <div class="summary-title">Auto Trading</div>
+            <div class="summary-value">
+              {{ configuration()?.enableAutoTrading ? "Enabled" : "Disabled" }}
+            </div>
+          </div>
+        </article>
 
-    <article class="summary-card">
-      <div class="summary-icon">📝</div>
-      <div>
-        <div class="summary-title">Paper Trading</div>
-        <div class="summary-value">
-          {{ configuration()?.paperTrading ? "Enabled" : "Disabled" }}
-        </div>
-      </div>
-    </article>
+        <article class="summary-card">
+          <div class="summary-icon">📝</div>
+          <div>
+            <div class="summary-title">Paper Trading</div>
+            <div class="summary-value">
+              {{ configuration()?.paperTrading ? "Enabled" : "Disabled" }}
+            </div>
+          </div>
+        </article>
 
-    <article class="summary-card">
-      <div class="summary-icon">⏱️</div>
-      <div>
-        <div class="summary-title">Ignore Market Hours</div>
-        <div class="summary-value">
-          {{ configuration()?.ignoreMarketHours ? "Yes" : "No" }}
-        </div>
-      </div>
-    </article>
+        <article class="summary-card">
+          <div class="summary-icon">⏱️</div>
+          <div>
+            <div class="summary-title">Ignore Market Hours</div>
+            <div class="summary-value">
+              {{ configuration()?.ignoreMarketHours ? "Yes" : "No" }}
+            </div>
+          </div>
+        </article>
 
-    <article class="summary-card">
-      <div class="summary-icon">⚠️</div>
-      <div>
-        <div class="summary-title">Risk Per Trade</div>
-        <div class="summary-value">{{ configuration()?.riskPercentage }}%</div>
-      </div>
-    </article>
+        <article class="summary-card">
+          <div class="summary-icon">⚠️</div>
+          <div>
+            <div class="summary-title">Risk Per Trade</div>
+            <div class="summary-value">
+              {{ configuration()?.riskPercentage }}%
+            </div>
+          </div>
+        </article>
 
-    <article class="summary-card">
-      <div class="summary-icon">💰</div>
-      <div>
-        <div class="summary-title">Capital / Trade</div>
-        <div class="summary-value">
-          ₹ {{ configuration()?.maxCapitalPerTrade | number: "1.0-0" }}
-        </div>
-      </div>
-    </article>
+        <article class="summary-card">
+          <div class="summary-icon">💰</div>
+          <div>
+            <div class="summary-title">Capital / Trade</div>
+            <div class="summary-value">
+              ₹ {{ configuration()?.maxCapitalPerTrade | number: "1.0-0" }}
+            </div>
+          </div>
+        </article>
 
-    <article class="summary-card">
-      <div class="summary-icon">📉</div>
-      <div>
-        <div class="summary-title">Max Daily Loss</div>
-        <div class="summary-value">
-          ₹ {{ configuration()?.maxDailyLoss | number: "1.0-0" }}
-        </div>
-      </div>
-    </article>
+        <article class="summary-card">
+          <div class="summary-icon">📉</div>
+          <div>
+            <div class="summary-title">Max Daily Loss</div>
+            <div class="summary-value">
+              ₹ {{ configuration()?.maxDailyLoss | number: "1.0-0" }}
+            </div>
+          </div>
+        </article>
 
-    <article class="summary-card">
-      <div class="summary-icon">🔔</div>
-      <div>
-        <div class="summary-title">Notifications</div>
-        <div class="summary-value">
-          {{ configuration()?.enableNotification ? "Enabled" : "Disabled" }}
-        </div>
-      </div>
-    </article>
-  </section>
+        <article class="summary-card">
+          <div class="summary-icon">🔔</div>
+          <div>
+            <div class="summary-title">Notifications</div>
+            <div class="summary-value">
+              {{ configuration()?.enableNotification ? "Enabled" : "Disabled" }}
+            </div>
+          </div>
+        </article>
+      </section>
 
-  <section class="market-panel" *ngIf="showMarket()">
-    <div class="market-card status-card">
-      <div
-        class="market-pill"
-        [class.open]="marketStatus() === 'OPEN'"
-        [class.closed]="marketStatus() === 'CLOSED'"
-      >
-        {{ marketStatus() === "OPEN" ? "Market Open" : "Market Closed" }}
-      </div>
-      <div class="market-time">{{ marketTimer() }}</div>
-    </div>
-
-    <div class="market-card detail-card">
-      <div class="market-card-item">
-        <span>Strategy</span>
-        <strong>{{ configuration()?.strategy }}</strong>
-      </div>
-      <div class="market-card-item">
-        <span>Auto Trading</span>
-        <strong>{{
-          configuration()?.enableAutoTrading ? "Enabled" : "Disabled"
-        }}</strong>
-      </div>
-      <div class="market-card-item">
-        <span>Paper Trading</span>
-        <strong>{{
-          configuration()?.paperTrading ? "Enabled" : "Disabled"
-        }}</strong>
-      </div>
-    </div>
-  </section>
-
-  <section class="table-shell">
-    <div class="table-header">
-      <div>{{ filteredGainers().length }} symbols found</div>
-      <div>Top candidates based on current scan</div>
-    </div>
-
-    <div class="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>⭐</th>
-            <th>Symbol</th>
-            <th>Token</th>
-            <th>LTP</th>
-            <th>Prev Close</th>
-            <th>Change</th>
-            <th>VWAP</th>
-            <th>EMA9</th>
-            <th>EMA21</th>
-            <th>RSI</th>
-            <th>Vol×</th>
-            <th>PB%</th>
-            <th>Qty</th>
-            <th>Avg</th>
-            <th>Invested</th>
-            <th>Current</th>
-            <th>P/L</th>
-            <th>Score</th>
-            <th>Signal</th>
-            <th>Risk</th>
-            <th>SL</th>
-            <th>Target</th>
-            <th>Reason</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr
-            *ngFor="let stock of filteredGainers()"
-            [class.owned-row]="stock.isOwned"
+      <section class="market-panel" *ngIf="showMarket()">
+        <div class="market-card status-card">
+          <div
+            class="market-pill"
+            [class.open]="marketStatus() === 'OPEN'"
+            [class.closed]="marketStatus() === 'CLOSED'"
           >
-            <td class="center-cell">
-              <span *ngIf="stock.isOwned">★</span>
-            </td>
+            {{ marketStatus() === "OPEN" ? "Market Open" : "Market Closed" }}
+          </div>
+          <div class="market-time">{{ marketTimer() }}</div>
+        </div>
 
-            <td class="symbol">{{ stock.symbol }}</td>
-            <td>{{ stock.symbolToken || "-" }}</td>
-            <td>₹{{ stock.currentPrice | number: "1.2-2" }}</td>
-            <td>₹{{ stock.previousClose | number: "1.2-2" }}</td>
-            <td
-              [class.positive]="stock.changePercent >= 0"
-              [class.negative]="stock.changePercent < 0"
-            >
-              {{ stock.changePercent | number: "1.2-2" }}%
-            </td>
-            <td>{{ stock.vwap | number: "1.2-2" }}</td>
-            <td>{{ (stock.ema9 ?? stock.emA9 ?? 0) | number: "1.2-2" }}</td>
-            <td>{{ (stock.ema21 ?? stock.emA21 ?? 0) | number: "1.2-2" }}</td>
-            <td>{{ (stock.rsi ?? 0) | number: "1.0-0" }}</td>
-            <td>{{ stock.volumeMultiplier | number: "1.1-1" }}×</td>
-            <td>{{ stock.pullbackDistance | number: "1.1-1" }}%</td>
-            <td>{{ stock.quantity ?? 0 }}</td>
-            <td>₹{{ (stock.averagePrice ?? 0) | number: "1.2-2" }}</td>
-            <td>₹{{ (stock.investedAmount ?? 0) | number: "1.2-2" }}</td>
-            <td>₹{{ (stock.currentValue ?? 0) | number: "1.2-2" }}</td>
-            <td
-              [class.positive]="(stock.profitLoss ?? 0) >= 0"
-              [class.negative]="(stock.profitLoss ?? 0) < 0"
-            >
-              ₹{{ (stock.profitLoss ?? 0) | number: "1.2-2" }}
-            </td>
-            <td>
-              <div
-                class="score-badge"
-                [class.excellent]="stock.score >= 80"
-                [class.good]="stock.score >= 60 && stock.score < 80"
-                [class.average]="stock.score < 60"
+        <div class="market-card detail-card">
+          <div class="market-card-item">
+            <span>Strategy</span>
+            <strong>{{ configuration()?.strategy }}</strong>
+          </div>
+          <div class="market-card-item">
+            <span>Auto Trading</span>
+            <strong>{{
+              configuration()?.enableAutoTrading ? "Enabled" : "Disabled"
+            }}</strong>
+          </div>
+          <div class="market-card-item">
+            <span>Paper Trading</span>
+            <strong>{{
+              configuration()?.paperTrading ? "Enabled" : "Disabled"
+            }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="table-shell">
+        <div class="table-header">
+          <div>{{ filteredGainers().length }} symbols found</div>
+          <div>Top candidates based on current scan</div>
+        </div>
+
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>⭐</th>
+                <th>Symbol</th>
+                <th>Token</th>
+                <th>LTP</th>
+                <th>Prev Close</th>
+                <th>Change</th>
+                <th>VWAP</th>
+                <th>EMA9</th>
+                <th>EMA21</th>
+                <th>RSI</th>
+                <th>Vol×</th>
+                <th>PB%</th>
+                <th>Qty</th>
+                <th>Avg</th>
+                <th>Invested</th>
+                <th>Current</th>
+                <th>P/L</th>
+                <th>Score</th>
+                <th>Signal</th>
+                <th>Risk</th>
+                <th>SL</th>
+                <th>Target</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr
+                *ngFor="let stock of filteredGainers()"
+                [class.owned-row]="stock.isOwned"
               >
-                {{ stock.score }}
-              </div>
-            </td>
-            <td>
-              <div
-                class="signal-pill"
-                [ngClass]="{
-                  buy: stock.signal === 'BUY',
-                  sell: stock.signal === 'SELL',
-                  hold: stock.signal === 'HOLD',
-                  setup: stock.signal === 'SETUP',
-                }"
-              >
-                <span class="signal-emoji">{{
-                  stock.signal === "BUY"
-                    ? "🟢"
-                    : stock.signal === "SELL"
-                      ? "🔴"
-                      : stock.signal === "HOLD"
-                        ? "🟡"
-                        : "⚪"
-                }}</span>
-                <span class="signal-label">{{ stock.signal }}</span>
-              </div>
-            </td>
-            <td>{{ stock.risk }}</td>
-            <td>₹{{ stock.stopLoss | number: "1.2-2" }}</td>
-            <td>₹{{ stock.targetPrice | number: "1.2-2" }}</td>
-            <td class="reason">{{ stock.reason }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-  </main>
+                <td class="center-cell">
+                  <span *ngIf="stock.isOwned">★</span>
+                </td>
+
+                <td class="symbol">{{ stock.symbol }}</td>
+                <td>{{ stock.symbolToken || "-" }}</td>
+                <td>₹{{ stock.currentPrice | number: "1.2-2" }}</td>
+                <td>₹{{ stock.previousClose | number: "1.2-2" }}</td>
+                <td
+                  [class.positive]="stock.changePercent >= 0"
+                  [class.negative]="stock.changePercent < 0"
+                >
+                  {{ stock.changePercent | number: "1.2-2" }}%
+                </td>
+                <td>{{ stock.vwap | number: "1.2-2" }}</td>
+                <td>{{ stock.ema9 ?? stock.emA9 ?? 0 | number: "1.2-2" }}</td>
+                <td>{{ stock.ema21 ?? stock.emA21 ?? 0 | number: "1.2-2" }}</td>
+                <td>{{ stock.rsi ?? 0 | number: "1.0-0" }}</td>
+                <td>{{ stock.volumeMultiplier | number: "1.1-1" }}×</td>
+                <td>{{ stock.pullbackDistance | number: "1.1-1" }}%</td>
+                <td>{{ stock.quantity ?? 0 }}</td>
+                <td>₹{{ stock.averagePrice ?? 0 | number: "1.2-2" }}</td>
+                <td>₹{{ stock.investedAmount ?? 0 | number: "1.2-2" }}</td>
+                <td>₹{{ stock.currentValue ?? 0 | number: "1.2-2" }}</td>
+                <td
+                  [class.positive]="(stock.profitLoss ?? 0) >= 0"
+                  [class.negative]="(stock.profitLoss ?? 0) < 0"
+                >
+                  ₹{{ stock.profitLoss ?? 0 | number: "1.2-2" }}
+                </td>
+                <td>
+                  <div
+                    class="score-badge"
+                    [class.excellent]="stock.score >= 80"
+                    [class.good]="stock.score >= 60 && stock.score < 80"
+                    [class.average]="stock.score < 60"
+                  >
+                    {{ stock.score }}
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="signal-pill"
+                    [ngClass]="{
+                      buy: stock.signal === 'BUY',
+                      sell: stock.signal === 'SELL',
+                      hold: stock.signal === 'HOLD',
+                      setup: stock.signal === 'SETUP',
+                    }"
+                  >
+                    <span class="signal-emoji">{{
+                      stock.signal === "BUY"
+                        ? "🟢"
+                        : stock.signal === "SELL"
+                          ? "🔴"
+                          : stock.signal === "HOLD"
+                            ? "🟡"
+                            : "⚪"
+                    }}</span>
+                    <span class="signal-label">{{ stock.signal }}</span>
+                  </div>
+                </td>
+                <td>{{ stock.risk }}</td>
+                <td>₹{{ stock.stopLoss | number: "1.2-2" }}</td>
+                <td>₹{{ stock.targetPrice | number: "1.2-2" }}</td>
+                <td class="reason">{{ stock.reason }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
   </div>
   <button
     class="sidebar-float-button"
@@ -317,6 +321,6 @@
     [title]="showSettings() ? 'Close controls' : 'Open controls'"
     [attr.aria-label]="showSettings() ? 'Close controls' : 'Open controls'"
   >
-    <span class="material-icons">{{ showSettings() ? 'close' : 'menu' }}</span>
+    <span class="material-icons">{{ showSettings() ? "close" : "menu" }}</span>
   </button>
 </div>
