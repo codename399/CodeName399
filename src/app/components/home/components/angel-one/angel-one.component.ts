@@ -289,11 +289,58 @@ export class AngelOneComponent implements OnInit, OnDestroy {
   }
 
   private updateMarketTimer(): void {
+    const config = this.configuration();
+
+    if (!config) {
+      this.marketStatus.set('LOADING');
+      this.marketTimer.set('');
+      return;
+    }
+
     const now = new Date();
 
     const marketOpen = this.getTodayOpen();
-
     const marketClose = this.getTodayClose();
+
+    if (config.ignoreMarketHours) {
+      if (this.isWeekend(now)) {
+        this.marketStatus.set('OPEN (Ignored)');
+        this.marketTimer.set(
+          `Market opens in ${this.formatTime(
+            this.getNextMarketOpen(now).getTime() - now.getTime(),
+          )}`,
+        );
+        return;
+      }
+
+      if (now < marketOpen) {
+        this.marketStatus.set('OPEN (Ignored)');
+        this.marketTimer.set(
+          `Market opens in ${this.formatTime(
+            marketOpen.getTime() - now.getTime(),
+          )}`,
+        );
+        return;
+      }
+
+      if (now >= marketOpen && now < marketClose) {
+        this.marketStatus.set('OPEN');
+        this.marketTimer.set(
+          `Market closes in ${this.formatTime(
+            marketClose.getTime() - now.getTime(),
+          )}`,
+        );
+        return;
+      }
+
+      this.marketStatus.set('OPEN (Ignored)');
+      this.marketTimer.set(
+        `Market opens in ${this.formatTime(
+          this.getNextMarketOpen(now).getTime() - now.getTime(),
+        )}`,
+      );
+      return;
+    }
 
     if (this.isWeekend(now)) {
       this.marketStatus.set('CLOSED');
@@ -307,8 +354,6 @@ export class AngelOneComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Before market
-
     if (now < marketOpen) {
       this.marketStatus.set('CLOSED');
 
@@ -319,8 +364,6 @@ export class AngelOneComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // During market
-
     if (now >= marketOpen && now < marketClose) {
       this.marketStatus.set('OPEN');
 
@@ -330,8 +373,6 @@ export class AngelOneComponent implements OnInit, OnDestroy {
 
       return;
     }
-
-    // After market
 
     this.marketStatus.set('CLOSED');
 
@@ -361,33 +402,29 @@ export class AngelOneComponent implements OnInit, OnDestroy {
   }
 
   private getTodayOpen(): Date {
+    const config = this.configuration();
+
     const date = new Date();
 
-    date.setHours(
-      9,
+    const [hour, minute] = config?.marketOpenTime?.split(':').map(Number) ?? [
+      9, 15,
+    ];
 
-      15,
-
-      0,
-
-      0,
-    );
+    date.setHours(hour, minute, 0, 0);
 
     return date;
   }
 
   private getTodayClose(): Date {
+    const config = this.configuration();
+
     const date = new Date();
 
-    date.setHours(
-      15,
+    const [hour, minute] = config?.marketCloseTime?.split(':').map(Number) ?? [
+      15, 30,
+    ];
 
-      30,
-
-      0,
-
-      0,
-    );
+    date.setHours(hour, minute, 0, 0);
 
     return date;
   }
@@ -397,17 +434,15 @@ export class AngelOneComponent implements OnInit, OnDestroy {
   }
 
   private getNextMarketOpen(current: Date): Date {
+    const config = this.configuration();
+
     const next = new Date(current);
 
-    next.setHours(
-      9,
+    const [hour, minute] = config?.marketOpenTime?.split(':').map(Number) ?? [
+      9, 15,
+    ];
 
-      15,
-
-      0,
-
-      0,
-    );
+    next.setHours(hour, minute, 0, 0);
 
     do {
       next.setDate(next.getDate() + 1);
