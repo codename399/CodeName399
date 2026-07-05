@@ -39,6 +39,8 @@ export interface TradingConfiguration {
 
   marketCloseTime: string;
 
+  excludedSymbols?: string[];
+
   watchListRefreshMinutes: number;
 
   minPrice: number;
@@ -48,4 +50,16 @@ export interface TradingConfiguration {
   minChangePercent: number;
 
   maxCandidates: number;
+
+  lastDailySummarySent?: string | null;
+
+  validateChargesBeforeTrade?: boolean;
+
+  minimumNetProfit?: number;
+
+  maximumChargesPercent?: number;
+
+  maximumChargesPerTrade?: number;
+
+  autoIncreaseTarget?: boolean;
 }

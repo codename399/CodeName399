@@ -121,6 +121,11 @@
             </div>
 
             <div class="field-row">
+              <label class="field-label" for="excludedSymbolsText">Excluded Symbols</label>
+              <textarea id="excludedSymbolsText" formControlName="excludedSymbolsText" class="field-input" rows="3" placeholder="NSE:RELIANCE, NSE:INFY"></textarea>
+            </div>
+
+            <div class="field-row">
               <label class="field-label" for="watchListRefreshMinutes">Watchlist Refresh (Minutes)</label>
               <input id="watchListRefreshMinutes" type="number" formControlName="watchListRefreshMinutes" class="field-input" />
             </div>
@@ -219,6 +224,51 @@
             <label class="toggle-field">
               <input type="checkbox" formControlName="enableNotification" />
               <span>Enable Notifications</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="settings-card">
+          <div class="card-header">
+            <div>
+              <h2>Charge Validation</h2>
+              <p>Protect trades from excessive fees</p>
+            </div>
+          </div>
+
+          <div class="card-body grid-2">
+            <label class="toggle-field full-width">
+              <input type="checkbox" formControlName="validateChargesBeforeTrade" />
+              <span>Validate Charges Before Trade</span>
+            </label>
+
+            <div class="field-row">
+              <label class="field-label" for="minimumNetProfit">Minimum Net Profit</label>
+              <div class="input-with-suffix">
+                <span class="prefix">₹</span>
+                <input id="minimumNetProfit" type="number" formControlName="minimumNetProfit" class="field-input" />
+              </div>
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="maximumChargesPercent">Maximum Charges %</label>
+              <div class="input-with-suffix">
+                <input id="maximumChargesPercent" type="number" formControlName="maximumChargesPercent" class="field-input" />
+                <span class="suffix">%</span>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="maximumChargesPerTrade">Maximum Charges / Trade</label>
+              <div class="input-with-suffix">
+                <span class="prefix">₹</span>
+                <input id="maximumChargesPerTrade" type="number" formControlName="maximumChargesPerTrade" class="field-input" />
+              </div>
+            </div>
+
+            <label class="toggle-field full-width">
+              <input type="checkbox" formControlName="autoIncreaseTarget" />
+              <span>Auto Increase Target</span>
             </label>
           </div>
         </section>

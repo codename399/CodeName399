@@ -74,6 +74,16 @@ export interface Gainer {
 
   reason: string;
 
+  // ---------- Additional Metrics ----------
+
+  atr?: number;
+  estimatedGrossProfit?: number;
+  estimatedCharges?: number;
+  estimatedNetProfit?: number;
+  chargesPercent?: number;
+  chargesAccepted?: boolean;
+  chargesReason?: string;
+
   // ---------- Metadata ----------
 
   quote?: MarketQuoteData;

@@ -88,7 +88,7 @@ export class TradingSettingsComponent implements OnInit {
 
     marketCloseTime: ['15:30', Validators.required],
 
-    excludedSymbols: [[]],
+    excludedSymbolsText: [''],
 
     watchListRefreshMinutes: [2, Validators.required],
 
@@ -99,6 +99,16 @@ export class TradingSettingsComponent implements OnInit {
     minChangePercent: [1, Validators.required],
 
     maxCandidates: [100, Validators.required],
+
+    validateChargesBeforeTrade: [true],
+
+    minimumNetProfit: [150, Validators.required],
+
+    maximumChargesPercent: [35, Validators.required],
+
+    maximumChargesPerTrade: [100, Validators.required],
+
+    autoIncreaseTarget: [true],
   });
 
   enableAutoTradingFormControl = this.form?.controls?.enableAutoTrading;
@@ -202,6 +212,8 @@ export class TradingSettingsComponent implements OnInit {
 
         marketCloseTime: this.toTimeInput(configuration.marketCloseTime),
 
+        excludedSymbolsText: (configuration.excludedSymbols ?? []).join(', '),
+
         watchListRefreshMinutes: configuration.watchListRefreshMinutes,
 
         minPrice: configuration.minPrice,
@@ -211,6 +223,16 @@ export class TradingSettingsComponent implements OnInit {
         minChangePercent: configuration.minChangePercent,
 
         maxCandidates: configuration.maxCandidates,
+
+        validateChargesBeforeTrade: configuration.validateChargesBeforeTrade ?? true,
+
+        minimumNetProfit: configuration.minimumNetProfit ?? 150,
+
+        maximumChargesPercent: configuration.maximumChargesPercent ?? 35,
+
+        maximumChargesPerTrade: configuration.maximumChargesPerTrade ?? 100,
+
+        autoIncreaseTarget: configuration.autoIncreaseTarget ?? true,
       },
       {
         emitEvent: false,
@@ -250,6 +272,13 @@ export class TradingSettingsComponent implements OnInit {
     }
 
     return `${value}:00`;
+  }
+
+  private parseExcludedSymbols(value: string | null | undefined): string[] {
+    return (value ?? '')
+      .split(',')
+      .map((symbol) => symbol.trim().toUpperCase())
+      .filter(Boolean);
   }
 
   // ======================================================
@@ -330,6 +359,8 @@ export class TradingSettingsComponent implements OnInit {
 
       marketCloseTime: this.toTimeSpan(value.marketCloseTime),
 
+      excludedSymbols: this.parseExcludedSymbols(value.excludedSymbolsText),
+
       watchListRefreshMinutes: Number(value.watchListRefreshMinutes),
 
       minPrice: Number(value.minPrice ?? 50),
@@ -339,6 +370,16 @@ export class TradingSettingsComponent implements OnInit {
       minChangePercent: Number(value.minChangePercent ?? 1),
 
       maxCandidates: Number(value.maxCandidates ?? 100),
+
+      validateChargesBeforeTrade: value.validateChargesBeforeTrade ?? true,
+
+      minimumNetProfit: Number(value.minimumNetProfit ?? 150),
+
+      maximumChargesPercent: Number(value.maximumChargesPercent ?? 35),
+
+      maximumChargesPerTrade: Number(value.maximumChargesPerTrade ?? 100),
+
+      autoIncreaseTarget: value.autoIncreaseTarget ?? true,
     };
 
     this.#angel

@@ -236,6 +236,13 @@
                 <th>Risk</th>
                 <th>SL</th>
                 <th>Target</th>
+                <th>ATR</th>
+                <th>Gross</th>
+                <th>Charges</th>
+                <th>Net</th>
+                <th>Charges %</th>
+                <th>Charges OK</th>
+                <th>Charge Reason</th>
                 <th>Reason</th>
               </tr>
             </thead>
@@ -310,6 +317,13 @@
                 <td>{{ stock.risk }}</td>
                 <td>₹{{ stock.stopLoss | number: "1.2-2" }}</td>
                 <td>₹{{ stock.targetPrice | number: "1.2-2" }}</td>
+                <td>₹{{ stock.atr ?? 0 | number: "1.2-2" }}</td>
+                <td>₹{{ stock.estimatedGrossProfit ?? 0 | number: "1.2-2" }}</td>
+                <td>₹{{ stock.estimatedCharges ?? 0 | number: "1.2-2" }}</td>
+                <td>₹{{ stock.estimatedNetProfit ?? 0 | number: "1.2-2" }}</td>
+                <td>{{ stock.chargesPercent ?? 0 | number: "1.2-2" }}%</td>
+                <td>{{ stock.chargesAccepted ? "Yes" : "No" }}</td>
+                <td class="reason">{{ stock.chargesReason || "-" }}</td>
                 <td class="reason">{{ stock.reason }}</td>
               </tr>
             </tbody>
