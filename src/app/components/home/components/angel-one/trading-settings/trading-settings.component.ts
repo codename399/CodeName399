@@ -371,6 +371,8 @@ export class TradingSettingsComponent implements OnInit {
 
       maxCandidates: Number(value.maxCandidates ?? 100),
 
+      visibleColumns: this.#angel.configuration()?.visibleColumns ?? [],
+
       validateChargesBeforeTrade: value.validateChargesBeforeTrade ?? true,
 
       minimumNetProfit: Number(value.minimumNetProfit ?? 150),

@@ -74,6 +74,41 @@ export class AngelOneComponent implements OnInit, OnDestroy {
 
   showLogs = signal(false);
 
+  readonly columnDefinitions = [
+    { key: 'star', label: '⭐', defaultVisible: true },
+    { key: 'symbol', label: 'Symbol', defaultVisible: true },
+    { key: 'token', label: 'Token', defaultVisible: false },
+    { key: 'ltp', label: 'LTP', defaultVisible: true },
+    { key: 'prevClose', label: 'Prev Close', defaultVisible: true },
+    { key: 'change', label: 'Change', defaultVisible: true },
+    { key: 'vwap', label: 'VWAP', defaultVisible: false },
+    { key: 'ema9', label: 'EMA9', defaultVisible: false },
+    { key: 'ema21', label: 'EMA21', defaultVisible: false },
+    { key: 'rsi', label: 'RSI', defaultVisible: false },
+    { key: 'volumeMultiplier', label: 'Vol×', defaultVisible: false },
+    { key: 'pullbackDistance', label: 'PB%', defaultVisible: false },
+    { key: 'quantity', label: 'Qty', defaultVisible: false },
+    { key: 'averagePrice', label: 'Avg', defaultVisible: false },
+    { key: 'investedAmount', label: 'Invested', defaultVisible: false },
+    { key: 'currentValue', label: 'Current', defaultVisible: false },
+    { key: 'profitLoss', label: 'P/L', defaultVisible: false },
+    { key: 'score', label: 'Score', defaultVisible: true },
+    { key: 'signal', label: 'Signal', defaultVisible: true },
+    { key: 'risk', label: 'Risk', defaultVisible: true },
+    { key: 'stopLoss', label: 'SL', defaultVisible: true },
+    { key: 'targetPrice', label: 'Target', defaultVisible: true },
+    { key: 'atr', label: 'ATR', defaultVisible: false },
+    { key: 'estimatedGrossProfit', label: 'Gross', defaultVisible: false },
+    { key: 'estimatedCharges', label: 'Charges', defaultVisible: false },
+    { key: 'estimatedNetProfit', label: 'Net', defaultVisible: false },
+    { key: 'chargesPercent', label: 'Charges %', defaultVisible: false },
+    { key: 'chargesAccepted', label: 'Charges OK', defaultVisible: false },
+    { key: 'chargesReason', label: 'Charge Reason', defaultVisible: false },
+    { key: 'reason', label: 'Reason', defaultVisible: true },
+  ];
+
+  visibleColumns = signal<string[]>([]);
+
   private timerId: any;
   private subscription?: Subscription;
 
@@ -178,6 +213,27 @@ export class AngelOneComponent implements OnInit, OnDestroy {
     this.showLogs.update((v) => !v);
   }
 
+  toggleColumn(columnKey: string): void {
+    const current = this.visibleColumns();
+    const next = current.includes(columnKey)
+      ? current.filter((key) => key !== columnKey)
+      : [...current, columnKey];
+
+    this.visibleColumns.set(next);
+    this.persistVisibleColumns(next);
+  }
+
+  resetColumns(): void {
+    const defaults = this.getDefaultVisibleColumnKeys();
+
+    this.visibleColumns.set(defaults);
+    this.persistVisibleColumns(defaults);
+  }
+
+  isColumnVisible(columnKey: string): boolean {
+    return this.visibleColumns().includes(columnKey);
+  }
+
   openSettings(): void {
     this.#router.navigate(['/home/trading-settings']);
   }
@@ -216,8 +272,8 @@ export class AngelOneComponent implements OnInit, OnDestroy {
       .getTradingConfiguration()
 
       .subscribe({
-        next: () => {
-          // Signal updated inside service.
+        next: (configuration) => {
+          this.applyVisibleColumns(configuration);
         },
 
         error: (error) => {
@@ -239,9 +295,14 @@ export class AngelOneComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const payload: TradingConfiguration = {
+      ...configuration,
+      visibleColumns: this.visibleColumns(),
+    };
+
     this.#angel
 
-      .saveTradingConfiguration(configuration)
+      .saveTradingConfiguration(payload)
 
       .subscribe({
         next: () => {
@@ -252,6 +313,43 @@ export class AngelOneComponent implements OnInit, OnDestroy {
           this.#toast.error('Unable to save configuration');
         },
       });
+  }
+
+  private applyVisibleColumns(configuration: TradingConfiguration | null): void {
+    const configuredColumns = configuration?.visibleColumns?.filter((columnKey) =>
+      this.columnDefinitions.some((column) => column.key === columnKey),
+    );
+
+    const nextColumns = configuredColumns?.length
+      ? configuredColumns
+      : this.getDefaultVisibleColumnKeys();
+
+    this.visibleColumns.set(nextColumns);
+  }
+
+  private persistVisibleColumns(visibleColumns: string[]): void {
+    const configuration = this.configuration();
+
+    if (!configuration) {
+      return;
+    }
+
+    const payload: TradingConfiguration = {
+      ...configuration,
+      visibleColumns,
+    };
+
+    this.#angel.saveTradingConfiguration(payload).subscribe({
+      error: (error) => {
+        console.error('Unable to persist visible columns', error);
+      },
+    });
+  }
+
+  private getDefaultVisibleColumnKeys(): string[] {
+    return this.columnDefinitions
+      .filter((column) => column.defaultVisible)
+      .map((column) => column.key);
   }
 
   // ======================================================

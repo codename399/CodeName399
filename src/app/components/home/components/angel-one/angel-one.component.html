@@ -63,6 +63,25 @@
             Refresh
           </button>
         </div>
+
+        <div class="column-panel">
+          <div class="column-panel-header">
+            <span>Table Columns</span>
+            <button class="text-link-button" type="button" (click)="resetColumns()">
+              Reset
+            </button>
+          </div>
+          <div class="column-options">
+            <label class="column-option" *ngFor="let column of columnDefinitions">
+              <input
+                type="checkbox"
+                [checked]="isColumnVisible(column.key)"
+                (change)="toggleColumn(column.key)"
+              />
+              <span>{{ column.label }}</span>
+            </label>
+          </div>
+        </div>
       </div>
     </aside>
 
@@ -214,36 +233,36 @@
           <table>
             <thead>
               <tr>
-                <th>⭐</th>
-                <th>Symbol</th>
-                <th>Token</th>
-                <th>LTP</th>
-                <th>Prev Close</th>
-                <th>Change</th>
-                <th>VWAP</th>
-                <th>EMA9</th>
-                <th>EMA21</th>
-                <th>RSI</th>
-                <th>Vol×</th>
-                <th>PB%</th>
-                <th>Qty</th>
-                <th>Avg</th>
-                <th>Invested</th>
-                <th>Current</th>
-                <th>P/L</th>
-                <th>Score</th>
-                <th>Signal</th>
-                <th>Risk</th>
-                <th>SL</th>
-                <th>Target</th>
-                <th>ATR</th>
-                <th>Gross</th>
-                <th>Charges</th>
-                <th>Net</th>
-                <th>Charges %</th>
-                <th>Charges OK</th>
-                <th>Charge Reason</th>
-                <th>Reason</th>
+                <th *ngIf="isColumnVisible('star')">⭐</th>
+                <th *ngIf="isColumnVisible('symbol')">Symbol</th>
+                <th *ngIf="isColumnVisible('token')">Token</th>
+                <th *ngIf="isColumnVisible('ltp')">LTP</th>
+                <th *ngIf="isColumnVisible('prevClose')">Prev Close</th>
+                <th *ngIf="isColumnVisible('change')">Change</th>
+                <th *ngIf="isColumnVisible('vwap')">VWAP</th>
+                <th *ngIf="isColumnVisible('ema9')">EMA9</th>
+                <th *ngIf="isColumnVisible('ema21')">EMA21</th>
+                <th *ngIf="isColumnVisible('rsi')">RSI</th>
+                <th *ngIf="isColumnVisible('volumeMultiplier')">Vol×</th>
+                <th *ngIf="isColumnVisible('pullbackDistance')">PB%</th>
+                <th *ngIf="isColumnVisible('quantity')">Qty</th>
+                <th *ngIf="isColumnVisible('averagePrice')">Avg</th>
+                <th *ngIf="isColumnVisible('investedAmount')">Invested</th>
+                <th *ngIf="isColumnVisible('currentValue')">Current</th>
+                <th *ngIf="isColumnVisible('profitLoss')">P/L</th>
+                <th *ngIf="isColumnVisible('score')">Score</th>
+                <th *ngIf="isColumnVisible('signal')">Signal</th>
+                <th *ngIf="isColumnVisible('risk')">Risk</th>
+                <th *ngIf="isColumnVisible('stopLoss')">SL</th>
+                <th *ngIf="isColumnVisible('targetPrice')">Target</th>
+                <th *ngIf="isColumnVisible('atr')">ATR</th>
+                <th *ngIf="isColumnVisible('estimatedGrossProfit')">Gross</th>
+                <th *ngIf="isColumnVisible('estimatedCharges')">Charges</th>
+                <th *ngIf="isColumnVisible('estimatedNetProfit')">Net</th>
+                <th *ngIf="isColumnVisible('chargesPercent')">Charges %</th>
+                <th *ngIf="isColumnVisible('chargesAccepted')">Charges OK</th>
+                <th *ngIf="isColumnVisible('chargesReason')">Charge Reason</th>
+                <th *ngIf="isColumnVisible('reason')">Reason</th>
               </tr>
             </thead>
 
@@ -252,37 +271,39 @@
                 *ngFor="let stock of filteredGainers()"
                 [class.owned-row]="stock.isOwned"
               >
-                <td class="center-cell">
+                <td class="center-cell" *ngIf="isColumnVisible('star')">
                   <span *ngIf="stock.isOwned">★</span>
                 </td>
 
-                <td class="symbol">{{ stock.symbol }}</td>
-                <td>{{ stock.symbolToken || "-" }}</td>
-                <td>₹{{ stock.currentPrice | number: "1.2-2" }}</td>
-                <td>₹{{ stock.previousClose | number: "1.2-2" }}</td>
+                <td class="symbol" *ngIf="isColumnVisible('symbol')">{{ stock.symbol }}</td>
+                <td *ngIf="isColumnVisible('token')">{{ stock.symbolToken || "-" }}</td>
+                <td *ngIf="isColumnVisible('ltp')">₹{{ stock.currentPrice | number: "1.2-2" }}</td>
+                <td *ngIf="isColumnVisible('prevClose')">₹{{ stock.previousClose | number: "1.2-2" }}</td>
                 <td
+                  *ngIf="isColumnVisible('change')"
                   [class.positive]="stock.changePercent >= 0"
                   [class.negative]="stock.changePercent < 0"
                 >
                   {{ stock.changePercent | number: "1.2-2" }}%
                 </td>
-                <td>{{ stock.vwap | number: "1.2-2" }}</td>
-                <td>{{ stock.ema9 ?? stock.emA9 ?? 0 | number: "1.2-2" }}</td>
-                <td>{{ stock.ema21 ?? stock.emA21 ?? 0 | number: "1.2-2" }}</td>
-                <td>{{ stock.rsi ?? 0 | number: "1.0-0" }}</td>
-                <td>{{ stock.volumeMultiplier | number: "1.1-1" }}×</td>
-                <td>{{ stock.pullbackDistance | number: "1.1-1" }}%</td>
-                <td>{{ stock.quantity ?? 0 }}</td>
-                <td>₹{{ stock.averagePrice ?? 0 | number: "1.2-2" }}</td>
-                <td>₹{{ stock.investedAmount ?? 0 | number: "1.2-2" }}</td>
-                <td>₹{{ stock.currentValue ?? 0 | number: "1.2-2" }}</td>
+                <td *ngIf="isColumnVisible('vwap')">{{ stock.vwap | number: "1.2-2" }}</td>
+                <td *ngIf="isColumnVisible('ema9')">{{ stock.ema9 ?? stock.emA9 ?? 0 | number: "1.2-2" }}</td>
+                <td *ngIf="isColumnVisible('ema21')">{{ stock.ema21 ?? stock.emA21 ?? 0 | number: "1.2-2" }}</td>
+                <td *ngIf="isColumnVisible('rsi')">{{ stock.rsi ?? 0 | number: "1.0-0" }}</td>
+                <td *ngIf="isColumnVisible('volumeMultiplier')">{{ stock.volumeMultiplier | number: "1.1-1" }}×</td>
+                <td *ngIf="isColumnVisible('pullbackDistance')">{{ stock.pullbackDistance | number: "1.1-1" }}%</td>
+                <td *ngIf="isColumnVisible('quantity')">{{ stock.quantity ?? 0 }}</td>
+                <td *ngIf="isColumnVisible('averagePrice')">₹{{ stock.averagePrice ?? 0 | number: "1.2-2" }}</td>
+                <td *ngIf="isColumnVisible('investedAmount')">₹{{ stock.investedAmount ?? 0 | number: "1.2-2" }}</td>
+                <td *ngIf="isColumnVisible('currentValue')">₹{{ stock.currentValue ?? 0 | number: "1.2-2" }}</td>
                 <td
+                  *ngIf="isColumnVisible('profitLoss')"
                   [class.positive]="(stock.profitLoss ?? 0) >= 0"
                   [class.negative]="(stock.profitLoss ?? 0) < 0"
                 >
                   ₹{{ stock.profitLoss ?? 0 | number: "1.2-2" }}
                 </td>
-                <td>
+                <td *ngIf="isColumnVisible('score')">
                   <div
                     class="score-badge"
                     [class.excellent]="stock.score >= 80"
@@ -292,7 +313,7 @@
                     {{ stock.score }}
                   </div>
                 </td>
-                <td>
+                <td *ngIf="isColumnVisible('signal')">
                   <div
                     class="signal-pill"
                     [ngClass]="{
@@ -314,17 +335,17 @@
                     <span class="signal-label">{{ stock.signal }}</span>
                   </div>
                 </td>
-                <td>{{ stock.risk }}</td>
-                <td>₹{{ stock.stopLoss | number: "1.2-2" }}</td>
-                <td>₹{{ stock.targetPrice | number: "1.2-2" }}</td>
-                <td>₹{{ stock.atr ?? 0 | number: "1.2-2" }}</td>
-                <td>₹{{ stock.estimatedGrossProfit ?? 0 | number: "1.2-2" }}</td>
-                <td>₹{{ stock.estimatedCharges ?? 0 | number: "1.2-2" }}</td>
-                <td>₹{{ stock.estimatedNetProfit ?? 0 | number: "1.2-2" }}</td>
-                <td>{{ stock.chargesPercent ?? 0 | number: "1.2-2" }}%</td>
-                <td>{{ stock.chargesAccepted ? "Yes" : "No" }}</td>
-                <td class="reason">{{ stock.chargesReason || "-" }}</td>
-                <td class="reason">{{ stock.reason }}</td>
+                <td *ngIf="isColumnVisible('risk')">{{ stock.risk }}</td>
+                <td *ngIf="isColumnVisible('stopLoss')">₹{{ stock.stopLoss | number: "1.2-2" }}</td>
+                <td *ngIf="isColumnVisible('targetPrice')">₹{{ stock.targetPrice | number: "1.2-2" }}</td>
+                <td *ngIf="isColumnVisible('atr')">₹{{ stock.atr ?? 0 | number: "1.2-2" }}</td>
+                <td *ngIf="isColumnVisible('estimatedGrossProfit')">₹{{ stock.estimatedGrossProfit ?? 0 | number: "1.2-2" }}</td>
+                <td *ngIf="isColumnVisible('estimatedCharges')">₹{{ stock.estimatedCharges ?? 0 | number: "1.2-2" }}</td>
+                <td *ngIf="isColumnVisible('estimatedNetProfit')">₹{{ stock.estimatedNetProfit ?? 0 | number: "1.2-2" }}</td>
+                <td *ngIf="isColumnVisible('chargesPercent')">{{ stock.chargesPercent ?? 0 | number: "1.2-2" }}%</td>
+                <td *ngIf="isColumnVisible('chargesAccepted')">{{ stock.chargesAccepted ? "Yes" : "No" }}</td>
+                <td class="reason" *ngIf="isColumnVisible('chargesReason')">{{ stock.chargesReason || "-" }}</td>
+                <td class="reason" *ngIf="isColumnVisible('reason')">{{ stock.reason }}</td>
               </tr>
             </tbody>
           </table>

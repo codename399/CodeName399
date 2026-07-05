@@ -51,6 +51,8 @@ export interface TradingConfiguration {
 
   maxCandidates: number;
 
+  visibleColumns?: string[];
+
   lastDailySummarySent?: string | null;
 
   validateChargesBeforeTrade?: boolean;
