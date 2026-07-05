@@ -1,5 +1,6 @@
-import { inject, Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
+import { Subject } from 'rxjs';
 import { API_CONSTANTS } from '../../../../injectors/common-injector';
 
 @Injectable({
@@ -7,24 +8,53 @@ import { API_CONSTANTS } from '../../../../injectors/common-injector';
 })
 export class MarketService {
   #apiConstants = inject(API_CONSTANTS);
-  private hub!: signalR.HubConnection;
 
-  gainers: any[] = [];
+  private hub?: signalR.HubConnection;
+  private isStarting = false;
 
-  async startConnection(callback: (data: any[]) => void) {
-    if (this.hub?.state === signalR.HubConnectionState.Connected) return;
+  private gainersSubject = new Subject<any[]>();
+  gainers$ = this.gainersSubject.asObservable();
 
-    this.hub = new signalR.HubConnectionBuilder()
-      .withUrl(this.#apiConstants.getUrl(this.#apiConstants.marketHub, false))
-      .withAutomaticReconnect()
-      .build();
+  async startConnection(): Promise<void> {
+    if (this.hub?.state === signalR.HubConnectionState.Connected) {
+      return;
+    }
 
-    this.hub.on('GainersUpdated', (data) => {
-      callback(data);
-    });
+    if (this.isStarting) {
+      return;
+    }
 
-    await this.hub.start();
+    this.isStarting = true;
 
-    console.log('SignalR Connected');
+    try {
+      if (!this.hub) {
+        this.hub = new signalR.HubConnectionBuilder()
+          .withUrl(
+            this.#apiConstants.getUrl(
+              this.#apiConstants.marketHub,
+              false
+            )
+          )
+          .withAutomaticReconnect()
+          .build();
+
+        this.hub.on('GainersUpdated', (data: any[]) => {
+          this.gainersSubject.next(data);
+        });
+      }
+
+      await this.hub.start();
+      console.log('SignalR Connected');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      this.isStarting = false;
+    }
+  }
+
+  async stopConnection(): Promise<void> {
+    if (this.hub) {
+      await this.hub.stop();
+    }
   }
 }

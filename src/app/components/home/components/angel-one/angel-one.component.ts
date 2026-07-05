@@ -16,6 +16,7 @@ import { MarketService } from '../../services/market.service';
 import { Gainer } from '../../models/gainer';
 import { TradingConfiguration } from '../../models/trading-configuration';
 import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-angel-one',
@@ -74,6 +75,7 @@ export class AngelOneComponent implements OnInit, OnDestroy {
   showLogs = signal(false);
 
   private timerId: any;
+  private subscription?: Subscription;
 
   // ======================================================
   // Computed
@@ -136,6 +138,8 @@ export class AngelOneComponent implements OnInit, OnDestroy {
     if (this.timerId) {
       clearInterval(this.timerId);
     }
+
+    this.subscription?.unsubscribe();
   }
 
   // ======================================================
@@ -254,9 +258,11 @@ export class AngelOneComponent implements OnInit, OnDestroy {
   // SignalR
   // ======================================================
 
-  private subscribeToGainers(): void {
-    this.#market.startConnection((gainers) => {
-      this.gainers.set(gainers);
+  private async subscribeToGainers(): Promise<void> {
+    await this.#market.startConnection();
+
+    this.subscription = this.#market.gainers$.subscribe((data: Gainer[]) => {
+      this.gainers.set(data);
     });
   }
 
@@ -449,5 +455,4 @@ export class AngelOneComponent implements OnInit, OnDestroy {
 
     return parts.join(' ');
   }
-
 }
