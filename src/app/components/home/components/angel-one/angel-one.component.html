@@ -30,9 +30,7 @@
             [title]="showSummary() ? 'Hide Summary' : 'Show Summary'"
             [attr.aria-label]="showSummary() ? 'Hide Summary' : 'Show Summary'"
           >
-            <span class="material-icons">{{
-              showSummary() ? "visibility_off" : "visibility"
-            }}</span>
+            {{ showSummary() ? "Hide Summary" : "Show Summary" }}
           </button>
 
           <button
@@ -42,7 +40,7 @@
             [title]="showMarket() ? 'Hide Market' : 'Show Market'"
             [attr.aria-label]="showMarket() ? 'Hide Market' : 'Show Market'"
           >
-            <span class="material-icons">show_chart</span>
+            {{ showMarket() ? "Hide Market" : "Show Market" }}
           </button>
 
           <button
@@ -52,7 +50,7 @@
             title="Settings"
             aria-label="Settings"
           >
-            <span class="material-icons">settings</span>
+            Settings
           </button>
 
           <button
@@ -62,17 +60,8 @@
             title="Refresh"
             aria-label="Refresh"
           >
-            <span class="material-icons">refresh</span>
+            Refresh
           </button>
-        </div>
-
-        <div class="search-box" *ngIf="filteredGainers().length > 0">
-          <input
-            type="text"
-            placeholder="Search symbol"
-            [value]="searchText()"
-            (input)="searchText.set($any($event.target).value)"
-          />
         </div>
       </div>
     </aside>
@@ -199,6 +188,15 @@
           </div>
         </div>
       </section>
+
+      <div class="search-box" *ngIf="filteredGainers().length > 0">
+        <input
+          type="text"
+          placeholder="Search symbol"
+          [value]="searchText()"
+          (input)="searchText.set($any($event.target).value)"
+        />
+      </div>
 
       <section class="table-shell">
         <div class="table-header">
