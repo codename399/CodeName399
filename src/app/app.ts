@@ -16,7 +16,7 @@ declare const bootstrap: any; //
   styleUrl: './app.css',
 })
 export class App {
-  protected readonly title = signal('AllCodeName399Apps');
+  protected readonly title = signal('CodeName399');
 
   toastEl: any;
 

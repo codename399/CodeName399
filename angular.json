@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "AllCodeName399Apps": {
+    "CodeName399": {
       "projectType": "application",
       "schematics": {},
       "root": "",
@@ -13,7 +13,7 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
-            "outputPath": "dist/AllCodeName399Apps",
+            "outputPath": "dist/CodeName399",
             "baseHref": "/",
             "browser": "src/main.ts",
             "polyfills": [
@@ -71,10 +71,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "AllCodeName399Apps:build:production"
+              "buildTarget": "CodeName399:build:production"
             },
             "development": {
-              "buildTarget": "AllCodeName399Apps:build:development"
+              "buildTarget": "CodeName399:build:development"
             }
           },
           "defaultConfiguration": "development"
