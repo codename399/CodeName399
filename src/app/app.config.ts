@@ -19,6 +19,7 @@ import { ConfigService } from './services/app-config-service';
 import { ApiConstants } from '../api-constants';
 import { environment } from '../assets/environments/environment';
 import { refreshTokenInterceptor } from '../interceptor/refresh-interceptor';
+import { provideServiceWorker } from '@angular/service-worker';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -55,6 +56,9 @@ export const appConfig: ApplicationConfig = {
     {
       provide: API_CONSTANTS,
       useClass: ApiConstants
-    }
+    }, provideServiceWorker('ngsw-worker.js', {
+            enabled: !isDevMode(),
+            registrationStrategy: 'registerWhenStable:30000'
+          })
   ],
 };
