@@ -83,6 +83,8 @@ export interface Gainer {
   chargesPercent?: number;
   chargesAccepted?: boolean;
   chargesReason?: string;
+  upperCircuitLimit?: number;
+  lowerCircuitLimit?: number;
 
   // ---------- Metadata ----------
 
