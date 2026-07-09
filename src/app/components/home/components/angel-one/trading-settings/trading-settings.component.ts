@@ -86,10 +86,6 @@ export class TradingSettingsComponent implements OnInit {
 
     maxCandidates: [100, Validators.required],
 
-    minimumNetProfit: [150, Validators.required],
-
-    maximumChargesPercent: [35, Validators.required],
-
     maximumChargesPerTrade: [100, Validators.required],
 
     buyTradingInterval: [5, Validators.required],
