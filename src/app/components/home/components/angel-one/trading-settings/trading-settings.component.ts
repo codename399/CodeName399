@@ -330,7 +330,7 @@ export class TradingSettingsComponent implements OnInit {
       maximumChargesPerTrade: Number(value.maximumChargesPerTrade ?? 100),
       lastDailySummarySent: null,
       buyTradingInterval: Number(value.buyTradingInterval ?? 5),
-      sellTradingInterval: Number(value.maxCandidates ?? 1000),
+      sellTradingInterval: Number(value.sellTradingInterval ?? 1000),
     };
 
     this.#angel
