@@ -111,10 +111,15 @@
 
           <div class="card-body grid-2">
             <div class="field-row">
-              <label class="field-label" for="scanIntervalSeconds">Scan Interval (Seconds)</label>
-              <input id="scanIntervalSeconds" type="number" formControlName="scanIntervalSeconds" class="field-input" />
+              <label class="field-label" for="buyTradingInterval">Buy Trading Interval (Seconds)</label>
+              <input id="buyTradingInterval" type="number" formControlName="buyTradingInterval" class="field-input" />
             </div>
 
+            <div class="field-row">
+              <label class="field-label" for="sellTradingInterval">Sell Trading Interval (Milliseconds)</label>
+              <input id="sellTradingInterval" type="number" formControlName="sellTradingInterval" class="field-input" />
+            </div>
+            
             <div class="field-row">
               <label class="field-label" for="cooldownMinutes">Cooldown (Minutes)</label>
               <input id="cooldownMinutes" type="number" formControlName="cooldownMinutes" class="field-input" />
@@ -144,45 +149,6 @@
               <label class="field-label" for="minVolume">Min Volume</label>
               <input id="minVolume" type="number" formControlName="minVolume" class="field-input" />
             </div>
-
-            <div class="field-row">
-              <label class="field-label" for="minChangePercent">Min Change %</label>
-              <div class="input-with-suffix">
-                <input id="minChangePercent" type="number" formControlName="minChangePercent" class="field-input" />
-                <span class="suffix">%</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section class="settings-card">
-          <div class="card-header">
-            <div>
-              <h2>Stop Loss & Target</h2>
-              <p>Risk protection</p>
-            </div>
-          </div>
-
-          <div class="card-body grid-2">
-            <label class="toggle-field">
-              <input type="checkbox" formControlName="enableTrailingStop" />
-              <span>Enable Trailing Stop</span>
-            </label>
-
-            <div class="field-row">
-              <label class="field-label" for="trailingStopPercentage">Trailing Stop %</label>
-              <input id="trailingStopPercentage" type="number" formControlName="trailingStopPercentage" class="field-input" />
-            </div>
-
-            <div class="field-row">
-              <label class="field-label" for="stopLossMultiplier">Stop Loss Multiplier</label>
-              <input id="stopLossMultiplier" type="number" formControlName="stopLossMultiplier" class="field-input" />
-            </div>
-
-            <div class="field-row">
-              <label class="field-label" for="targetMultiplier">Target Multiplier</label>
-              <input id="targetMultiplier" type="number" formControlName="targetMultiplier" class="field-input" />
-            </div>
           </div>
         </section>
 
@@ -204,11 +170,6 @@
               <label class="field-label" for="marketCloseTime">Market Close</label>
               <input id="marketCloseTime" type="time" formControlName="marketCloseTime" class="field-input" />
             </div>
-
-            <label class="toggle-field full-width">
-              <input type="checkbox" formControlName="autoSquareOff" />
-              <span>Auto Square Off</span>
-            </label>
           </div>
         </section>
 
@@ -237,11 +198,6 @@
           </div>
 
           <div class="card-body grid-2">
-            <label class="toggle-field full-width">
-              <input type="checkbox" formControlName="validateChargesBeforeTrade" />
-              <span>Validate Charges Before Trade</span>
-            </label>
-
             <div class="field-row">
               <label class="field-label" for="minimumNetProfit">Minimum Net Profit</label>
               <div class="input-with-suffix">
@@ -265,11 +221,6 @@
                 <input id="maximumChargesPerTrade" type="number" formControlName="maximumChargesPerTrade" class="field-input" />
               </div>
             </div>
-
-            <label class="toggle-field full-width">
-              <input type="checkbox" formControlName="autoIncreaseTarget" />
-              <span>Auto Increase Target</span>
-            </label>
           </div>
         </section>
       </div>

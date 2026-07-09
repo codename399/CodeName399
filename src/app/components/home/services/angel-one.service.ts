@@ -173,8 +173,4 @@ export class AngelOneService {
   get maxDailyTrades(): number {
     return this.configuration()?.maxDailyTrades ?? 0;
   }
-
-  get scanIntervalSeconds(): number {
-    return this.configuration()?.scanIntervalSeconds ?? 0;
-  }
 }

@@ -70,19 +70,7 @@ export class TradingSettingsComponent implements OnInit {
 
     cooldownMinutes: [10, Validators.required],
 
-    scanIntervalSeconds: [5, Validators.required],
-
     ignoreMarketHours: [false],
-
-    enableTrailingStop: [true],
-
-    trailingStopPercentage: [1, Validators.required],
-
-    stopLossMultiplier: [1, Validators.required],
-
-    targetMultiplier: [2, Validators.required],
-
-    autoSquareOff: [true],
 
     marketOpenTime: ['09:15', Validators.required],
 
@@ -96,11 +84,7 @@ export class TradingSettingsComponent implements OnInit {
 
     minVolume: [500000, Validators.required],
 
-    minChangePercent: [1, Validators.required],
-
     maxCandidates: [100, Validators.required],
-
-    validateChargesBeforeTrade: [true],
 
     minimumNetProfit: [150, Validators.required],
 
@@ -108,7 +92,9 @@ export class TradingSettingsComponent implements OnInit {
 
     maximumChargesPerTrade: [100, Validators.required],
 
-    autoIncreaseTarget: [true],
+    buyTradingInterval: [5, Validators.required],
+
+    sellTradingInterval: [1000, Validators.required],
   });
 
   enableAutoTradingFormControl = this.form?.controls?.enableAutoTrading;
@@ -194,19 +180,7 @@ export class TradingSettingsComponent implements OnInit {
 
         cooldownMinutes: configuration.cooldownMinutes,
 
-        scanIntervalSeconds: configuration.scanIntervalSeconds,
-
         ignoreMarketHours: configuration.ignoreMarketHours,
-
-        enableTrailingStop: configuration.enableTrailingStop,
-
-        trailingStopPercentage: configuration.trailingStopPercentage,
-
-        stopLossMultiplier: configuration.stopLossMultiplier,
-
-        targetMultiplier: configuration.targetMultiplier,
-
-        autoSquareOff: configuration.autoSquareOff,
 
         marketOpenTime: this.toTimeInput(configuration.marketOpenTime),
 
@@ -220,19 +194,11 @@ export class TradingSettingsComponent implements OnInit {
 
         minVolume: configuration.minVolume,
 
-        minChangePercent: configuration.minChangePercent,
-
         maxCandidates: configuration.maxCandidates,
 
-        validateChargesBeforeTrade: configuration.validateChargesBeforeTrade ?? true,
+        buyTradingInterval: configuration.buyTradingInterval,
 
-        minimumNetProfit: configuration.minimumNetProfit ?? 150,
-
-        maximumChargesPercent: configuration.maximumChargesPercent ?? 35,
-
-        maximumChargesPerTrade: configuration.maximumChargesPerTrade ?? 100,
-
-        autoIncreaseTarget: configuration.autoIncreaseTarget ?? true,
+        sellTradingInterval: configuration.sellTradingInterval,
       },
       {
         emitEvent: false,
@@ -252,7 +218,9 @@ export class TradingSettingsComponent implements OnInit {
     return value.substring(0, 5);
   }
 
-  private normalizeStrategy(value: TradingStrategy | string | number): TradingStrategy {
+  private normalizeStrategy(
+    value: TradingStrategy | string | number,
+  ): TradingStrategy {
     if (typeof value === 'string') {
       const numeric = Number(value);
 
@@ -341,19 +309,7 @@ export class TradingSettingsComponent implements OnInit {
 
       cooldownMinutes: Number(value.cooldownMinutes),
 
-      scanIntervalSeconds: Number(value.scanIntervalSeconds),
-
       ignoreMarketHours: value.ignoreMarketHours ?? false,
-
-      enableTrailingStop: value.enableTrailingStop ?? false,
-
-      trailingStopPercentage: Number(value.trailingStopPercentage),
-
-      stopLossMultiplier: Number(value.stopLossMultiplier),
-
-      targetMultiplier: Number(value.targetMultiplier),
-
-      autoSquareOff: value.autoSquareOff ?? false,
 
       marketOpenTime: this.toTimeSpan(value.marketOpenTime),
 
@@ -367,21 +323,14 @@ export class TradingSettingsComponent implements OnInit {
 
       minVolume: Number(value.minVolume ?? 500000),
 
-      minChangePercent: Number(value.minChangePercent ?? 1),
-
       maxCandidates: Number(value.maxCandidates ?? 100),
 
       visibleColumns: this.#angel.configuration()?.visibleColumns ?? [],
 
-      validateChargesBeforeTrade: value.validateChargesBeforeTrade ?? true,
-
-      minimumNetProfit: Number(value.minimumNetProfit ?? 150),
-
-      maximumChargesPercent: Number(value.maximumChargesPercent ?? 35),
-
       maximumChargesPerTrade: Number(value.maximumChargesPerTrade ?? 100),
-
-      autoIncreaseTarget: value.autoIncreaseTarget ?? true,
+      lastDailySummarySent: null,
+      buyTradingInterval: Number(value.buyTradingInterval ?? 5),
+      sellTradingInterval: Number(value.maxCandidates ?? 1000),
     };
 
     this.#angel

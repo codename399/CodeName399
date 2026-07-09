@@ -21,25 +21,13 @@ export interface TradingConfiguration {
 
   cooldownMinutes: number;
 
-  scanIntervalSeconds: number;
-
   ignoreMarketHours: boolean;
 
-  enableTrailingStop: boolean;
+  marketOpenTime: string; // "09:15:00"
 
-  trailingStopPercentage: number;
+  marketCloseTime: string; // "15:00:00"
 
-  stopLossMultiplier: number;
-
-  targetMultiplier: number;
-
-  autoSquareOff: boolean;
-
-  marketOpenTime: string;
-
-  marketCloseTime: string;
-
-  excludedSymbols?: string[];
+  excludedSymbols: string[];
 
   watchListRefreshMinutes: number;
 
@@ -47,21 +35,15 @@ export interface TradingConfiguration {
 
   minVolume: number;
 
-  minChangePercent: number;
-
   maxCandidates: number;
 
+  lastDailySummarySent: string | null; // e.g. "2026-07-09"
+
+  maximumChargesPerTrade: number;
+
+  buyTradingInterval: number;
+
+  sellTradingInterval: number;
+
   visibleColumns?: string[];
-
-  lastDailySummarySent?: string | null;
-
-  validateChargesBeforeTrade?: boolean;
-
-  minimumNetProfit?: number;
-
-  maximumChargesPercent?: number;
-
-  maximumChargesPerTrade?: number;
-
-  autoIncreaseTarget?: boolean;
 }
