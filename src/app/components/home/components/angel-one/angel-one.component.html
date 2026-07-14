@@ -280,6 +280,7 @@
                 <th *ngIf="isColumnVisible('chargesAccepted')">Charges OK</th>
                 <th *ngIf="isColumnVisible('chargesReason')">Charge Reason</th>
                 <th *ngIf="isColumnVisible('reason')">Reason</th>
+                <th *ngIf="isColumnVisible('suggestion')">Suggestion</th>
                 <th *ngIf="isColumnVisible('upperCircuitLimit')">
                   Upper Circuit Limit
                 </th>
@@ -416,6 +417,9 @@
                 </td>
                 <td class="reason" *ngIf="isColumnVisible('reason')">
                   {{ stock.reason }}
+                </td>
+                <td class="reason" *ngIf="isColumnVisible('reason')">
+                  {{ stock.suggestion }}
                 </td>
                 <td *ngIf="isColumnVisible('upperCircuitLimit')">
                   ₹{{ stock.upperCircuitLimit | number: "1.2-2" }}

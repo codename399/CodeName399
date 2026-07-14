@@ -73,6 +73,7 @@ export interface Gainer {
   // ---------- Explanation ----------
 
   reason: string;
+  suggestion: string;
 
   // ---------- Additional Metrics ----------
 

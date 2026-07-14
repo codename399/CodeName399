@@ -105,6 +105,7 @@ export class AngelOneComponent implements OnInit, OnDestroy {
     { key: 'chargesAccepted', label: 'Charges OK', defaultVisible: false },
     { key: 'chargesReason', label: 'Charge Reason', defaultVisible: false },
     { key: 'reason', label: 'Reason', defaultVisible: true },
+    { key: 'suggestion', label: 'Suggestion', defaultVisible: true },
     { key: 'upperCircuitLimit', label: 'Upper Circuit Limit', defaultVisible: false },
     { key: 'lowerCircuitLimit', label: 'Lower Circuit Limit', defaultVisible: false },
   ];
