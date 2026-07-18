@@ -118,56 +118,13 @@ export class ApiConstants {
 
   // ---------------- Trading ----------------
 
-  readonly generateSession =
-    '/generateSession';
-
-  readonly gainers =
-    '/gainers';
-
-  readonly losers =
-    '/losers';
-
   readonly marketHub =
     '/marketHub';
-
-  // ---------------- Angel One ----------------
-
-  readonly loginToAngelOne =
-    '/login-to-angel';
-
-  readonly refreshAngelToken =
-    '/refresh-angel-token';
-
-  readonly getAvailableCash =
-    '/get-available-cash';
-
-  readonly ownedHoldings =
-    '/owned-holdings';
 
   // ---------------- Dashboard ----------------
 
   readonly dashboardSummary =
     '/dashboard';
-
-  readonly getTradingState =
-    '/trading-state';
-
-  // ---------------- Auto Trading ----------------
-
-  readonly enableAutoTrading =
-    '/enable-auto-trading';
-
-  readonly disableAutoTrading =
-    '/disable-auto-trading';
-
-  readonly updateStrategy =
-    '/update-strategy';
-
-  readonly togglePaperTrading =
-    '/toggle-paper-trading';
-
-  readonly resetTradingState =
-    '/reset-trading-state';
 
   // ---------------- Trading Configuration ----------------
 
