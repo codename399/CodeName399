@@ -13,82 +13,50 @@ export interface MarketQuoteData {
 }
 
 export interface Gainer {
-  // ---------- Instrument ----------
+    symbol: string;
+    symbolToken: string;
 
-  symbol: string;
-  symbolToken?: string;
+    currentPrice: number;
+    previousClose: number;
+    changePercent: number;
 
-  companyName?: string;
-  exchange?: string;
-  token?: string;
+    ema9: number;
+    ema21: number;
+    rsi: number;
+    vwap: number;
+    atr: number;
 
-  // ---------- Price ----------
+    volumeMultiplier: number;
+    pullbackDistance: number;
 
-  currentPrice: number;
-  previousClose: number;
+    score: number;
 
-  open?: number;
-  high?: number;
-  low?: number;
-  volume?: number;
+    signal: string;
+    risk: string;
+    reason: string;
 
-  // ---------- Performance ----------
+    stopLoss: number;
+    targetPrice: number;
 
-  change?: number;
-  changePercent: number;
+    isOwned: boolean;
 
-  // ---------- Indicators ----------
+    quantity: number;
+    averagePrice: number;
 
-  vwap: number;
-  ema9?: number;
-  emA9?: number;
-  ema21?: number;
-  emA21?: number;
-  rsi?: number;
+    investedAmount: number;
+    currentValue: number;
 
-  volumeMultiplier: number;
-  pullbackDistance: number;
+    profitLoss: number;
+    profitLossPercentage: number;
 
-  // ---------- Portfolio ----------
+    upperCircuitLimit: number;
+    lowerCircuitLimit: number;
 
-  isOwned: boolean;
-  quantity?: number;
-  averagePrice?: number;
-  investedAmount?: number;
-  currentValue?: number;
-  profitLoss?: number;
-  profitLossPercentage?: number;
+    suggestion: string;
 
-  // ---------- Trading ----------
+    setupTime?: string | null;
+    setupPrice: number;
+    setupConfirmed: boolean;
 
-  signal: 'BUY' | 'SELL' | 'HOLD' | 'SETUP' | string;
-  risk: 'LOW' | 'MEDIUM' | 'HIGH' | string;
-  score: number;
-
-  // ---------- Trade Levels ----------
-
-  stopLoss: number;
-  targetPrice: number;
-
-  // ---------- Explanation ----------
-
-  reason: string;
-  suggestion: string;
-
-  // ---------- Additional Metrics ----------
-
-  atr?: number;
-  estimatedGrossProfit?: number;
-  estimatedCharges?: number;
-  estimatedNetProfit?: number;
-  chargesPercent?: number;
-  chargesAccepted?: boolean;
-  chargesReason?: string;
-  upperCircuitLimit?: number;
-  lowerCircuitLimit?: number;
-
-  // ---------- Metadata ----------
-
-  quote?: MarketQuoteData;
-  updatedAt?: string;
+    quote: MarketQuoteData;
 }
