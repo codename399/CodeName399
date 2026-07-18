@@ -3,11 +3,9 @@ import { Injectable, inject, signal } from '@angular/core';
 
 import { tap } from 'rxjs';
 
-import { Constants } from '../../../../constants';
 
 import { API_CONSTANTS } from '../../../../injectors/common-injector';
 
-import { AngelOneLoginData } from '../models/angel-one-login-response';
 
 import { DashboardSummary } from '../models/dashboard-summary';
 
@@ -94,68 +92,6 @@ export class AngelOneService {
           this.configuration.set(configuration);
         }),
       );
-  }
-
-  // ======================================================
-  // Market Scanner
-  // ======================================================
-
-  getTopGainers() {
-    return this.#http
-
-      .get<Gainer[]>(
-        this.#api.getUrl(
-          this.#api.gainers,
-
-          true,
-        ),
-      )
-
-      .pipe(
-        tap((gainers) => {
-          this.gainers.set(gainers);
-        }),
-      );
-  }
-
-  // ======================================================
-  // Wallet
-  // ======================================================
-
-  getAvailableCash() {
-    return this.#http.get<number>(
-      this.#api.getUrl(
-        this.#api.getAvailableCash,
-
-        true,
-      ),
-    );
-  }
-
-  // ======================================================
-  // Holdings
-  // ======================================================
-
-  getOwnedHoldings() {
-    return this.#http.get<string[]>(
-      this.#api.getUrl(
-        this.#api.ownedHoldings,
-
-        true,
-      ),
-    );
-  }
-
-  // ======================================================
-  // Helpers
-  // ======================================================
-
-  reloadConfiguration() {
-    return this.getTradingConfiguration();
-  }
-
-  reloadDashboard() {
-    return this.getDashboardSummary();
   }
 
   get isAutoTradingEnabled(): boolean {
