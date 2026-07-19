@@ -20,8 +20,8 @@ export interface Gainer {
     previousClose: number;
     changePercent: number;
 
-    ema9: number;
-    ema21: number;
+    emA9: number;
+    emA21: number;
     rsi: number;
     vwap: number;
     atr: number;
