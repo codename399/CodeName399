@@ -105,6 +105,8 @@
               <tr>
                 <th *ngIf="isColumnVisible('star')">⭐</th>
                 <th *ngIf="isColumnVisible('symbol')">Symbol</th>
+                <th *ngIf="isColumnVisible('stopLoss')">SL</th>
+                <th *ngIf="isColumnVisible('targetPrice')">Target</th>
                 <th *ngIf="isColumnVisible('token')">Token</th>
                 <th *ngIf="isColumnVisible('prevClose')">Prev Close</th>
                 <th *ngIf="isColumnVisible('vwap')">VWAP</th>
@@ -193,6 +195,14 @@
                       </span>
                     </div>
                   </div>
+                </td>
+
+                <td *ngIf="isColumnVisible('stopLoss')">
+                  ₹{{ stock.stopLoss | number: "1.2-2" }}
+                </td>
+
+                <td *ngIf="isColumnVisible('targetPrice')">
+                  ₹{{ stock.targetPrice | number: "1.2-2" }}
                 </td>
 
                 <td *ngIf="isColumnVisible('token')">
