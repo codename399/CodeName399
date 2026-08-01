@@ -107,6 +107,38 @@ export class TradingSettingsComponent implements OnInit {
     buyTradingInterval: [5, Validators.required],
 
     sellTradingInterval: [1000, Validators.required],
+
+    enableEMA9: [true],
+
+    enableEMA21: [true],
+
+    enableEMA50: [true],
+
+    enableEMA200: [true],
+
+    enableATR: [true],
+
+    enableRSI: [true],
+
+    enableVWAP: [true],
+
+    enableADX: [true],
+
+    enableRelativeVolume: [true],
+
+    enableEMASlope: [true],
+
+    enableDistanceFromEMA: [true],
+
+    enableChoppiness: [true],
+
+    enableSuperTrend: [true],
+
+    enableAnchoredVWAP: [true],
+
+    enableMACD: [true],
+
+    enableBollinger: [true],
   });
 
   enableAutoTradingFormControl = this.form?.controls?.enableAutoTrading;
@@ -227,6 +259,38 @@ export class TradingSettingsComponent implements OnInit {
         buyTradingInterval: configuration.buyTradingInterval,
 
         sellTradingInterval: configuration.sellTradingInterval,
+
+        enableEMA9: configuration.enableEMA9,
+
+        enableEMA21: configuration.enableEMA21,
+
+        enableEMA50: configuration.enableEMA50,
+
+        enableEMA200: configuration.enableEMA200,
+
+        enableATR: configuration.enableATR,
+
+        enableRSI: configuration.enableRSI,
+
+        enableVWAP: configuration.enableVWAP,
+
+        enableADX: configuration.enableADX,
+
+        enableRelativeVolume: configuration.enableRelativeVolume,
+
+        enableEMASlope: configuration.enableEMASlope,
+
+        enableDistanceFromEMA: configuration.enableDistanceFromEMA,
+
+        enableChoppiness: configuration.enableChoppiness,
+
+        enableSuperTrend: configuration.enableSuperTrend,
+
+        enableAnchoredVWAP: configuration.enableAnchoredVWAP,
+
+        enableMACD: configuration.enableMACD,
+
+        enableBollinger: configuration.enableBollinger,
       },
       {
         emitEvent: false,
@@ -375,6 +439,22 @@ export class TradingSettingsComponent implements OnInit {
       lastDailySummarySent: null,
       buyTradingInterval: Number(value.buyTradingInterval ?? 5),
       sellTradingInterval: Number(value.sellTradingInterval ?? 1000),
+      enableEMA9: value.enableEMA9 ?? true,
+      enableEMA21: value.enableEMA21 ?? true,
+      enableEMA50: value.enableEMA50 ?? true,
+      enableEMA200: value.enableEMA200 ?? true,
+      enableATR: value.enableATR ?? true,
+      enableRSI: value.enableRSI ?? true,
+      enableVWAP: value.enableVWAP ?? true,
+      enableADX: value.enableADX ?? true,
+      enableRelativeVolume: value.enableRelativeVolume ?? true,
+      enableEMASlope: value.enableEMASlope ?? true,
+      enableDistanceFromEMA: value.enableDistanceFromEMA ?? true,
+      enableChoppiness: value.enableChoppiness ?? true,
+      enableSuperTrend: value.enableSuperTrend ?? true,
+      enableAnchoredVWAP: value.enableAnchoredVWAP ?? true,
+      enableMACD: value.enableMACD ?? true,
+      enableBollinger: value.enableBollinger ?? true,
     };
 
     this.#angel
