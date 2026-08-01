@@ -13,50 +13,110 @@ export interface MarketQuoteData {
 }
 
 export interface Gainer {
-    symbol: string;
-    symbolToken: string;
+  symbol: string;
+  symbolToken: string;
 
-    currentPrice: number;
-    previousClose: number;
-    changePercent: number;
+  currentPrice: number;
+  previousClose: number;
+  changePercent: number;
 
-    emA9: number;
-    emA21: number;
-    rsi: number;
-    vwap: number;
-    atr: number;
+  // =========================
+  // Trend
+  // =========================
 
-    volumeMultiplier: number;
-    pullbackDistance: number;
+  emA9: number;
+  emA21: number;
+  emA50: number;
+  emA200: number;
+  atr: number;
+  rsi: number;
+  vwap: number;
+  anchoredVWAP: number;
 
-    score: number;
+  // =========================
+  // Advanced Indicators
+  // =========================
 
-    signal: string;
-    risk: string;
-    reason: string;
+  adx: number;
+  plusDI: number;
+  minusDI: number;
+  superTrend: number;
+  superTrendBullish: boolean;
+  choppiness: number;
+  relativeVolume: number;
+  volumeMultiplier: number;
+  emaSlope9: number;
+  emaSlope21: number;
 
-    stopLoss: number;
-    targetPrice: number;
+  // =========================
+  // Price Action
+  // =========================
 
-    isOwned: boolean;
+  pullbackDistance: number;
+  distanceFromEMA: number;
+  distanceFromVWAP: number;
+  distanceFromAnchoredVWAP: number;
+  priceAboveEMA9: boolean;
+  priceAboveVWAP: boolean;
+  aboveAnchoredVWAP: boolean;
+  ema9Bounce: boolean;
+  vwapBounce: boolean;
+  anchoredVWAPBounce: boolean;
+  higherHigh: boolean;
+  higherLow: boolean;
+  lastCandleBullish: boolean;
+  increasingMomentum: boolean;
+  isExhaustedMove: boolean;
 
-    quantity: number;
-    averagePrice: number;
+  // =========================
+  // Evaluation
+  // =========================
 
-    investedAmount: number;
-    currentValue: number;
+  score: number;
+  signal: string;
+  risk: string;
+  reason: string;
+  suggestion: string;
 
-    profitLoss: number;
-    profitLossPercentage: number;
+  // =========================
+  // Trade Levels
+  // =========================
 
-    upperCircuitLimit: number;
-    lowerCircuitLimit: number;
+  stopLoss: number;
+  targetPrice: number;
 
-    suggestion: string;
+  // =========================
+  // Position
+  // =========================
 
-    setupTime?: string | null;
-    setupPrice: number;
-    setupConfirmed: boolean;
+  isOwned: boolean;
+  quantity: number;
+  averagePrice: number;
+  investedAmount: number;
+  currentValue: number;
+  profitLoss: number;
+  profitLossPercentage: number;
 
-    quote: MarketQuoteData;
+  // =========================
+  // Market
+  // =========================
+
+  upperCircuitLimit: number;
+  lowerCircuitLimit: number;
+  quote: MarketQuoteData;
+
+  macd: number;
+  macdSignal: number;
+  macdHistogram: number;
+
+  bollingerUpper: number;
+  bollingerMiddle: number;
+  bollingerLower: number;
+  bollingerBandwidth: number;
+  bollingerSqueeze: boolean;
+  bollingerExpansion: boolean;
+
+  setupTime?: string | null;
+  setupPrice: number;
+  setupConfirmed: boolean;
 }

@@ -84,9 +84,21 @@ export class AngelOneComponent implements OnInit, OnDestroy {
     { key: 'vwap', label: 'VWAP', defaultVisible: false },
     { key: 'ema9', label: 'EMA9', defaultVisible: false },
     { key: 'ema21', label: 'EMA21', defaultVisible: false },
+    { key: 'ema50', label: 'EMA50', defaultVisible: false },
+    { key: 'ema200', label: 'EMA200', defaultVisible: false },
+    { key: 'anchoredVWAP', label: 'Anchored VWAP', defaultVisible: false },
+    { key: 'adx', label: 'ADX', defaultVisible: false },
+    { key: 'superTrend', label: 'SuperTrend', defaultVisible: false },
+    { key: 'superTrendBullish', label: 'ST Bullish', defaultVisible: false },
     { key: 'rsi', label: 'RSI', defaultVisible: false },
     { key: 'volumeMultiplier', label: 'Vol×', defaultVisible: false },
     { key: 'pullbackDistance', label: 'PB%', defaultVisible: false },
+    { key: 'distanceFromEMA', label: 'Dist EMA%', defaultVisible: false },
+    { key: 'distanceFromVWAP', label: 'Dist VWAP%', defaultVisible: false },
+    { key: 'macd', label: 'MACD', defaultVisible: false },
+    { key: 'macdSignal', label: 'MACD Sig', defaultVisible: false },
+    { key: 'macdHistogram', label: 'MACD Hist', defaultVisible: false },
+    { key: 'bollingerBandwidth', label: 'Boll Bandwidth', defaultVisible: false },
     { key: 'quantity', label: 'Qty', defaultVisible: false },
     { key: 'averagePrice', label: 'Avg', defaultVisible: false },
     { key: 'investedAmount', label: 'Invested', defaultVisible: false },
@@ -357,6 +369,7 @@ export class AngelOneComponent implements OnInit, OnDestroy {
     await this.#market.startConnection();
 
     this.subscription = this.#market.gainers$.subscribe((data: Gainer[]) => {
+      debugger;
       this.gainers.set(data);
     });
   }

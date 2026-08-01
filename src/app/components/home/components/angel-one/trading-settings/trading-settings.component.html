@@ -50,6 +50,19 @@
               <span>Ignore Market Hours</span>
             </label>
 
+            <label class="toggle-field">
+              <input type="checkbox" formControlName="autoSquareOff" />
+              <span>Auto Square Off</span>
+            </label>
+
+            <div class="field-row">
+              <label class="field-label" for="paperTradingBalance">Paper Trading Balance</label>
+              <div class="input-with-suffix">
+                <span class="prefix">₹</span>
+                <input id="paperTradingBalance" type="number" formControlName="paperTradingBalance" class="field-input" />
+              </div>
+            </div>
+
             <div class="field-row">
               <label class="field-label" for="strategy">Strategy</label>
               <select id="strategy" formControlName="strategy" class="field-input">
@@ -97,6 +110,59 @@
             <div class="field-row">
               <label class="field-label" for="maxDailyTrades">Max Daily Trades</label>
               <input id="maxDailyTrades" type="number" formControlName="maxDailyTrades" class="field-input" />
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-card">
+          <div class="card-header">
+            <div>
+              <h2>Virtual Trading</h2>
+              <p>Simulation and profit guardrails</p>
+            </div>
+          </div>
+
+          <div class="card-body grid-2">
+            <div class="field-row">
+              <label class="field-label" for="minimumRoiPercent">Minimum ROI Percentage</label>
+              <div class="input-with-suffix">
+                <input id="minimumRoiPercent" type="number" step="0.01" formControlName="minimumRoiPercent" class="field-input" />
+                <span class="suffix">%</span>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="minimumNetProfit">Minimum Net Profit</label>
+              <div class="input-with-suffix">
+                <span class="prefix">₹</span>
+                <input id="minimumNetProfit" type="number" formControlName="minimumNetProfit" class="field-input" />
+              </div>
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="virtualTradeObservationSeconds">Virtual Trade Observation (Seconds)</label>
+              <input id="virtualTradeObservationSeconds" type="number" formControlName="virtualTradeObservationSeconds" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="virtualTradeExpirySeconds">Virtual Trade Expiry (Seconds)</label>
+              <input id="virtualTradeExpirySeconds" type="number" formControlName="virtualTradeExpirySeconds" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="minimumVirtualProfitPercent">Minimum Virtual Profit Percentage</label>
+              <div class="input-with-suffix">
+                <input id="minimumVirtualProfitPercent" type="number" step="0.01" formControlName="minimumVirtualProfitPercent" class="field-input" />
+                <span class="suffix">%</span>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="maximumVirtualPullbackPercent">Maximum Virtual Pullback Percentage</label>
+              <div class="input-with-suffix">
+                <input id="maximumVirtualPullbackPercent" type="number" step="0.01" formControlName="maximumVirtualPullbackPercent" class="field-input" />
+                <span class="suffix">%</span>
+              </div>
             </div>
           </div>
         </section>

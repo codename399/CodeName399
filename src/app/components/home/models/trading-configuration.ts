@@ -41,6 +41,22 @@ export interface TradingConfiguration {
 
   maximumChargesPerTrade: number;
 
+  minimumRoiPercent: number;
+
+  minimumNetProfit: number;
+
+  autoSquareOff: boolean;
+
+  paperTradingBalance: number;
+
+  virtualTradeObservationSeconds: number;
+
+  virtualTradeExpirySeconds: number;
+
+  minimumVirtualProfitPercent: number;
+
+  maximumVirtualPullbackPercent: number;
+
   buyTradingInterval: number;
 
   sellTradingInterval: number;

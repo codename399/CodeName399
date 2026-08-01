@@ -259,9 +259,21 @@
                 <th *ngIf="isColumnVisible('vwap')">VWAP</th>
                 <th *ngIf="isColumnVisible('ema9')">EMA9</th>
                 <th *ngIf="isColumnVisible('ema21')">EMA21</th>
+                <th *ngIf="isColumnVisible('ema50')">EMA50</th>
+                <th *ngIf="isColumnVisible('ema200')">EMA200</th>
+                <th *ngIf="isColumnVisible('anchoredVWAP')">Anchored VWAP</th>
+                <th *ngIf="isColumnVisible('adx')">ADX</th>
+                <th *ngIf="isColumnVisible('superTrend')">SuperTrend</th>
+                <th *ngIf="isColumnVisible('superTrendBullish')">ST Bullish</th>
                 <th *ngIf="isColumnVisible('rsi')">RSI</th>
                 <th *ngIf="isColumnVisible('volumeMultiplier')">Vol×</th>
                 <th *ngIf="isColumnVisible('pullbackDistance')">PB%</th>
+                <th *ngIf="isColumnVisible('distanceFromEMA')">Dist EMA%</th>
+                <th *ngIf="isColumnVisible('distanceFromVWAP')">Dist VWAP%</th>
+                <th *ngIf="isColumnVisible('macd')">MACD</th>
+                <th *ngIf="isColumnVisible('macdSignal')">MACD Sig</th>
+                <th *ngIf="isColumnVisible('macdHistogram')">MACD Hist</th>
+                <th *ngIf="isColumnVisible('bollingerBandwidth')">Boll Bandwidth</th>
                 <th *ngIf="isColumnVisible('quantity')">Qty</th>
                 <th *ngIf="isColumnVisible('averagePrice')">Avg</th>
                 <th *ngIf="isColumnVisible('investedAmount')">Invested</th>
@@ -329,6 +341,30 @@
                   {{ stock.emA21 | number: "1.2-2" }}
                 </td>
 
+                <td *ngIf="isColumnVisible('ema50')">
+                  {{ stock.emA50 | number: "1.2-2" }}
+                </td>
+
+                <td *ngIf="isColumnVisible('ema200')">
+                  {{ stock.emA200 | number: "1.2-2" }}
+                </td>
+
+                <td *ngIf="isColumnVisible('anchoredVWAP')">
+                  {{ stock.anchoredVWAP | number: "1.2-2" }}
+                </td>
+
+                <td *ngIf="isColumnVisible('adx')">
+                  {{ stock.adx | number: "1.1-1" }}
+                </td>
+
+                <td *ngIf="isColumnVisible('superTrend')">
+                  {{ stock.superTrend | number: "1.2-2" }}
+                </td>
+
+                <td *ngIf="isColumnVisible('superTrendBullish')">
+                  {{ stock.superTrendBullish ? 'Yes' : 'No' }}
+                </td>
+
                 <td *ngIf="isColumnVisible('rsi')">
                   {{ stock.rsi | number: "1.0-0" }}
                 </td>
@@ -339,6 +375,30 @@
 
                 <td *ngIf="isColumnVisible('pullbackDistance')">
                   {{ stock.pullbackDistance | number: "1.1-1" }}%
+                </td>
+
+                <td *ngIf="isColumnVisible('distanceFromEMA')">
+                  {{ stock.distanceFromEMA | number: "1.1-1" }}%
+                </td>
+
+                <td *ngIf="isColumnVisible('distanceFromVWAP')">
+                  {{ stock.distanceFromVWAP | number: "1.1-1" }}%
+                </td>
+
+                <td *ngIf="isColumnVisible('macd')">
+                  {{ stock.macd | number: "1.2-2" }}
+                </td>
+
+                <td *ngIf="isColumnVisible('macdSignal')">
+                  {{ stock.macdSignal | number: "1.2-2" }}
+                </td>
+
+                <td *ngIf="isColumnVisible('macdHistogram')">
+                  {{ stock.macdHistogram | number: "1.2-2" }}
+                </td>
+
+                <td *ngIf="isColumnVisible('bollingerBandwidth')">
+                  {{ stock.bollingerBandwidth | number: "1.2-2" }}
                 </td>
 
                 <td *ngIf="isColumnVisible('quantity')">

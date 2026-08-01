@@ -74,7 +74,7 @@ export class TradingSettingsComponent implements OnInit {
 
     marketOpenTime: ['09:15', Validators.required],
 
-    marketCloseTime: ['15:30', Validators.required],
+    marketCloseTime: ['15:00', Validators.required],
 
     excludedSymbolsText: [''],
 
@@ -87,6 +87,22 @@ export class TradingSettingsComponent implements OnInit {
     maxCandidates: [100, Validators.required],
 
     maximumChargesPerTrade: [100, Validators.required],
+
+    minimumRoiPercent: [0.3, [Validators.required, Validators.min(0), Validators.max(100)]],
+
+    minimumNetProfit: [5, Validators.required],
+
+    autoSquareOff: [true],
+
+    paperTradingBalance: [100000, Validators.required],
+
+    virtualTradeObservationSeconds: [20, Validators.required],
+
+    virtualTradeExpirySeconds: [60, Validators.required],
+
+    minimumVirtualProfitPercent: [0.25, [Validators.required, Validators.min(0), Validators.max(100)]],
+
+    maximumVirtualPullbackPercent: [0.5, [Validators.required, Validators.min(0), Validators.max(100)]],
 
     buyTradingInterval: [5, Validators.required],
 
@@ -191,6 +207,22 @@ export class TradingSettingsComponent implements OnInit {
         minVolume: configuration.minVolume,
 
         maxCandidates: configuration.maxCandidates,
+
+        minimumRoiPercent: configuration.minimumRoiPercent,
+
+        minimumNetProfit: configuration.minimumNetProfit,
+
+        autoSquareOff: configuration.autoSquareOff,
+
+        paperTradingBalance: configuration.paperTradingBalance,
+
+        virtualTradeObservationSeconds: configuration.virtualTradeObservationSeconds,
+
+        virtualTradeExpirySeconds: configuration.virtualTradeExpirySeconds,
+
+        minimumVirtualProfitPercent: configuration.minimumVirtualProfitPercent,
+
+        maximumVirtualPullbackPercent: configuration.maximumVirtualPullbackPercent,
 
         buyTradingInterval: configuration.buyTradingInterval,
 
@@ -320,6 +352,22 @@ export class TradingSettingsComponent implements OnInit {
       minVolume: Number(value.minVolume ?? 500000),
 
       maxCandidates: Number(value.maxCandidates ?? 100),
+
+      minimumRoiPercent: Number(value.minimumRoiPercent ?? 0.3),
+
+      minimumNetProfit: Number(value.minimumNetProfit ?? 5),
+
+      autoSquareOff: value.autoSquareOff ?? false,
+
+      paperTradingBalance: Number(value.paperTradingBalance ?? 100000),
+
+      virtualTradeObservationSeconds: Number(value.virtualTradeObservationSeconds ?? 20),
+
+      virtualTradeExpirySeconds: Number(value.virtualTradeExpirySeconds ?? 60),
+
+      minimumVirtualProfitPercent: Number(value.minimumVirtualProfitPercent ?? 0.25),
+
+      maximumVirtualPullbackPercent: Number(value.maximumVirtualPullbackPercent ?? 0.5),
 
       visibleColumns: this.#angel.configuration()?.visibleColumns ?? [],
 
