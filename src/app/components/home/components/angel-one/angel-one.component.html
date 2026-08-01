@@ -88,7 +88,15 @@
       <section class="table-shell">
         <div class="table-header">
           <div>{{ filteredGainers().length }} symbols found</div>
-          <div>Top candidates based on current scan</div>
+          <div>
+            Top candidates based on current scan
+            <span
+              class="info-tooltip"
+              title="Details order: token · price · change% · qty · avg · invested · current · p/l"
+              aria-label="Reference for display order of values under symbol"
+              >ℹ️</span
+            >
+          </div>
         </div>
 
         <div class="table-scroll">
@@ -98,9 +106,7 @@
                 <th *ngIf="isColumnVisible('star')">⭐</th>
                 <th *ngIf="isColumnVisible('symbol')">Symbol</th>
                 <th *ngIf="isColumnVisible('token')">Token</th>
-                <th *ngIf="isColumnVisible('ltp')">LTP</th>
                 <th *ngIf="isColumnVisible('prevClose')">Prev Close</th>
-                <th *ngIf="isColumnVisible('change')">Change</th>
                 <th *ngIf="isColumnVisible('vwap')">VWAP</th>
                 <th *ngIf="isColumnVisible('ema9')">EMA9</th>
                 <th *ngIf="isColumnVisible('ema21')">EMA21</th>
@@ -119,11 +125,6 @@
                 <th *ngIf="isColumnVisible('macdSignal')">MACD Sig</th>
                 <th *ngIf="isColumnVisible('macdHistogram')">MACD Hist</th>
                 <th *ngIf="isColumnVisible('bollingerBandwidth')">Boll Bandwidth</th>
-                <th *ngIf="isColumnVisible('quantity')">Qty</th>
-                <th *ngIf="isColumnVisible('averagePrice')">Avg</th>
-                <th *ngIf="isColumnVisible('investedAmount')">Invested</th>
-                <th *ngIf="isColumnVisible('currentValue')">Current</th>
-                <th *ngIf="isColumnVisible('profitLoss')">P/L</th>
                 <th *ngIf="isColumnVisible('score')">Score</th>
                 <th *ngIf="isColumnVisible('signal')">Signal</th>
                 <th *ngIf="isColumnVisible('risk')">Risk</th>
@@ -145,33 +146,61 @@
               <tr
                 *ngFor="let stock of filteredGainers()"
                 [class.owned-row]="stock.isOwned"
+                [ngClass]="{
+                  'signal-row-buy': stock.signal === 'BUY',
+                  'signal-row-sell': stock.signal === 'SELL',
+                  'signal-row-hold': stock.signal === 'HOLD',
+                  'signal-row-setup': stock.signal === 'SETUP'
+                }"
               >
                 <td class="center-cell" *ngIf="isColumnVisible('star')">
                   <span *ngIf="stock.isOwned">★</span>
                 </td>
 
                 <td class="symbol" *ngIf="isColumnVisible('symbol')">
-                  {{ stock.symbol }}
+                  <div class="symbol-content">
+                    <div class="symbol-name">{{ stock.symbol }}</div>
+                    <div class="symbol-meta">
+                      <span class="symbol-meta-item">
+                        {{ stock.symbolToken || '-' }}
+                      </span>
+                      <span class="symbol-meta-item">
+                        ₹{{ stock.currentPrice | number: '1.2-2' }}
+                      </span>
+                      <span
+                        class="symbol-meta-item"
+                        [class.positive]="stock.changePercent >= 0"
+                        [class.negative]="stock.changePercent < 0"
+                      >
+                        {{ stock.changePercent | number: '1.2-2' }}%
+                      </span>
+                      <span class="symbol-meta-item">{{ stock.quantity }}</span>
+                      <span class="symbol-meta-item">
+                        ₹{{ stock.averagePrice | number: '1.2-2' }}
+                      </span>
+                      <span class="symbol-meta-item">
+                        ₹{{ stock.investedAmount | number: '1.2-2' }}
+                      </span>
+                      <span class="symbol-meta-item">
+                        ₹{{ stock.currentValue | number: '1.2-2' }}
+                      </span>
+                      <span
+                        class="symbol-meta-item"
+                        [class.positive]="stock.profitLoss >= 0"
+                        [class.negative]="stock.profitLoss < 0"
+                      >
+                        {{ stock.profitLoss | number: '1.2-2' }}
+                      </span>
+                    </div>
+                  </div>
                 </td>
 
                 <td *ngIf="isColumnVisible('token')">
                   {{ stock.symbolToken || "-" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('ltp')">
-                  ₹{{ stock.currentPrice | number: "1.2-2" }}
-                </td>
-
                 <td *ngIf="isColumnVisible('prevClose')">
                   ₹{{ stock.previousClose | number: "1.2-2" }}
-                </td>
-
-                <td
-                  *ngIf="isColumnVisible('change')"
-                  [class.positive]="stock.changePercent >= 0"
-                  [class.negative]="stock.changePercent < 0"
-                >
-                  {{ stock.changePercent | number: "1.2-2" }}%
                 </td>
 
                 <td *ngIf="isColumnVisible('vwap')">
@@ -246,30 +275,6 @@
                   {{ stock.bollingerBandwidth | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('quantity')">
-                  {{ stock.quantity }}
-                </td>
-
-                <td *ngIf="isColumnVisible('averagePrice')">
-                  ₹{{ stock.averagePrice | number: "1.2-2" }}
-                </td>
-
-                <td *ngIf="isColumnVisible('investedAmount')">
-                  ₹{{ stock.investedAmount | number: "1.2-2" }}
-                </td>
-
-                <td *ngIf="isColumnVisible('currentValue')">
-                  ₹{{ stock.currentValue | number: "1.2-2" }}
-                </td>
-
-                <td
-                  *ngIf="isColumnVisible('profitLoss')"
-                  [class.positive]="stock.profitLoss >= 0"
-                  [class.negative]="stock.profitLoss < 0"
-                >
-                  ₹{{ stock.profitLoss | number: "1.2-2" }}
-                </td>
-
                 <td *ngIf="isColumnVisible('score')">
                   <div
                     class="score-badge"
@@ -291,18 +296,7 @@
                       setup: stock.signal === 'SETUP',
                     }"
                   >
-                    <span class="signal-emoji">
-                      {{
-                        stock.signal === "BUY"
-                          ? "🟢"
-                          : stock.signal === "SELL"
-                            ? "🔴"
-                            : stock.signal === "HOLD"
-                              ? "🟡"
-                              : "⚪"
-                      }}
-                    </span>
-
+                    <span class="signal-dot"></span>
                     <span class="signal-label">
                       {{ stock.signal }}
                     </span>

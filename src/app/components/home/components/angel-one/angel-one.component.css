@@ -565,6 +565,25 @@ table {
   min-width: 1024px;
 }
 
+.info-tooltip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.4rem;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.1);
+  color: #0f172a;
+  font-size: 0.78rem;
+  cursor: default;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+.info-tooltip:hover {
+  background: rgba(15, 23, 42, 0.14);
+}
+
 thead {
   background: #f8fafc;
 }
@@ -650,14 +669,14 @@ tbody tr:hover {
   border: 1px solid transparent;
 }
 
-.signal-pill .signal-emoji {
+.signal-dot {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  font-size: 0.95rem;
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .signal-pill .signal-label {
@@ -670,38 +689,51 @@ tbody tr:hover {
   border-color: #a7f3d0;
 }
 
+.signal-pill.buy .signal-dot {
+  background: #22c55e;
+  border-color: #16a34a;
+}
+
 .signal-pill.sell {
   background: #fee2e2;
   color: #991b1b;
   border-color: #fecaca;
 }
 
+.signal-pill.sell .signal-dot {
+  background: #ef4444;
+  border-color: #b91c1c;
+}
+
 .signal-pill.hold {
-  background: #e0f2fe;
-  color: #0c4a6e;
-  border-color: #bae6fd;
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.signal-pill.hold .signal-dot {
+  background: #ffffff;
+  border-color: #94a3b8;
 }
 
 .signal-pill.setup {
-  background: #f5f3ff;
-  color: #5b21b6;
-  border-color: #ddd6fe;
+  background: #fef9c3;
+  color: #92400e;
+  border-color: #fde68a;
 }
 
-.reason {
-  max-width: 260px;
-  color: #475569;
+.signal-pill.setup .signal-dot {
+  background: #facc15;
+  border-color: #f59e0b;
 }
 
-@media (max-width: 1120px) {
-  .market-panel,
-  .summary-grid {
-    grid-template-columns: 1fr;
-  }
+.market-panel,
+.summary-grid {
+  grid-template-columns: 1fr;
+}
 
-  .page-top {
-    padding: 20px;
-  }
+.page-top {
+  padding: 20px;
 }
 
 @media (max-width: 760px) {
@@ -1082,6 +1114,10 @@ td {
   transition: 0.15s;
 }
 
+td.symbol {
+  text-align: left;
+}
+
 tbody tr {
   transition: 0.15s;
 }
@@ -1090,34 +1126,49 @@ tbody tr:hover {
   background: #f8fafc;
 }
 
-/* ======================================================
-   Sticky Symbol Column
-====================================================== */
 
-th:nth-child(2) {
-  position: sticky;
-
-  left: 0;
-
-  z-index: 110;
+.symbol-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
 }
 
-td.symbol {
-  position: sticky;
-
-  left: 0;
-
-  background: white;
-
+.symbol-name {
+  font-size: 1.1rem;
   font-weight: 700;
-
-  text-align: left;
-
-  z-index: 10;
+  line-height: 1.1;
 }
 
-tbody tr:hover td.symbol {
-  background: #f8fafc;
+.symbol-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+  opacity: 0.88;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.symbol-meta-item {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.symbol-meta-item::after {
+  content: '·';
+  margin: 0 0.5rem;
+  opacity: 0.6;
+}
+
+.symbol-meta-item:last-child::after {
+  content: '';
+  margin: 0;
 }
 
 /* ======================================================
@@ -1137,11 +1188,51 @@ tbody tr:hover td.symbol {
 }
 
 .owned-row:hover td.symbol {
-  background: #dcfce7;
+  background: #dbeafe;
+}
+
+.owned-row {
+  background: #dbeafe;
+}
+
+.owned-row:hover {
+  background: #bfdbfe;
 }
 
 .owned {
   font-size: 18px;
+}
+
+.signal-row-buy {
+  background: #ecfdf5;
+}
+
+.signal-row-buy:hover {
+  background: #bbf7d0;
+}
+
+.signal-row-sell {
+  background: #fef2f2;
+}
+
+.signal-row-sell:hover {
+  background: #fecaca;
+}
+
+.signal-row-hold {
+  background: #ffffff;
+}
+
+.signal-row-hold:hover {
+  background: #f3f4f6;
+}
+
+.signal-row-setup {
+  background: #fef9c3;
+}
+
+.signal-row-setup:hover {
+  background: #fef08a;
 }
 
 /* ======================================================
