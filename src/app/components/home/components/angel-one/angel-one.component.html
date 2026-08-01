@@ -91,11 +91,13 @@
           <div>
             Top candidates based on current scan
             <span
-              class="info-tooltip"
+              class="tooltip-trigger"
               title="Details order: token · price · change% · qty · avg · invested · current · p/l"
               aria-label="Reference for display order of values under symbol"
-              >ℹ️</span
+              tabindex="0"
             >
+              <span class="info-tooltip">ℹ️</span>
+            </span>
           </div>
         </div>
 
@@ -353,42 +355,69 @@
       <section class="summary-panel">
         <div class="summary-stripe">
           <div
-            class="summary-stripe-item market-status"
+            class="summary-stripe-item market-status tooltip-trigger"
             [class.market-open]="marketStatus() === 'OPEN'"
             [class.market-closed]="marketStatus() === 'CLOSED'"
             [class.market-ignored]="marketStatus() !== 'OPEN' && marketStatus() !== 'CLOSED'"
             title="Market status"
+            tabindex="0"
           >
             <span>⏱️</span>
             <div>
               <strong>{{ marketStatus() }}</strong>
               <small>{{ marketTimer() }}</small>
             </div>
+
           </div>
 
-          <div class="summary-stripe-item" title="Ignore market hours">
+          <div
+            class="summary-stripe-item tooltip-trigger"
+            title="Ignore market hours"
+            tabindex="0"
+          >
             <span>🕒</span>
             <strong>{{ configuration()?.ignoreMarketHours ? 'Ignored' : 'Market Hours' }}</strong>
+
           </div>
 
-          <div class="summary-stripe-item" title="Available cash">
+          <div
+            class="summary-stripe-item tooltip-trigger"
+            title="Available cash"
+            tabindex="0"
+          >
             <span>💵</span>
             <strong>₹ {{ availableCash() | number: "1.2-2" }}</strong>
+
           </div>
 
-          <div class="summary-stripe-item" title="Strategy">
+          <div
+            class="summary-stripe-item tooltip-trigger"
+            title="Strategy"
+            tabindex="0"
+          >
             <span>📈</span>
             <strong>{{ configuration()?.strategy }}</strong>
+
           </div>
 
-          <div class="summary-stripe-item" title="Auto trading">
+          <div
+            class="summary-stripe-item tooltip-trigger"
+            title="Auto trading"
+            tabindex="0"
+          >
             <span>🤖</span>
             <strong>{{ configuration()?.enableAutoTrading ? 'On' : 'Off' }}</strong>
+
           </div>
 
-          <div class="summary-stripe-item" title="Paper trading">
+          <div
+            class="summary-stripe-item tooltip-trigger"
+            title="Paper trading"
+            tabindex="0"
+          >
             <span>📝</span>
             <strong>{{ configuration()?.paperTrading ? 'On' : 'Off' }}</strong>
+
           </div>
         </div>
 

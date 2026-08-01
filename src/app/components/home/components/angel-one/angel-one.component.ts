@@ -52,6 +52,7 @@ export class AngelOneComponent implements OnInit, OnDestroy {
 
   searchText = signal('');
 
+
   // ======================================================
   // Configuration
   // ======================================================

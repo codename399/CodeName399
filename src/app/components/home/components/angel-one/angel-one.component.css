@@ -580,9 +580,25 @@ table {
   border: 1px solid rgba(15, 23, 42, 0.12);
 }
 
-.info-tooltip:hover {
+.info-tooltip:hover,
+.info-tooltip:focus-visible {
   background: rgba(15, 23, 42, 0.14);
+  outline: none;
 }
+
+.tooltip-trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.summary-stripe-item.tooltip-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 
 thead {
   background: #f8fafc;
