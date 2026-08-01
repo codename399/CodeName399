@@ -64,10 +64,6 @@ export class AngelOneComponent implements OnInit, OnDestroy {
   // UI
   // ======================================================
 
-  showSummary = signal(false);
-
-  showMarket = signal(false);
-
   showSettings = signal(false);
 
   showPortfolio = signal(false);
@@ -201,14 +197,6 @@ export class AngelOneComponent implements OnInit, OnDestroy {
   // ======================================================
   // Toolbar
   // ======================================================
-
-  toggleSummary(): void {
-    this.showSummary.update((v) => !v);
-  }
-
-  toggleMarket(): void {
-    this.showMarket.update((v) => !v);
-  }
 
   toggleSettings(): void {
     this.showSettings.update((v) => !v);
@@ -369,7 +357,6 @@ export class AngelOneComponent implements OnInit, OnDestroy {
     await this.#market.startConnection();
 
     this.subscription = this.#market.gainers$.subscribe((data: Gainer[]) => {
-      debugger;
       this.gainers.set(data);
     });
   }

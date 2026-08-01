@@ -23,25 +23,6 @@
 
       <div class="page-actions">
         <div class="action-buttons">
-          <button
-            class="pill-button"
-            type="button"
-            (click)="toggleSummary()"
-            [title]="showSummary() ? 'Hide Summary' : 'Show Summary'"
-            [attr.aria-label]="showSummary() ? 'Hide Summary' : 'Show Summary'"
-          >
-            {{ showSummary() ? "Hide Summary" : "Show Summary" }}
-          </button>
-
-          <button
-            class="pill-button"
-            type="button"
-            (click)="toggleMarket()"
-            [title]="showMarket() ? 'Hide Market' : 'Show Market'"
-            [attr.aria-label]="showMarket() ? 'Hide Market' : 'Show Market'"
-          >
-            {{ showMarket() ? "Hide Market" : "Show Market" }}
-          </button>
 
           <button
             class="pill-button accent"
@@ -51,16 +32,6 @@
             aria-label="Settings"
           >
             Settings
-          </button>
-
-          <button
-            class="pill-button"
-            type="button"
-            (click)="refresh()"
-            title="Refresh"
-            aria-label="Refresh"
-          >
-            Refresh
           </button>
 
           <button
@@ -103,141 +74,15 @@
     </aside>
 
     <main class="page-main" [class.sidebar-open]="showSettings()">
-      <section class="summary-grid" *ngIf="showSummary()">
-        <article class="summary-card">
-          <div class="summary-icon">💵</div>
-          <div>
-            <div class="summary-title">Available Cash</div>
-            <div class="summary-value">
-              ₹ {{ availableCash() | number: "1.2-2" }}
-            </div>
-          </div>
-        </article>
-
-        <article class="summary-card">
-          <div class="summary-icon">📈</div>
-          <div>
-            <div class="summary-title">Strategy</div>
-            <div class="summary-value">{{ configuration()?.strategy }}</div>
-          </div>
-        </article>
-
-        <article class="summary-card">
-          <div class="summary-icon">🤖</div>
-          <div>
-            <div class="summary-title">Auto Trading</div>
-            <div class="summary-value">
-              {{ configuration()?.enableAutoTrading ? "Enabled" : "Disabled" }}
-            </div>
-          </div>
-        </article>
-
-        <article class="summary-card">
-          <div class="summary-icon">📝</div>
-          <div>
-            <div class="summary-title">Paper Trading</div>
-            <div class="summary-value">
-              {{ configuration()?.paperTrading ? "Enabled" : "Disabled" }}
-            </div>
-          </div>
-        </article>
-
-        <article class="summary-card">
-          <div class="summary-icon">⏱️</div>
-          <div>
-            <div class="summary-title">Ignore Market Hours</div>
-            <div class="summary-value">
-              {{ configuration()?.ignoreMarketHours ? "Yes" : "No" }}
-            </div>
-          </div>
-        </article>
-
-        <article class="summary-card">
-          <div class="summary-icon">⚠️</div>
-          <div>
-            <div class="summary-title">Risk Per Trade</div>
-            <div class="summary-value">
-              {{ configuration()?.riskPercentage }}%
-            </div>
-          </div>
-        </article>
-
-        <article class="summary-card">
-          <div class="summary-icon">💰</div>
-          <div>
-            <div class="summary-title">Capital / Trade</div>
-            <div class="summary-value">
-              ₹ {{ configuration()?.maxCapitalPerTrade | number: "1.0-0" }}
-            </div>
-          </div>
-        </article>
-
-        <article class="summary-card">
-          <div class="summary-icon">📉</div>
-          <div>
-            <div class="summary-title">Max Daily Loss</div>
-            <div class="summary-value">
-              ₹ {{ configuration()?.maxDailyLoss | number: "1.0-0" }}
-            </div>
-          </div>
-        </article>
-
-        <article class="summary-card">
-          <div class="summary-icon">🔔</div>
-          <div>
-            <div class="summary-title">Notifications</div>
-            <div class="summary-value">
-              {{ configuration()?.enableNotification ? "Enabled" : "Disabled" }}
-            </div>
-          </div>
-        </article>
-      </section>
-
-      <section class="market-panel" *ngIf="showMarket()">
-        <div class="market-card status-card">
-          <div
-            class="market-pill"
-            [class.open]="marketStatus() === 'OPEN'"
-            [class.closed]="marketStatus() === 'CLOSED'"
-          >
-            {{ marketStatus() === "OPEN" ? "Market Open" : "Market Closed" }}
-          </div>
-          <div class="market-time">{{ marketTimer() }}</div>
+      <div class="page-top">
+        <div class="search-box" *ngIf="filteredGainers().length > 0">
+          <input
+            type="text"
+            placeholder="Search symbol"
+            [value]="searchText()"
+            (input)="searchText.set($any($event.target).value)"
+          />
         </div>
-
-        <div class="market-card detail-card">
-          <div class="market-card-item">
-            <span>Strategy</span>
-            <strong>{{ configuration()?.strategy }}</strong>
-          </div>
-          <div class="market-card-item">
-            <span>Auto Trading</span>
-            <strong>{{
-              configuration()?.enableAutoTrading ? "Enabled" : "Disabled"
-            }}</strong>
-          </div>
-          <div class="market-card-item">
-            <span>Paper Trading</span>
-            <strong>{{
-              configuration()?.paperTrading ? "Enabled" : "Disabled"
-            }}</strong>
-          </div>
-          <div class="market-card-item">
-            <span>Ignore Market Hours</span>
-            <strong>{{
-              configuration()?.ignoreMarketHours ? "Yes" : "No"
-            }}</strong>
-          </div>
-        </div>
-      </section>
-
-      <div class="search-box" *ngIf="filteredGainers().length > 0">
-        <input
-          type="text"
-          placeholder="Search symbol"
-          [value]="searchText()"
-          (input)="searchText.set($any($event.target).value)"
-        />
       </div>
 
       <section class="table-shell">
@@ -500,15 +345,75 @@
           </table>
         </div>
       </section>
+
+      <section class="summary-panel">
+        <div class="summary-stripe">
+          <div
+            class="summary-stripe-item market-status"
+            [class.market-open]="marketStatus() === 'OPEN'"
+            [class.market-closed]="marketStatus() === 'CLOSED'"
+            [class.market-ignored]="marketStatus() !== 'OPEN' && marketStatus() !== 'CLOSED'"
+            title="Market status"
+          >
+            <span>⏱️</span>
+            <div>
+              <strong>{{ marketStatus() }}</strong>
+              <small>{{ marketTimer() }}</small>
+            </div>
+          </div>
+
+          <div class="summary-stripe-item" title="Ignore market hours">
+            <span>🕒</span>
+            <strong>{{ configuration()?.ignoreMarketHours ? 'Ignored' : 'Market Hours' }}</strong>
+          </div>
+
+          <div class="summary-stripe-item" title="Available cash">
+            <span>💵</span>
+            <strong>₹ {{ availableCash() | number: "1.2-2" }}</strong>
+          </div>
+
+          <div class="summary-stripe-item" title="Strategy">
+            <span>📈</span>
+            <strong>{{ configuration()?.strategy }}</strong>
+          </div>
+
+          <div class="summary-stripe-item" title="Auto trading">
+            <span>🤖</span>
+            <strong>{{ configuration()?.enableAutoTrading ? 'On' : 'Off' }}</strong>
+          </div>
+
+          <div class="summary-stripe-item" title="Paper trading">
+            <span>📝</span>
+            <strong>{{ configuration()?.paperTrading ? 'On' : 'Off' }}</strong>
+          </div>
+        </div>
+
+        <div class="summary-actions">
+          <button
+            class="sidebar-float-button"
+            [ngClass]="{
+              'market-open': marketStatus() === 'OPEN',
+              'market-closed': marketStatus() === 'CLOSED',
+              'market-ignored': marketStatus() !== 'OPEN' && marketStatus() !== 'CLOSED'
+            }"
+            type="button"
+            (click)="toggleSettings()"
+            [title]="showSettings() ? 'Close controls' : 'Open controls'"
+            [attr.aria-label]="showSettings() ? 'Close controls' : 'Open controls'"
+          >
+            <span class="material-icons">{{ showSettings() ? "close" : "menu" }}</span>
+          </button>
+
+          <button
+            class="refresh-button"
+            type="button"
+            (click)="refresh()"
+            title="Refresh"
+            aria-label="Refresh"
+          >
+            <span class="material-icons">refresh</span>
+          </button>
+        </div>
+      </section>
     </main>
   </div>
-  <button
-    class="sidebar-float-button"
-    type="button"
-    (click)="toggleSettings()"
-    [title]="showSettings() ? 'Close controls' : 'Open controls'"
-    [attr.aria-label]="showSettings() ? 'Close controls' : 'Open controls'"
-  >
-    <span class="material-icons">{{ showSettings() ? "close" : "menu" }}</span>
-  </button>
-</div>
