@@ -92,7 +92,7 @@
             Top candidates based on current scan
             <span
               class="tooltip-trigger"
-              title="Details order: token · price · change% · qty · avg · invested · current · p/l"
+              title="Details order: p/l · change% · ltp · qty · avg · invested · current"
               aria-label="Reference for display order of values under symbol"
               tabindex="0"
             >
@@ -165,11 +165,12 @@
                   <div class="symbol-content">
                     <div class="symbol-name">{{ stock.symbol }}</div>
                     <div class="symbol-meta">
-                      <span class="symbol-meta-item">
-                        {{ stock.symbolToken || '-' }}
-                      </span>
-                      <span class="symbol-meta-item">
-                        ₹{{ stock.currentPrice | number: '1.2-2' }}
+                      <span
+                        class="symbol-meta-item"
+                        [class.positive]="stock.profitLoss >= 0"
+                        [class.negative]="stock.profitLoss < 0"
+                      >
+                        {{ stock.profitLoss | number: '1.2-2' }}
                       </span>
                       <span
                         class="symbol-meta-item"
@@ -177,6 +178,9 @@
                         [class.negative]="stock.changePercent < 0"
                       >
                         {{ stock.changePercent | number: '1.2-2' }}%
+                      </span>
+                      <span class="symbol-meta-item">
+                        ₹{{ stock.currentPrice | number: '1.2-2' }}
                       </span>
                       <span class="symbol-meta-item">{{ stock.quantity }}</span>
                       <span class="symbol-meta-item">
@@ -187,13 +191,6 @@
                       </span>
                       <span class="symbol-meta-item">
                         ₹{{ stock.currentValue | number: '1.2-2' }}
-                      </span>
-                      <span
-                        class="symbol-meta-item"
-                        [class.positive]="stock.profitLoss >= 0"
-                        [class.negative]="stock.profitLoss < 0"
-                      >
-                        {{ stock.profitLoss | number: '1.2-2' }}
                       </span>
                     </div>
                   </div>
