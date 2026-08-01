@@ -23,7 +23,6 @@
 
       <div class="page-actions">
         <div class="action-buttons">
-
           <button
             class="pill-button accent"
             type="button"
@@ -92,11 +91,16 @@
             Top candidates based on current scan
             <span
               class="tooltip-trigger"
-              title="Details order: p/l · change% · ltp · qty · avg · invested · current"
-              aria-label="Reference for display order of values under symbol"
+              (click)="toggleTooltip($event)"
               tabindex="0"
             >
               <span class="info-tooltip">ℹ️</span>
+
+              <span class="tooltip-content">
+                Details order:
+                <br />
+                P/L • Change% • LTP • Qty • Avg • Invested • Current
+              </span>
             </span>
           </div>
         </div>
@@ -128,7 +132,9 @@
                 <th *ngIf="isColumnVisible('macd')">MACD</th>
                 <th *ngIf="isColumnVisible('macdSignal')">MACD Sig</th>
                 <th *ngIf="isColumnVisible('macdHistogram')">MACD Hist</th>
-                <th *ngIf="isColumnVisible('bollingerBandwidth')">Boll Bandwidth</th>
+                <th *ngIf="isColumnVisible('bollingerBandwidth')">
+                  Boll Bandwidth
+                </th>
                 <th *ngIf="isColumnVisible('score')">Score</th>
                 <th *ngIf="isColumnVisible('signal')">Signal</th>
                 <th *ngIf="isColumnVisible('risk')">Risk</th>
@@ -154,7 +160,7 @@
                   'signal-row-buy': stock.signal === 'BUY',
                   'signal-row-sell': stock.signal === 'SELL',
                   'signal-row-hold': stock.signal === 'HOLD',
-                  'signal-row-setup': stock.signal === 'SETUP'
+                  'signal-row-setup': stock.signal === 'SETUP',
                 }"
               >
                 <td class="center-cell" *ngIf="isColumnVisible('star')">
@@ -170,27 +176,27 @@
                         [class.positive]="stock.profitLoss >= 0"
                         [class.negative]="stock.profitLoss < 0"
                       >
-                        {{ stock.profitLoss | number: '1.2-2' }}
+                        {{ stock.profitLoss | number: "1.2-2" }}
                       </span>
                       <span
                         class="symbol-meta-item"
                         [class.positive]="stock.changePercent >= 0"
                         [class.negative]="stock.changePercent < 0"
                       >
-                        {{ stock.changePercent | number: '1.2-2' }}%
+                        {{ stock.changePercent | number: "1.2-2" }}%
                       </span>
                       <span class="symbol-meta-item">
-                        ₹{{ stock.currentPrice | number: '1.2-2' }}
+                        ₹{{ stock.currentPrice | number: "1.2-2" }}
                       </span>
                       <span class="symbol-meta-item">{{ stock.quantity }}</span>
                       <span class="symbol-meta-item">
-                        ₹{{ stock.averagePrice | number: '1.2-2' }}
+                        ₹{{ stock.averagePrice | number: "1.2-2" }}
                       </span>
                       <span class="symbol-meta-item">
-                        ₹{{ stock.investedAmount | number: '1.2-2' }}
+                        ₹{{ stock.investedAmount | number: "1.2-2" }}
                       </span>
                       <span class="symbol-meta-item">
-                        ₹{{ stock.currentValue | number: '1.2-2' }}
+                        ₹{{ stock.currentValue | number: "1.2-2" }}
                       </span>
                     </div>
                   </div>
@@ -245,7 +251,7 @@
                 </td>
 
                 <td *ngIf="isColumnVisible('superTrendBullish')">
-                  {{ stock.superTrendBullish ? 'Yes' : 'No' }}
+                  {{ stock.superTrendBullish ? "Yes" : "No" }}
                 </td>
 
                 <td *ngIf="isColumnVisible('rsi')">
@@ -355,7 +361,9 @@
             class="summary-stripe-item market-status tooltip-trigger"
             [class.market-open]="marketStatus() === 'OPEN'"
             [class.market-closed]="marketStatus() === 'CLOSED'"
-            [class.market-ignored]="marketStatus() !== 'OPEN' && marketStatus() !== 'CLOSED'"
+            [class.market-ignored]="
+              marketStatus() !== 'OPEN' && marketStatus() !== 'CLOSED'
+            "
             title="Market status"
             tabindex="0"
           >
@@ -364,7 +372,6 @@
               <strong>{{ marketStatus() }}</strong>
               <small>{{ marketTimer() }}</small>
             </div>
-
           </div>
 
           <div
@@ -373,8 +380,9 @@
             tabindex="0"
           >
             <span>🕒</span>
-            <strong>{{ configuration()?.ignoreMarketHours ? 'Ignored' : 'Market Hours' }}</strong>
-
+            <strong>{{
+              configuration()?.ignoreMarketHours ? "Ignored" : "Market Hours"
+            }}</strong>
           </div>
 
           <div
@@ -384,7 +392,6 @@
           >
             <span>💵</span>
             <strong>₹ {{ availableCash() | number: "1.2-2" }}</strong>
-
           </div>
 
           <div
@@ -394,7 +401,6 @@
           >
             <span>📈</span>
             <strong>{{ configuration()?.strategy }}</strong>
-
           </div>
 
           <div
@@ -403,8 +409,9 @@
             tabindex="0"
           >
             <span>🤖</span>
-            <strong>{{ configuration()?.enableAutoTrading ? 'On' : 'Off' }}</strong>
-
+            <strong>{{
+              configuration()?.enableAutoTrading ? "On" : "Off"
+            }}</strong>
           </div>
 
           <div
@@ -413,8 +420,7 @@
             tabindex="0"
           >
             <span>📝</span>
-            <strong>{{ configuration()?.paperTrading ? 'On' : 'Off' }}</strong>
-
+            <strong>{{ configuration()?.paperTrading ? "On" : "Off" }}</strong>
           </div>
         </div>
 
@@ -424,14 +430,19 @@
             [ngClass]="{
               'market-open': marketStatus() === 'OPEN',
               'market-closed': marketStatus() === 'CLOSED',
-              'market-ignored': marketStatus() !== 'OPEN' && marketStatus() !== 'CLOSED'
+              'market-ignored':
+                marketStatus() !== 'OPEN' && marketStatus() !== 'CLOSED',
             }"
             type="button"
             (click)="toggleSettings()"
             [title]="showSettings() ? 'Close controls' : 'Open controls'"
-            [attr.aria-label]="showSettings() ? 'Close controls' : 'Open controls'"
+            [attr.aria-label]="
+              showSettings() ? 'Close controls' : 'Open controls'
+            "
           >
-            <span class="material-icons">{{ showSettings() ? "close" : "menu" }}</span>
+            <span class="material-icons">{{
+              showSettings() ? "close" : "menu"
+            }}</span>
           </button>
 
           <button
@@ -447,3 +458,4 @@
       </section>
     </main>
   </div>
+</div>

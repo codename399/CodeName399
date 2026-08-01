@@ -17,13 +17,14 @@ import { Gainer } from '../../models/gainer';
 import { TradingConfiguration } from '../../models/trading-configuration';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-angel-one',
 
   standalone: true,
 
-  imports: [CommonModule],
+  imports: [CommonModule, MatTooltipModule],
 
   templateUrl: './angel-one.component.html',
 
@@ -51,7 +52,6 @@ export class AngelOneComponent implements OnInit, OnDestroy {
   marketTimer = signal('');
 
   searchText = signal('');
-
 
   // ======================================================
   // Configuration
@@ -93,7 +93,11 @@ export class AngelOneComponent implements OnInit, OnDestroy {
     { key: 'macd', label: 'MACD', defaultVisible: false },
     { key: 'macdSignal', label: 'MACD Sig', defaultVisible: false },
     { key: 'macdHistogram', label: 'MACD Hist', defaultVisible: false },
-    { key: 'bollingerBandwidth', label: 'Boll Bandwidth', defaultVisible: false },
+    {
+      key: 'bollingerBandwidth',
+      label: 'Boll Bandwidth',
+      defaultVisible: false,
+    },
     { key: 'score', label: 'Score', defaultVisible: true },
     { key: 'signal', label: 'Signal', defaultVisible: true },
     { key: 'risk', label: 'Risk', defaultVisible: true },
@@ -102,8 +106,16 @@ export class AngelOneComponent implements OnInit, OnDestroy {
     { key: 'atr', label: 'ATR', defaultVisible: false },
     { key: 'reason', label: 'Reason', defaultVisible: true },
     { key: 'suggestion', label: 'Suggestion', defaultVisible: true },
-    { key: 'upperCircuitLimit', label: 'Upper Circuit Limit', defaultVisible: false },
-    { key: 'lowerCircuitLimit', label: 'Lower Circuit Limit', defaultVisible: false },
+    {
+      key: 'upperCircuitLimit',
+      label: 'Upper Circuit Limit',
+      defaultVisible: false,
+    },
+    {
+      key: 'lowerCircuitLimit',
+      label: 'Lower Circuit Limit',
+      defaultVisible: false,
+    },
   ];
 
   visibleColumns = signal<string[]>([]);
@@ -306,9 +318,12 @@ export class AngelOneComponent implements OnInit, OnDestroy {
       });
   }
 
-  private applyVisibleColumns(configuration: TradingConfiguration | null): void {
-    const configuredColumns = configuration?.visibleColumns?.filter((columnKey) =>
-      this.columnDefinitions.some((column) => column.key === columnKey),
+  private applyVisibleColumns(
+    configuration: TradingConfiguration | null,
+  ): void {
+    const configuredColumns = configuration?.visibleColumns?.filter(
+      (columnKey) =>
+        this.columnDefinitions.some((column) => column.key === columnKey),
     );
 
     const nextColumns = configuredColumns?.length
@@ -578,5 +593,10 @@ export class AngelOneComponent implements OnInit, OnDestroy {
     parts.push(`${seconds}s`);
 
     return parts.join(' ');
+  }
+
+  toggleTooltip(event: Event) {
+    const trigger = event.currentTarget as HTMLElement;
+    trigger.classList.toggle('active');
   }
 }
