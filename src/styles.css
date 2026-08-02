@@ -5,3 +5,90 @@
 .datepicker {
     width: 100%;
 }/* You can add global styles to this file, and also import other style files */
+
+.app-tooltip {
+
+    position: fixed;
+
+    max-width: 260px;
+
+    padding: 12px 14px;
+
+    background: #1e293b;
+
+    color: white;
+
+    border-radius: 8px;
+
+    font-size: 13px;
+
+    line-height: 1.4;
+
+    z-index: 100000;
+
+    box-shadow: 0 10px 25px rgba(0,0,0,.3);
+
+    animation: tooltipFade .15s ease;
+}
+
+@keyframes tooltipFade {
+
+    from {
+        opacity: 0;
+        transform: scale(.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.app-tooltip::after {
+    content: "";
+    position: absolute;
+}
+
+.app-tooltip.left::after {
+
+    left: 100%;
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    border: 8px solid transparent;
+    border-left-color: #1e293b;
+}
+
+.app-tooltip.right::after {
+
+    right: 100%;
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    border: 8px solid transparent;
+    border-right-color: #1e293b;
+}
+
+.app-tooltip.top::after {
+
+    left: 50%;
+    top: 100%;
+
+    transform: translateX(-50%);
+
+    border: 8px solid transparent;
+    border-top-color: #1e293b;
+}
+
+.app-tooltip.bottom::after {
+
+    left: 50%;
+    bottom: 100%;
+
+    transform: translateX(-50%);
+
+    border: 8px solid transparent;
+    border-bottom-color: #1e293b;
+}

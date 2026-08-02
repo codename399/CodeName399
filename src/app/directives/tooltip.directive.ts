@@ -12,119 +12,88 @@ import {
   standalone: true,
 })
 export class TooltipDirective implements OnDestroy {
-  @Input('appTooltip') tooltipText = '';
+  @Input('appTooltip') text = '';
 
-  private tooltipEl: HTMLElement | null = null;
+  @Input() tooltipPosition: 'top' | 'bottom' | 'left' | 'right' = 'left';
+
+  private tooltip?: HTMLElement;
 
   constructor(
-    private readonly elementRef: ElementRef<HTMLElement>,
-    private readonly renderer: Renderer2,
+    private element: ElementRef,
+    private renderer: Renderer2,
   ) {}
 
-  @HostListener('mouseenter')
-  onMouseEnter(): void {
-    this.show();
-  }
+  @HostListener('click', ['$event'])
+  toggle(event: Event) {
+    event.stopPropagation();
 
-  @HostListener('mouseleave')
-  onMouseLeave(): void {
-    this.hide();
-  }
-
-  @HostListener('focus')
-  onFocus(): void {
-    this.show();
-  }
-
-  @HostListener('blur')
-  onBlur(): void {
-    this.hide();
-  }
-
-  @HostListener('click')
-  onClick(): void {
-    if (this.isTouchDevice()) {
-      this.toggle();
-    }
-  }
-
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: Event): void {
-    const target = event.target as Node | null;
-
-    if (!target || !this.elementRef.nativeElement.contains(target)) {
-      this.hide();
-    }
-  }
-
-  ngOnDestroy(): void {
-    this.hide();
-  }
-
-  private toggle(): void {
-    if (this.tooltipEl) {
-      this.hide();
+    if (this.tooltip) {
+      this.destroyTooltip();
       return;
     }
 
-    this.show();
+    this.createTooltip();
   }
 
-  private show(): void {
-    if (!this.tooltipText || this.tooltipEl) {
+  @HostListener('document:click')
+  close() {
+    this.destroyTooltip();
+  }
+
+  private createTooltip(): void {
+    const tooltip = this.renderer.createElement('div') as HTMLDivElement;
+
+    this.tooltip = tooltip;
+
+    this.renderer.addClass(tooltip, 'app-tooltip');
+    this.renderer.addClass(tooltip, this.tooltipPosition);
+
+    tooltip.innerText = this.text;
+
+    this.renderer.appendChild(document.body, tooltip);
+
+    const hostRect = this.element.nativeElement.getBoundingClientRect();
+    const tooltipRect = tooltip.getBoundingClientRect();
+
+    let left = 0;
+    let top = 0;
+
+    switch (this.tooltipPosition) {
+      case 'left':
+        left = hostRect.left - tooltipRect.width - 10;
+        top = hostRect.top + hostRect.height / 2 - tooltipRect.height / 2;
+        break;
+
+      case 'right':
+        left = hostRect.right + 10;
+        top = hostRect.top + hostRect.height / 2 - tooltipRect.height / 2;
+        break;
+
+      case 'top':
+        left = hostRect.left + hostRect.width / 2 - tooltipRect.width / 2;
+        top = hostRect.top - tooltipRect.height - 10;
+        break;
+
+      case 'bottom':
+        left = hostRect.left + hostRect.width / 2 - tooltipRect.width / 2;
+        top = hostRect.bottom + 10;
+        break;
+    }
+
+    this.renderer.setStyle(tooltip, 'left', `${left}px`);
+    this.renderer.setStyle(tooltip, 'top', `${top}px`);
+  }
+
+  private destroyTooltip() {
+    if (!this.tooltip) {
       return;
     }
 
-    this.tooltipEl = this.renderer.createElement('div');
-    this.renderer.addClass(this.tooltipEl, 'tooltip-panel');
-    this.renderer.setAttribute(this.tooltipEl, 'role', 'tooltip');
-    this.renderer.setProperty(this.tooltipEl, 'textContent', this.tooltipText);
-    this.renderer.appendChild(document.body, this.tooltipEl);
-
-    this.positionTooltip();
+    this.renderer.removeChild(document.body, this.tooltip);
+    this.tooltip = undefined;
   }
 
-  private hide(): void {
-    if (!this.tooltipEl) {
-      return;
-    }
-
-    this.renderer.removeChild(document.body, this.tooltipEl);
-    this.tooltipEl = null;
-  }
-
-  private positionTooltip(): void {
-    if (!this.tooltipEl) {
-      return;
-    }
-
-    const hostRect = this.elementRef.nativeElement.getBoundingClientRect();
-    const tooltipRect = this.tooltipEl.getBoundingClientRect();
-
-    let top = hostRect.bottom + 8;
-    let left = hostRect.left + hostRect.width / 2 - tooltipRect.width / 2;
-
-    if (left < 8) {
-      left = 8;
-    }
-
-    const maxLeft = window.innerWidth - tooltipRect.width - 8;
-
-    if (left > maxLeft) {
-      left = maxLeft;
-    }
-
-    const maxTop = window.innerHeight - tooltipRect.height - 8;
-
-    if (top > maxTop) {
-      top = hostRect.top - tooltipRect.height - 8;
-    }
-
-    this.renderer.setStyle(this.tooltipEl, 'top', `${Math.max(8, top)}px`);
-    this.renderer.setStyle(this.tooltipEl, 'left', `${Math.max(8, left)}px`);
-  }
-
-  private isTouchDevice(): boolean {
-    return window.matchMedia('(pointer: coarse)').matches;
+  ngOnDestroy() {
+    this.destroyTooltip();
   }
 }

@@ -87,30 +87,22 @@
       <section class="table-shell">
         <div class="table-header">
           <div>{{ filteredGainers().length }} symbols found</div>
-          <div>
-            Top candidates based on current scan
-            <span
-              class="tooltip-trigger"
-              (click)="toggleTooltip($event)"
-              tabindex="0"
-            >
-              <span class="info-tooltip">ℹ️</span>
-
-              <span class="tooltip-content">
-                Details order:
-                <br />
-                P/L • Change% • LTP • Qty • Avg • Invested • Current
-              </span>
-            </span>
-          </div>
+          <div>Top candidates based on current scan</div>
         </div>
-
         <div class="table-scroll">
           <table>
             <thead>
               <tr>
                 <th *ngIf="isColumnVisible('star')">⭐</th>
-                <th *ngIf="isColumnVisible('symbol')">Symbol</th>
+                <th *ngIf="isColumnVisible('symbol')">
+                  Symbol
+                  <span
+                    class="cursor-pointer"
+                    appTooltip="Details order: P/L • Change% • LTP • Qty • Avg • Invested • Current"
+                    tooltipPosition="bottom"
+                    >ℹ️</span
+                  >
+                </th>
                 <th *ngIf="isColumnVisible('stopLoss')">SL</th>
                 <th *ngIf="isColumnVisible('targetPrice')">Target</th>
                 <th *ngIf="isColumnVisible('token')">Token</th>

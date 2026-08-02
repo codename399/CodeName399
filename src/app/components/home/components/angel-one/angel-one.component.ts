@@ -18,13 +18,14 @@ import { TradingConfiguration } from '../../models/trading-configuration';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TooltipDirective } from '../../../../directives/tooltip.directive';
 
 @Component({
   selector: 'app-angel-one',
 
   standalone: true,
 
-  imports: [CommonModule, MatTooltipModule],
+  imports: [CommonModule, TooltipDirective],
 
   templateUrl: './angel-one.component.html',
 
@@ -593,10 +594,5 @@ export class AngelOneComponent implements OnInit, OnDestroy {
     parts.push(`${seconds}s`);
 
     return parts.join(' ');
-  }
-
-  toggleTooltip(event: Event) {
-    const trigger = event.currentTarget as HTMLElement;
-    trigger.classList.toggle('active');
   }
 }
