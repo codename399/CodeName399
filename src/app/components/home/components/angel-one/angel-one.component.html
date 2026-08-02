@@ -130,8 +130,6 @@
                 <th *ngIf="isColumnVisible('score')">Score</th>
                 <th *ngIf="isColumnVisible('signal')">Signal</th>
                 <th *ngIf="isColumnVisible('risk')">Risk</th>
-                <th *ngIf="isColumnVisible('stopLoss')">SL</th>
-                <th *ngIf="isColumnVisible('targetPrice')">Target</th>
                 <th *ngIf="isColumnVisible('atr')">ATR</th>
                 <th *ngIf="isColumnVisible('reason')">Reason</th>
                 <th *ngIf="isColumnVisible('suggestion')">Suggestion</th>
@@ -312,14 +310,6 @@
 
                 <td *ngIf="isColumnVisible('risk')">
                   {{ stock.risk }}
-                </td>
-
-                <td *ngIf="isColumnVisible('stopLoss')">
-                  ₹{{ stock.stopLoss | number: "1.2-2" }}
-                </td>
-
-                <td *ngIf="isColumnVisible('targetPrice')">
-                  ₹{{ stock.targetPrice | number: "1.2-2" }}
                 </td>
 
                 <td *ngIf="isColumnVisible('atr')">
