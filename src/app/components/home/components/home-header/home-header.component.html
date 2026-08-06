@@ -1,51 +1,88 @@
 <header class="bg-white shadow-md fixed top-0 left-0 w-full z-50">
-    <div class="mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-16">
-            <!-- Left: Logo -->
-            <div class="flex items-center space-x-2">
-                <span class="text-2xl font-bold text-indigo-600 cursor-pointer" (click)="goHome()">codename399</span>
-            </div>
+  <div class="mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center h-16">
+      <!-- Left: Logo -->
+      <div class="flex items-center space-x-2">
+        <span
+          class="text-2xl font-bold text-indigo-600 cursor-pointer"
+          (click)="goHome()"
+          >codename399</span
+        >
+      </div>
 
-            <!-- Center: Navigation -->
-            <!-- <nav class="hidden md:flex space-x-6">
+      <!-- Center: Navigation -->
+      <!-- <nav class="hidden md:flex space-x-6">
                 <a routerLink="/" class="text-gray-600 hover:text-indigo-600">Home</a>
                 <a routerLink="/about" class="text-gray-600 hover:text-indigo-600">About</a>
                 <a routerLink="/services" class="text-gray-600 hover:text-indigo-600">Services</a>
             </nav> -->
 
-            <!-- Right: Profile Dropdown -->
-            <div class="relative" (clickOutside)="isDropdownOpen = false">
-                <button (click)="toggleDropdown()" class="flex items-center focus:outline-none space-x-2">
-                    <img class="w-9 h-9 rounded-full border-2 border-indigo-500" [src]="profilePictureUrl"
-                        alt="User avatar" />
-                    <span class="hidden md:block text-gray-700 font-medium">Ajay</span>
-                    <svg class="w-4 h-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none"
-                        viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
+      <!-- Right: Profile Dropdown -->
+      <div class="relative" (clickOutside)="isDropdownOpen = false">
+        <button
+          (click)="toggleDropdown()"
+          class="flex items-center focus:outline-none space-x-2"
+        >
+          <img
+            class="w-9 h-9 rounded-full border-2 border-indigo-500"
+            [src]="profilePictureUrl"
+            alt="User avatar"
+          />
+          <span class="hidden md:block text-gray-700 font-medium">Ajay</span>
+          <svg
+            class="w-4 h-4 text-gray-500"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </button>
 
-                <!-- Dropdown -->
-                @if(isDropdownOpen){
-                <div class="absolute right-0 mt-2 w-56 bg-white border rounded-xl shadow-lg py-2">
-                    <a (click)="editProfile()" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Edit profile</a>
-                    <a (click)="changePassword()" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Change
-                        password</a>
-                    @if(isAdminUser){
-                    <button (click)="openLogs()" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">
-                        Logs
-                    </button>
-                    }
-                    <div class="border-t my-1"></div>
-                    <button (click)="logout()" class="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100">
-                        Logout
-                    </button>
-                </div>
-                }
+        <!-- Dropdown -->
+        @if (isDropdownOpen) {
+          <div
+            class="absolute right-0 mt-2 w-56 bg-white border rounded-xl shadow-lg py-2"
+          >
+            <a
+              (click)="editProfile()"
+              class="block px-4 py-2 text-gray-700 hover:bg-gray-100"
+              >Edit profile</a
+            >
+            <a
+              (click)="changePassword()"
+              class="block px-4 py-2 text-gray-700 hover:bg-gray-100"
+              >Change password</a
+            >
+            @if (isAdminUser) {
+              <button
+                (click)="openLogs()"
+                class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+              >
+                Logs
+              </button>
+            }
+            <div class="border-t my-1"></div>
+            <button
+              (click)="logout()"
+              class="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100"
+            >
+              Logout
+            </button>
+          </div>
+        }
 
-                <app-logs-panel [isOpen]="isLogsOpen" (close)="closeLogs()"></app-logs-panel>
-                }
-            </div>
-        </div>
+        <app-logs-panel
+          [isOpen]="isLogsOpen"
+          (close)="closeLogs()"
+        ></app-logs-panel>
+      </div>
     </div>
+  </div>
 </header>

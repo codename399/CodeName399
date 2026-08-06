@@ -4,6 +4,7 @@ import { Config } from '../../../../../assets/environments/config';
 import { AuthenticationService } from '../../../authentication/services/authentication-service';
 import { User } from '../../models/user';
 import { LogsComponent } from '../logs/logs.component';
+import { Constants } from '../../../../../constants';
 
 @Component({
   selector: 'app-home-header',
@@ -40,7 +41,7 @@ export class HomeHeaderComponent {
   isLogsOpen: boolean = false;
 
   get isAdminUser(): boolean {
-    return this.#authenticationService.hasClaim('role', 'Admin');
+    return this.#authenticationService.hasClaim(Constants.roleClaim, Constants.admin);
   }
 
   constructor() {
