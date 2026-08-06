@@ -1,0 +1,50 @@
+@if(isOpen){
+<div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
+  <div class="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-xl">
+    <div class="flex items-center justify-between">
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900">Logs</h3>
+        <p class="text-sm text-gray-500">Browse and download your server logs.</p>
+      </div>
+      <button (click)="onClose()" class="text-gray-500 hover:text-gray-700">✕</button>
+    </div>
+
+    <div class="mt-4 flex items-center justify-between">
+      <button (click)="downloadAllLogs()" class="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+        Download all
+      </button>
+      <button (click)="loadLogs()" class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+        Refresh
+      </button>
+    </div>
+
+    @if(isLoadingLogs){
+    <div class="mt-4 text-sm text-gray-500">Loading logs...</div>
+    }
+
+    @if(!isLoadingLogs && logs.length === 0){
+    <div class="mt-4 rounded-lg border border-dashed border-gray-200 p-4 text-sm text-gray-500">
+      No logs found.
+    </div>
+    }
+
+    @if(!isLoadingLogs && logs.length > 0){
+    <div class="mt-4 max-h-96 overflow-auto rounded-lg border border-gray-200">
+      <ul class="divide-y divide-gray-200">
+        @for(log of logs; track log.name){
+        <li class="flex items-center justify-between px-4 py-3">
+          <div>
+            <div class="font-medium text-gray-800">{{ log.name }}</div>
+            <div class="text-xs text-gray-500">Updated {{ log.modified | date:'medium' }}</div>
+          </div>
+          <button (click)="downloadLog(log.name)" class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Download
+          </button>
+        </li>
+        }
+      </ul>
+    </div>
+    }
+  </div>
+</div>
+}

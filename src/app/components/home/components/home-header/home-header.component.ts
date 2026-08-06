@@ -3,11 +3,12 @@ import { Router } from '@angular/router';
 import { Config } from '../../../../../assets/environments/config';
 import { AuthenticationService } from '../../../authentication/services/authentication-service';
 import { User } from '../../models/user';
+import { LogsComponent } from '../logs/logs.component';
 
 @Component({
   selector: 'app-home-header',
   standalone: true,
-  imports: [],
+  imports: [LogsComponent],
   templateUrl: './home-header.component.html',
   styleUrl: './home-header.component.css'
 })
@@ -36,6 +37,11 @@ export class HomeHeaderComponent {
   profilePictureUrl!: string;
   logoUrl!: string
   isDropdownOpen: boolean = false;
+  isLogsOpen: boolean = false;
+
+  get isAdminUser(): boolean {
+    return this.#authenticationService.hasClaim('role', 'Admin');
+  }
 
   constructor() {
     this.profilePictureUrl = this.#config.profilePictureUrl;
@@ -47,6 +53,15 @@ export class HomeHeaderComponent {
 
   logout() {
     this.#authenticationService.logout();
+  }
+
+  openLogs() {
+    this.isLogsOpen = true;
+    this.isDropdownOpen = false;
+  }
+
+  closeLogs() {
+    this.isLogsOpen = false;
   }
 
   changePassword() {

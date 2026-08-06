@@ -27,15 +27,23 @@
 
                 <!-- Dropdown -->
                 @if(isDropdownOpen){
-                <div class="absolute right-0 mt-2 w-48 bg-white border rounded-xl shadow-lg py-2">
+                <div class="absolute right-0 mt-2 w-56 bg-white border rounded-xl shadow-lg py-2">
                     <a (click)="editProfile()" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Edit profile</a>
                     <a (click)="changePassword()" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Change
                         password</a>
+                    @if(isAdminUser){
+                    <button (click)="openLogs()" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">
+                        Logs
+                    </button>
+                    }
                     <div class="border-t my-1"></div>
                     <button (click)="logout()" class="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100">
                         Logout
                     </button>
                 </div>
+                }
+
+                <app-logs-panel [isOpen]="isLogsOpen" (close)="closeLogs()"></app-logs-panel>
                 }
             </div>
         </div>

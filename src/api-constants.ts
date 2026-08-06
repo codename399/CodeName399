@@ -42,6 +42,15 @@ export class ApiConstants {
   readonly changePassword =
     '/changePassword';
 
+  readonly logs =
+    '/logs';
+
+  readonly downloadLog =
+    '/download';
+
+  readonly downloadAllLogs =
+    '/download-all';
+
   // ---------------- Roles ----------------
 
   readonly getAllRoles =
