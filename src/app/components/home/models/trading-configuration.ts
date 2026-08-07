@@ -94,4 +94,60 @@ export interface TradingConfiguration {
   sellTradingInterval: number;
 
   visibleColumns?: string[];
+
+  validation: ValidationSettings;
+
+  evaluation: EvaluationSettings;
+
+  virtualTrading: VirtualTradingSettings;
+
+  exit: ExitSettings;
+}
+
+export interface EvaluationSettings {
+  strongAdx: number;
+  mediumAdx: number;
+  lowChoppiness: number;
+  highChoppiness: number;
+  highRelativeVolume: number;
+  mediumRelativeVolume: number;
+  lowRelativeVolume: number;
+  excellentScore: number;
+  goodScore: number;
+  averageScore: number;
+}
+
+export interface ExitSettings {
+  atrExitMultiplier: number;
+  minimumProfitPercent: number;
+}
+
+export interface ValidationSettings {
+  minimumMovementScore: number;
+  minimumConfidence: number;
+  minimumRiskReward: number;
+  minimumTrendStrength: number;
+  minimumTrendStability: number;
+  minimumRecoveryScore: number;
+  minimumVolatilityScore: number;
+  minimumNoiseScore: number;
+  minimumBreakoutStrength: number;
+  minimumRSI: number;
+  maximumRSI: number;
+  minimumVolumeMultiplier: number;
+  minimumPositiveTickRatio: number;
+  minimumAboveEntryRatio: number;
+  minimumHigherHighs: number;
+  minimumConsecutivePositiveTicks: number;
+  maximumConsecutiveNegativeTicks: number;
+  maximumDrawdownPercent: number;
+}
+
+export interface VirtualTradingSettings {
+  warmupSeconds: number;
+  observationSeconds: number;
+  maximumObservationSeconds: number;
+  tickWindow: number;
+  entryLossPercent: number;
+  highestPriceTolerance: number;
 }

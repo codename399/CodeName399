@@ -170,6 +170,239 @@
         <section class="settings-card">
           <div class="card-header">
             <div>
+              <h2>Virtual Trading Tuning</h2>
+              <p>Advanced simulation thresholds</p>
+            </div>
+          </div>
+
+          <div class="card-body grid-2" formGroupName="virtualTrading">
+            <div class="field-row">
+              <label class="field-label" for="warmupSeconds">Warmup (Seconds)</label>
+              <input id="warmupSeconds" type="number" formControlName="warmupSeconds" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="observationSeconds">Observation (Seconds)</label>
+              <input id="observationSeconds" type="number" formControlName="observationSeconds" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="maximumObservationSeconds">Max Observation (Seconds)</label>
+              <input id="maximumObservationSeconds" type="number" formControlName="maximumObservationSeconds" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="tickWindow">Tick Window</label>
+              <input id="tickWindow" type="number" formControlName="tickWindow" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="entryLossPercent">Entry Loss Percentage</label>
+              <div class="input-with-suffix">
+                <input id="entryLossPercent" type="number" step="0.01" formControlName="entryLossPercent" class="field-input" />
+                <span class="suffix">%</span>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="highestPriceTolerance">Highest Price Tolerance</label>
+              <div class="input-with-suffix">
+                <input id="highestPriceTolerance" type="number" step="0.01" formControlName="highestPriceTolerance" class="field-input" />
+                <span class="suffix">%</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-card">
+          <div class="card-header">
+            <div>
+              <h2>Validation Thresholds</h2>
+              <p>Signal and risk validation cutoffs</p>
+            </div>
+          </div>
+
+          <div class="card-body grid-2" formGroupName="validation">
+            <div class="field-row">
+              <label class="field-label" for="minimumMovementScore">Minimum Movement Score</label>
+              <input id="minimumMovementScore" type="number" formControlName="minimumMovementScore" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="minimumConfidence">Minimum Confidence</label>
+              <input id="minimumConfidence" type="number" formControlName="minimumConfidence" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="minimumRiskReward">Minimum Risk Reward</label>
+              <input id="minimumRiskReward" type="number" step="0.01" formControlName="minimumRiskReward" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="minimumTrendStrength">Minimum Trend Strength</label>
+              <input id="minimumTrendStrength" type="number" formControlName="minimumTrendStrength" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="minimumTrendStability">Minimum Trend Stability</label>
+              <input id="minimumTrendStability" type="number" formControlName="minimumTrendStability" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="minimumRecoveryScore">Minimum Recovery Score</label>
+              <input id="minimumRecoveryScore" type="number" formControlName="minimumRecoveryScore" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="minimumVolatilityScore">Minimum Volatility Score</label>
+              <input id="minimumVolatilityScore" type="number" formControlName="minimumVolatilityScore" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="minimumNoiseScore">Minimum Noise Score</label>
+              <input id="minimumNoiseScore" type="number" formControlName="minimumNoiseScore" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="minimumBreakoutStrength">Minimum Breakout Strength</label>
+              <input id="minimumBreakoutStrength" type="number" formControlName="minimumBreakoutStrength" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="minimumRSI">Minimum RSI</label>
+              <input id="minimumRSI" type="number" formControlName="minimumRSI" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="maximumRSI">Maximum RSI</label>
+              <input id="maximumRSI" type="number" formControlName="maximumRSI" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="minimumVolumeMultiplier">Minimum Volume Multiplier</label>
+              <input id="minimumVolumeMultiplier" type="number" step="0.01" formControlName="minimumVolumeMultiplier" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="minimumPositiveTickRatio">Minimum Positive Tick Ratio</label>
+              <input id="minimumPositiveTickRatio" type="number" step="0.01" formControlName="minimumPositiveTickRatio" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="minimumAboveEntryRatio">Minimum Above Entry Ratio</label>
+              <input id="minimumAboveEntryRatio" type="number" step="0.01" formControlName="minimumAboveEntryRatio" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="minimumHigherHighs">Minimum Higher Highs</label>
+              <input id="minimumHigherHighs" type="number" formControlName="minimumHigherHighs" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="minimumConsecutivePositiveTicks">Minimum Consecutive Positive Ticks</label>
+              <input id="minimumConsecutivePositiveTicks" type="number" formControlName="minimumConsecutivePositiveTicks" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="maximumConsecutiveNegativeTicks">Maximum Consecutive Negative Ticks</label>
+              <input id="maximumConsecutiveNegativeTicks" type="number" formControlName="maximumConsecutiveNegativeTicks" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="maximumDrawdownPercent">Maximum Drawdown Percentage</label>
+              <input id="maximumDrawdownPercent" type="number" step="0.01" formControlName="maximumDrawdownPercent" class="field-input" />
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-card">
+          <div class="card-header">
+            <div>
+              <h2>Evaluation Thresholds</h2>
+              <p>Score-based evaluation cutoffs</p>
+            </div>
+          </div>
+
+          <div class="card-body grid-2" formGroupName="evaluation">
+            <div class="field-row">
+              <label class="field-label" for="strongAdx">Strong ADX</label>
+              <input id="strongAdx" type="number" formControlName="strongAdx" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="mediumAdx">Medium ADX</label>
+              <input id="mediumAdx" type="number" formControlName="mediumAdx" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="lowChoppiness">Low Choppiness</label>
+              <input id="lowChoppiness" type="number" formControlName="lowChoppiness" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="highChoppiness">High Choppiness</label>
+              <input id="highChoppiness" type="number" formControlName="highChoppiness" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="highRelativeVolume">High Relative Volume</label>
+              <input id="highRelativeVolume" type="number" step="0.01" formControlName="highRelativeVolume" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="mediumRelativeVolume">Medium Relative Volume</label>
+              <input id="mediumRelativeVolume" type="number" step="0.01" formControlName="mediumRelativeVolume" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="lowRelativeVolume">Low Relative Volume</label>
+              <input id="lowRelativeVolume" type="number" step="0.01" formControlName="lowRelativeVolume" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="excellentScore">Excellent Score</label>
+              <input id="excellentScore" type="number" formControlName="excellentScore" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="goodScore">Good Score</label>
+              <input id="goodScore" type="number" formControlName="goodScore" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="averageScore">Average Score</label>
+              <input id="averageScore" type="number" formControlName="averageScore" class="field-input" />
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-card">
+          <div class="card-header">
+            <div>
+              <h2>Exit Settings</h2>
+              <p>Profit-taking and stop-loss exits</p>
+            </div>
+          </div>
+
+          <div class="card-body grid-2" formGroupName="exit">
+            <div class="field-row">
+              <label class="field-label" for="atrExitMultiplier">ATR Exit Multiplier</label>
+              <input id="atrExitMultiplier" type="number" step="0.01" formControlName="atrExitMultiplier" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="minimumProfitPercent">Minimum Profit Percentage</label>
+              <input id="minimumProfitPercent" type="number" step="0.01" formControlName="minimumProfitPercent" class="field-input" />
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-card">
+        </section>
+
+        <section class="settings-card">
+          <div class="card-header">
+            <div>
               <h2>Scanner</h2>
               <p>Market scanning configuration</p>
             </div>

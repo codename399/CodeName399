@@ -139,6 +139,54 @@ export class TradingSettingsComponent implements OnInit {
     enableMACD: [true],
 
     enableBollinger: [true],
+
+    validation: this.#fb.group({
+      minimumMovementScore: [45, [Validators.required, Validators.min(0), Validators.max(100)]],
+      minimumConfidence: [65, [Validators.required, Validators.min(0), Validators.max(100)]],
+      minimumRiskReward: [1.5, [Validators.required, Validators.min(0)]],
+      minimumTrendStrength: [50, [Validators.required, Validators.min(0), Validators.max(100)]],
+      minimumTrendStability: [55, [Validators.required, Validators.min(0), Validators.max(100)]],
+      minimumRecoveryScore: [50, [Validators.required, Validators.min(0), Validators.max(100)]],
+      minimumVolatilityScore: [30, [Validators.required, Validators.min(0), Validators.max(100)]],
+      minimumNoiseScore: [45, [Validators.required, Validators.min(0), Validators.max(100)]],
+      minimumBreakoutStrength: [45, [Validators.required, Validators.min(0), Validators.max(100)]],
+      minimumRSI: [50, [Validators.required, Validators.min(0), Validators.max(100)]],
+      maximumRSI: [72, [Validators.required, Validators.min(0), Validators.max(100)]],
+      minimumVolumeMultiplier: [1.5, [Validators.required, Validators.min(0)]],
+      minimumPositiveTickRatio: [0.55, [Validators.required, Validators.min(0), Validators.max(1)]],
+      minimumAboveEntryRatio: [0.55, [Validators.required, Validators.min(0), Validators.max(1)]],
+      minimumHigherHighs: [2, [Validators.required, Validators.min(0)]],
+      minimumConsecutivePositiveTicks: [2, [Validators.required, Validators.min(0)]],
+      maximumConsecutiveNegativeTicks: [6, [Validators.required, Validators.min(0)]],
+      maximumDrawdownPercent: [0.4, [Validators.required, Validators.min(0), Validators.max(100)]],
+    }),
+
+    evaluation: this.#fb.group({
+      strongAdx: [30, [Validators.required, Validators.min(0), Validators.max(100)]],
+      mediumAdx: [25, [Validators.required, Validators.min(0), Validators.max(100)]],
+      lowChoppiness: [38, [Validators.required, Validators.min(0), Validators.max(100)]],
+      highChoppiness: [55, [Validators.required, Validators.min(0), Validators.max(100)]],
+      highRelativeVolume: [2, [Validators.required, Validators.min(0)]],
+      mediumRelativeVolume: [1.5, [Validators.required, Validators.min(0)]],
+      lowRelativeVolume: [1.2, [Validators.required, Validators.min(0)]],
+      excellentScore: [90, [Validators.required, Validators.min(0), Validators.max(100)]],
+      goodScore: [80, [Validators.required, Validators.min(0), Validators.max(100)]],
+      averageScore: [70, [Validators.required, Validators.min(0), Validators.max(100)]],
+    }),
+
+    virtualTrading: this.#fb.group({
+      warmupSeconds: [8, [Validators.required, Validators.min(0)]],
+      observationSeconds: [15, [Validators.required, Validators.min(0)]],
+      maximumObservationSeconds: [45, [Validators.required, Validators.min(0)]],
+      tickWindow: [20, [Validators.required, Validators.min(0)]],
+      entryLossPercent: [0.2, [Validators.required, Validators.min(0), Validators.max(100)]],
+      highestPriceTolerance: [0.3, [Validators.required, Validators.min(0), Validators.max(100)]],
+    }),
+
+    exit: this.#fb.group({
+      atrExitMultiplier: [0.4, [Validators.required, Validators.min(0), Validators.max(100)]],
+      minimumProfitPercent: [0.25, [Validators.required, Validators.min(0), Validators.max(100)]],
+    }),
   });
 
   enableAutoTradingFormControl = this.form?.controls?.enableAutoTrading;
@@ -291,6 +339,54 @@ export class TradingSettingsComponent implements OnInit {
         enableMACD: configuration.enableMACD,
 
         enableBollinger: configuration.enableBollinger,
+
+        validation: {
+          minimumMovementScore: configuration.validation?.minimumMovementScore ?? 45,
+          minimumConfidence: configuration.validation?.minimumConfidence ?? 65,
+          minimumRiskReward: configuration.validation?.minimumRiskReward ?? 1.5,
+          minimumTrendStrength: configuration.validation?.minimumTrendStrength ?? 50,
+          minimumTrendStability: configuration.validation?.minimumTrendStability ?? 55,
+          minimumRecoveryScore: configuration.validation?.minimumRecoveryScore ?? 50,
+          minimumVolatilityScore: configuration.validation?.minimumVolatilityScore ?? 30,
+          minimumNoiseScore: configuration.validation?.minimumNoiseScore ?? 45,
+          minimumBreakoutStrength: configuration.validation?.minimumBreakoutStrength ?? 45,
+          minimumRSI: configuration.validation?.minimumRSI ?? 50,
+          maximumRSI: configuration.validation?.maximumRSI ?? 72,
+          minimumVolumeMultiplier: configuration.validation?.minimumVolumeMultiplier ?? 1.5,
+          minimumPositiveTickRatio: configuration.validation?.minimumPositiveTickRatio ?? 0.55,
+          minimumAboveEntryRatio: configuration.validation?.minimumAboveEntryRatio ?? 0.55,
+          minimumHigherHighs: configuration.validation?.minimumHigherHighs ?? 2,
+          minimumConsecutivePositiveTicks: configuration.validation?.minimumConsecutivePositiveTicks ?? 2,
+          maximumConsecutiveNegativeTicks: configuration.validation?.maximumConsecutiveNegativeTicks ?? 6,
+          maximumDrawdownPercent: configuration.validation?.maximumDrawdownPercent ?? 0.4,
+        },
+
+        evaluation: {
+          strongAdx: configuration.evaluation?.strongAdx ?? 30,
+          mediumAdx: configuration.evaluation?.mediumAdx ?? 25,
+          lowChoppiness: configuration.evaluation?.lowChoppiness ?? 38,
+          highChoppiness: configuration.evaluation?.highChoppiness ?? 55,
+          highRelativeVolume: configuration.evaluation?.highRelativeVolume ?? 2,
+          mediumRelativeVolume: configuration.evaluation?.mediumRelativeVolume ?? 1.5,
+          lowRelativeVolume: configuration.evaluation?.lowRelativeVolume ?? 1.2,
+          excellentScore: configuration.evaluation?.excellentScore ?? 90,
+          goodScore: configuration.evaluation?.goodScore ?? 80,
+          averageScore: configuration.evaluation?.averageScore ?? 70,
+        },
+
+        virtualTrading: {
+          warmupSeconds: configuration.virtualTrading?.warmupSeconds ?? 8,
+          observationSeconds: configuration.virtualTrading?.observationSeconds ?? 15,
+          maximumObservationSeconds: configuration.virtualTrading?.maximumObservationSeconds ?? 45,
+          tickWindow: configuration.virtualTrading?.tickWindow ?? 20,
+          entryLossPercent: configuration.virtualTrading?.entryLossPercent ?? 0.2,
+          highestPriceTolerance: configuration.virtualTrading?.highestPriceTolerance ?? 0.3,
+        },
+
+        exit: {
+          atrExitMultiplier: configuration.exit?.atrExitMultiplier ?? 0.4,
+          minimumProfitPercent: configuration.exit?.minimumProfitPercent ?? 0.25,
+        },
       },
       {
         emitEvent: false,
@@ -455,6 +551,50 @@ export class TradingSettingsComponent implements OnInit {
       enableAnchoredVWAP: value.enableAnchoredVWAP ?? true,
       enableMACD: value.enableMACD ?? true,
       enableBollinger: value.enableBollinger ?? true,
+      validation: {
+        minimumMovementScore: Number(value.validation?.minimumMovementScore ?? 45),
+        minimumConfidence: Number(value.validation?.minimumConfidence ?? 65),
+        minimumRiskReward: Number(value.validation?.minimumRiskReward ?? 1.5),
+        minimumTrendStrength: Number(value.validation?.minimumTrendStrength ?? 50),
+        minimumTrendStability: Number(value.validation?.minimumTrendStability ?? 55),
+        minimumRecoveryScore: Number(value.validation?.minimumRecoveryScore ?? 50),
+        minimumVolatilityScore: Number(value.validation?.minimumVolatilityScore ?? 30),
+        minimumNoiseScore: Number(value.validation?.minimumNoiseScore ?? 45),
+        minimumBreakoutStrength: Number(value.validation?.minimumBreakoutStrength ?? 45),
+        minimumRSI: Number(value.validation?.minimumRSI ?? 50),
+        maximumRSI: Number(value.validation?.maximumRSI ?? 72),
+        minimumVolumeMultiplier: Number(value.validation?.minimumVolumeMultiplier ?? 1.5),
+        minimumPositiveTickRatio: Number(value.validation?.minimumPositiveTickRatio ?? 0.55),
+        minimumAboveEntryRatio: Number(value.validation?.minimumAboveEntryRatio ?? 0.55),
+        minimumHigherHighs: Number(value.validation?.minimumHigherHighs ?? 2),
+        minimumConsecutivePositiveTicks: Number(value.validation?.minimumConsecutivePositiveTicks ?? 2),
+        maximumConsecutiveNegativeTicks: Number(value.validation?.maximumConsecutiveNegativeTicks ?? 6),
+        maximumDrawdownPercent: Number(value.validation?.maximumDrawdownPercent ?? 0.4),
+      },
+      evaluation: {
+        strongAdx: Number(value.evaluation?.strongAdx ?? 30),
+        mediumAdx: Number(value.evaluation?.mediumAdx ?? 25),
+        lowChoppiness: Number(value.evaluation?.lowChoppiness ?? 38),
+        highChoppiness: Number(value.evaluation?.highChoppiness ?? 55),
+        highRelativeVolume: Number(value.evaluation?.highRelativeVolume ?? 2),
+        mediumRelativeVolume: Number(value.evaluation?.mediumRelativeVolume ?? 1.5),
+        lowRelativeVolume: Number(value.evaluation?.lowRelativeVolume ?? 1.2),
+        excellentScore: Number(value.evaluation?.excellentScore ?? 90),
+        goodScore: Number(value.evaluation?.goodScore ?? 80),
+        averageScore: Number(value.evaluation?.averageScore ?? 70),
+      },
+      virtualTrading: {
+        warmupSeconds: Number(value.virtualTrading?.warmupSeconds ?? 8),
+        observationSeconds: Number(value.virtualTrading?.observationSeconds ?? 15),
+        maximumObservationSeconds: Number(value.virtualTrading?.maximumObservationSeconds ?? 45),
+        tickWindow: Number(value.virtualTrading?.tickWindow ?? 20),
+        entryLossPercent: Number(value.virtualTrading?.entryLossPercent ?? 0.2),
+        highestPriceTolerance: Number(value.virtualTrading?.highestPriceTolerance ?? 0.3),
+      },
+      exit: {
+        atrExitMultiplier: Number(value.exit?.atrExitMultiplier ?? 0.4),
+        minimumProfitPercent: Number(value.exit?.minimumProfitPercent ?? 0.25),
+      },
     };
 
     this.#angel
