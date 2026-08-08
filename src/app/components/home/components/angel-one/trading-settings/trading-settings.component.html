@@ -167,6 +167,293 @@
           </div>
         </section>
 
+
+        <section class="settings-card">
+          <div class="card-header">
+            <div>
+              <h2>Evaluation Scoring</h2>
+              <p>Configure strategy scoring, thresholds and penalties</p>
+            </div>
+          </div>
+
+          <div class="card-body grid-2" formGroupName="evaluation">
+            <div class="field-row">
+              <label class="field-label">Excellent Score</label>
+              <input type="number" formControlName="excellentScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Good Score</label>
+              <input type="number" formControlName="goodScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Average / Setup Score</label>
+              <input type="number" formControlName="averageScore" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label">Strong ADX</label>
+              <input type="number" step="0.1" formControlName="strongAdx" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Medium ADX</label>
+              <input type="number" step="0.1" formControlName="mediumAdx" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Low Choppiness</label>
+              <input type="number" step="0.1" formControlName="lowChoppiness" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">High Choppiness</label>
+              <input type="number" step="0.1" formControlName="highChoppiness" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label">High Relative Volume</label>
+              <input type="number" step="0.1" formControlName="highRelativeVolume" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Medium Relative Volume</label>
+              <input type="number" step="0.1" formControlName="mediumRelativeVolume" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Low Relative Volume</label>
+              <input type="number" step="0.1" formControlName="lowRelativeVolume" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label">EMA9 &gt; EMA21 Score</label>
+              <input type="number" formControlName="ema9AboveEma21Score" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">EMA21 &gt; EMA50 Score</label>
+              <input type="number" formControlName="ema21AboveEma50Score" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">SuperTrend Bullish Score</label>
+              <input type="number" formControlName="superTrendBullishScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Price Above VWAP Score</label>
+              <input type="number" formControlName="priceAboveVwapScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Anchored VWAP Score</label>
+              <input type="number" formControlName="anchoredVwapScore" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label">Strong ADX Score</label>
+              <input type="number" formControlName="strongAdxScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Medium ADX Score</label>
+              <input type="number" formControlName="mediumAdxScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">+DI &gt; -DI Score</label>
+              <input type="number" formControlName="plusDiAboveMinusDiScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Low Choppiness Score</label>
+              <input type="number" formControlName="lowChoppinessScore" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label">Increasing Momentum Score</label>
+              <input type="number" formControlName="momentumIncreasingScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Bullish Candle Score</label>
+              <input type="number" formControlName="lastCandleBullishScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Higher High Score</label>
+              <input type="number" formControlName="higherHighScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Higher Low Score</label>
+              <input type="number" formControlName="higherLowScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">EMA9 Slope Score</label>
+              <input type="number" formControlName="ema9SlopePositiveScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">EMA21 Slope Score</label>
+              <input type="number" formControlName="ema21SlopePositiveScore" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label">Momentum High Volume Score</label>
+              <input type="number" formControlName="highRelativeVolumeScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Momentum Medium Volume Score</label>
+              <input type="number" formControlName="mediumRelativeVolumeScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Momentum Low Volume Score</label>
+              <input type="number" formControlName="lowRelativeVolumeScore" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label">Pullback High Volume Score</label>
+              <input type="number" formControlName="pullbackHighRelativeVolumeScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Pullback Medium Volume Score</label>
+              <input type="number" formControlName="pullbackMediumRelativeVolumeScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Pullback Low Volume Score</label>
+              <input type="number" formControlName="pullbackLowRelativeVolumeScore" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label">Momentum Pullback Minimum</label>
+              <input type="number" step="0.01" formControlName="momentumPullbackIdealMinimum" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Momentum Pullback Ideal Maximum</label>
+              <input type="number" step="0.01" formControlName="momentumPullbackIdealMaximum" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Momentum Pullback Maximum</label>
+              <input type="number" step="0.01" formControlName="momentumPullbackMaximum" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Momentum Pullback Ideal Score</label>
+              <input type="number" formControlName="momentumPullbackIdealScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Momentum Pullback Secondary Score</label>
+              <input type="number" formControlName="momentumPullbackSecondaryScore" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label">Pullback Minimum Distance</label>
+              <input type="number" step="0.01" formControlName="pullbackDistanceMinimum" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Pullback Ideal Maximum</label>
+              <input type="number" step="0.01" formControlName="pullbackDistanceIdealMaximum" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Pullback Maximum Distance</label>
+              <input type="number" step="0.01" formControlName="pullbackDistanceMaximum" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Pullback Ideal Score</label>
+              <input type="number" formControlName="pullbackDistanceIdealScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Pullback Secondary Score</label>
+              <input type="number" formControlName="pullbackDistanceSecondaryScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">EMA9 Bounce Score</label>
+              <input type="number" formControlName="ema9BounceScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">VWAP Bounce Score</label>
+              <input type="number" formControlName="vwapBounceScore" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label">RSI Valid Score</label>
+              <input type="number" formControlName="rsiValidScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">RSI Above Minimum Score</label>
+              <input type="number" formControlName="rsiAboveMinimumScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">RSI Below Minimum Penalty</label>
+              <input type="number" formControlName="rsiBelowMinimumPenalty" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Momentum RSI Penalty</label>
+              <input type="number" formControlName="momentumRsiBelowMinimumPenalty" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label">MACD Bullish Score</label>
+              <input type="number" formControlName="macdBullishScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">MACD Bearish Penalty</label>
+              <input type="number" formControlName="macdBearishPenalty" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">MACD Histogram Positive Score</label>
+              <input type="number" formControlName="macdHistogramPositiveScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">MACD Histogram Negative Penalty</label>
+              <input type="number" formControlName="macdHistogramNegativePenalty" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label">Momentum Wide Bollinger</label>
+              <input type="number" step="0.01" formControlName="momentumWideBollingerBandwidth" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Momentum Medium Bollinger</label>
+              <input type="number" step="0.01" formControlName="momentumMediumBollingerBandwidth" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Momentum Narrow Bollinger</label>
+              <input type="number" step="0.01" formControlName="momentumNarrowBollingerBandwidth" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Momentum Wide Bollinger Score</label>
+              <input type="number" formControlName="momentumWideBollingerScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Momentum Medium Bollinger Score</label>
+              <input type="number" formControlName="momentumMediumBollingerScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Momentum Narrow Bollinger Penalty</label>
+              <input type="number" formControlName="momentumNarrowBollingerPenalty" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label">Pullback Wide Bollinger</label>
+              <input type="number" step="0.01" formControlName="pullbackWideBollingerBandwidth" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Pullback Narrow Bollinger</label>
+              <input type="number" step="0.01" formControlName="pullbackNarrowBollingerBandwidth" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Pullback Wide Bollinger Score</label>
+              <input type="number" formControlName="pullbackWideBollingerScore" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Pullback Narrow Bollinger Penalty</label>
+              <input type="number" formControlName="pullbackNarrowBollingerPenalty" class="field-input" />
+            </div>
+
+            <div class="field-row">
+              <label class="field-label">Momentum Exhausted Move Penalty</label>
+              <input type="number" formControlName="momentumExhaustedMovePenalty" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">Pullback Exhausted Move Penalty</label>
+              <input type="number" formControlName="pullbackExhaustedMovePenalty" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">SuperTrend Bearish Penalty</label>
+              <input type="number" formControlName="superTrendBearishPenalty" class="field-input" />
+            </div>
+            <div class="field-row">
+              <label class="field-label">High Choppiness Penalty</label>
+              <input type="number" formControlName="highChoppinessPenalty" class="field-input" />
+            </div>
+          </div>
+        </section>
+
         <section class="settings-card">
           <div class="card-header">
             <div>
@@ -582,6 +869,11 @@
               <input id="minimumProfitPercent" type="number" step="0.01" formControlName="minimumProfitPercent" class="field-input" />
             </div>
           </div>
+
+            <div class="field-row">
+              <label class="field-label" for="trailingStopAtrMultiplier">Trailing Stop ATR Multiplier</label>
+              <input id="trailingStopAtrMultiplier" type="number" step="0.01" formControlName="trailingStopAtrMultiplier" class="field-input" />
+            </div>
         </section>
 
         <section class="settings-card">

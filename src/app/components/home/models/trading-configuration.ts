@@ -119,11 +119,79 @@ export interface EvaluationSettings {
   excellentScore: number;
   goodScore: number;
   averageScore: number;
+
+  ema9AboveEma21Score: number;
+  ema21AboveEma50Score: number;
+  superTrendBullishScore: number;
+  priceAboveVwapScore: number;
+  anchoredVwapScore: number;
+
+  strongAdxScore: number;
+  mediumAdxScore: number;
+  plusDiAboveMinusDiScore: number;
+  lowChoppinessScore: number;
+
+  momentumIncreasingScore: number;
+  lastCandleBullishScore: number;
+  higherHighScore: number;
+  higherLowScore: number;
+  ema9SlopePositiveScore: number;
+  ema21SlopePositiveScore: number;
+
+  highRelativeVolumeScore: number;
+  mediumRelativeVolumeScore: number;
+  lowRelativeVolumeScore: number;
+
+  pullbackHighRelativeVolumeScore: number;
+  pullbackMediumRelativeVolumeScore: number;
+  pullbackLowRelativeVolumeScore: number;
+
+  momentumPullbackIdealMinimum: number;
+  momentumPullbackIdealMaximum: number;
+  momentumPullbackMaximum: number;
+  momentumPullbackIdealScore: number;
+  momentumPullbackSecondaryScore: number;
+
+  pullbackDistanceMinimum: number;
+  pullbackDistanceIdealMaximum: number;
+  pullbackDistanceMaximum: number;
+  pullbackDistanceIdealScore: number;
+  pullbackDistanceSecondaryScore: number;
+  ema9BounceScore: number;
+  vwapBounceScore: number;
+
+  rsiValidScore: number;
+  rsiAboveMinimumScore: number;
+  rsiBelowMinimumPenalty: number;
+  momentumRsiBelowMinimumPenalty: number;
+
+  macdBullishScore: number;
+  macdBearishPenalty: number;
+  macdHistogramPositiveScore: number;
+  macdHistogramNegativePenalty: number;
+
+  momentumWideBollingerBandwidth: number;
+  momentumMediumBollingerBandwidth: number;
+  momentumNarrowBollingerBandwidth: number;
+  momentumWideBollingerScore: number;
+  momentumMediumBollingerScore: number;
+  momentumNarrowBollingerPenalty: number;
+
+  pullbackWideBollingerBandwidth: number;
+  pullbackNarrowBollingerBandwidth: number;
+  pullbackWideBollingerScore: number;
+  pullbackNarrowBollingerPenalty: number;
+
+  momentumExhaustedMovePenalty: number;
+  pullbackExhaustedMovePenalty: number;
+  superTrendBearishPenalty: number;
+  highChoppinessPenalty: number;
 }
 
 export interface ExitSettings {
   atrExitMultiplier: number;
   minimumProfitPercent: number;
+  trailingStopAtrMultiplier: number;
 }
 
 // ValidationSettings is defined later with extended fields.
