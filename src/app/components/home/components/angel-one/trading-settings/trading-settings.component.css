@@ -4,13 +4,18 @@
   background: #eef4fb;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 .settings-page {
   display: flex;
   flex-direction: column;
   min-height: 100%;
   padding: 28px 24px;
   gap: 24px;
-  box-sizing: border-box;
 }
 
 .page-header {
@@ -48,7 +53,10 @@ button {
   padding: 0.85rem 1.4rem;
   font-size: 0.95rem;
   font-weight: 700;
-  transition: transform 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 button:disabled {
@@ -59,6 +67,7 @@ button:disabled {
 .primary-button {
   background: #2563eb;
   color: white;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.18);
 }
 
 .primary-button:hover:not(:disabled) {
@@ -70,7 +79,7 @@ button:disabled {
 .nav-button {
   background: white;
   color: #334155;
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
 }
 
 .secondary-button:hover:not(:disabled),
@@ -94,134 +103,283 @@ button:disabled {
 .settings-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 }
 
+/*
+ * Accordion layout
+ * The HTML uses:
+ *
+ * <div class="settings-grid">
+ *   <details class="settings-card">
+ *     <summary class="card-header">...</summary>
+ *     <div class="card-body">...</div>
+ *   </details>
+ * </div>
+ */
 .settings-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(320px, 1fr));
-  gap: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
 }
 
 .settings-card {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
   background: white;
-  border-radius: 22px;
-  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.055);
   overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  animation: fadeUp 0.2s ease;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.settings-card:hover {
+  border-color: rgba(37, 99, 235, 0.22);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.settings-card[open] {
+  border-color: rgba(37, 99, 235, 0.28);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.09);
 }
 
 .card-header {
-  padding: 24px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 72px;
+  margin: 0;
+  padding: 18px 52px 18px 22px;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 0;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.card-header::-webkit-details-marker {
+  display: none;
+}
+
+.card-header::marker {
+  content: "";
+}
+
+.card-header::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 24px;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid #64748b;
+  border-bottom: 2px solid #64748b;
+  transform: translateY(-65%) rotate(45deg);
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.settings-card[open] > .card-header {
   background: linear-gradient(180deg, #f8fafc 0%, #eef4fb 100%);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.settings-card[open] > .card-header::after {
+  transform: translateY(-25%) rotate(225deg);
+  border-color: #2563eb;
+}
+
+.card-header:hover {
+  background: #f8fafc;
+}
+
+.card-header:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.2);
+  outline-offset: -3px;
+}
+
+.card-header > div {
+  min-width: 0;
 }
 
 .card-header h2 {
-  margin: 0 0 6px;
-  font-size: 20px;
+  margin: 0 0 4px;
+  font-size: 18px;
+  line-height: 1.3;
+  font-weight: 800;
   color: #102a43;
 }
 
 .card-header p {
   margin: 0;
   color: #64748b;
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .card-body {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 22px 24px 24px;
+  width: 100%;
+  padding: 20px 22px 22px;
+  background: #ffffff;
 }
 
 .grid-2 {
   display: grid;
-  grid-template-columns: repeat(2, minmax(160px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+  align-items: start;
 }
 
 .field-row {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   gap: 8px;
 }
 
 .field-label {
   font-size: 0.9rem;
+  line-height: 1.35;
   font-weight: 700;
   color: #334155;
 }
 
 .field-input,
-select {
+select,
+textarea {
+  display: block;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 44px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid #cbd5e1;
-  padding: 0 14px;
+  padding: 10px 14px;
   background: white;
   color: #0f172a;
+  font: inherit;
   font-size: 0.95rem;
   outline: none;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+}
+
+textarea.field-input {
+  min-height: 88px;
+  resize: vertical;
+  line-height: 1.45;
 }
 
 .field-input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.field-input:hover:not(:focus),
+select:hover:not(:focus),
+textarea:hover:not(:focus) {
+  border-color: #94a3b8;
 }
 
 .input-with-suffix,
 .input-with-prefix {
   display: flex;
-  align-items: center;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
   border: 1px solid #cbd5e1;
-  border-radius: 14px;
+  border-radius: 12px;
   overflow: hidden;
   background: white;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.input-with-suffix:focus-within,
+.input-with-prefix:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
 }
 
 .input-with-suffix .suffix,
 .input-with-prefix .prefix {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   min-width: 48px;
   padding: 0 12px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #475569;
   background: #f8fafc;
+  border: 0;
 }
 
 .input-with-suffix input,
 .input-with-prefix input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  min-height: 42px;
   border: none;
   outline: none;
   box-shadow: none;
-  padding: 12px 14px;
-  width: 100%;
+  padding: 9px 14px;
+  background: transparent;
 }
 
 .toggle-field {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px;
-  border-radius: 16px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 12px 14px;
+  border-radius: 12px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
   font-weight: 700;
   color: #102a43;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease;
+}
+
+.toggle-field:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
 }
 
 .toggle-field input {
+  flex: 0 0 auto;
   width: 18px;
   height: 18px;
+  margin: 0;
+  accent-color: #2563eb;
 }
 
 .toggle-field.full-width {
@@ -239,8 +397,8 @@ select:focus {
   gap: 18px;
   padding: 18px 22px;
   background: white;
-  border-radius: 20px;
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
   border: 1px solid rgba(148, 163, 184, 0.18);
   position: sticky;
   bottom: 0;
@@ -250,6 +408,7 @@ select:focus {
 .footer-left {
   display: flex;
   align-items: center;
+  min-width: 0;
 }
 
 .status-pill {
@@ -274,40 +433,16 @@ select:focus {
 
 .footer-right {
   display: flex;
+  align-items: center;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-@media (max-width: 1080px) {
-  .settings-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 660px) {
-  .settings-page {
-    padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
-  }
-
-  .settings-footer {
-    position: static;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-    padding: 16px;
-    margin-top: 4px;
-  }
-
-  .header-actions,
-  .footer-right {
-    width: 100%;
-    justify-content: stretch;
-  }
-
-  .header-actions button,
-  .footer-right button {
-    width: 100%;
-  }
+.footer-right button {
+  min-width: 140px;
+  height: 44px;
+  font-weight: 600;
+  border-radius: 10px;
 }
 
 .unsaved {
@@ -318,69 +453,29 @@ select:focus {
   color: #15803d;
 }
 
-/* ==========================================================
-   Footer Right
-========================================================== */
-
-.footer-right {
-  display: flex;
-
-  align-items: center;
-
-  gap: 14px;
+/* Number inputs */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
-/* ==========================================================
-   Material Buttons
-========================================================== */
-
-.footer-right button {
-  min-width: 140px;
-
-  height: 44px;
-
-  font-weight: 600;
-
-  border-radius: 10px;
+input[type="number"] {
+  -moz-appearance: textfield;
 }
 
-.footer-right button mat-icon {
-  margin-right: 8px;
+/* Time inputs */
+input[type="time"] {
+  cursor: pointer;
 }
 
-/* ==========================================================
-   Save Button
-========================================================== */
-
-button[mat-flat-button] {
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.25);
-}
-
-button[mat-flat-button]:hover {
-  transform: translateY(-1px);
-}
-
-/* ==========================================================
-   Disabled Buttons
-========================================================== */
-
-button:disabled {
-  opacity: 0.55;
-
-  cursor: not-allowed;
-}
-
-/* ==========================================================
-   Material Form Fields
-========================================================== */
-
+/* Angular Material compatibility */
 .mat-mdc-form-field {
   width: 100%;
 }
 
 .mat-mdc-text-field-wrapper {
   border-radius: 12px !important;
-
   transition: 0.2s ease;
 }
 
@@ -392,48 +487,13 @@ button:disabled {
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
 }
 
-/* ==========================================================
-   Labels
-========================================================== */
-
 .mat-mdc-form-field label {
   font-weight: 500;
 }
 
-/* ==========================================================
-   Number Inputs
-========================================================== */
-
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-
-  margin: 0;
-}
-
-input[type="number"] {
-  -moz-appearance: textfield;
-}
-
-/* ==========================================================
-   Time Inputs
-========================================================== */
-
-input[type="time"] {
-  cursor: pointer;
-}
-
-/* ==========================================================
-   Select
-========================================================== */
-
 .mat-mdc-select {
   font-size: 15px;
 }
-
-/* ==========================================================
-   Toggle
-========================================================== */
 
 mat-slide-toggle {
   margin-bottom: 6px;
@@ -443,98 +503,71 @@ mat-slide-toggle {
   padding: 4px 0;
 }
 
-/* ==========================================================
-   Icons
-========================================================== */
-
 mat-icon {
   vertical-align: middle;
 }
-
-/* ==========================================================
-   Card Animation
-========================================================== */
-
-.settings-card {
-  animation: fadeUp 0.25s ease;
-}
-
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-
-    transform: translateY(12px);
-  }
-
-  to {
-    opacity: 1;
-
-    transform: translateY(0);
-  }
-}
-
-/* ==========================================================
-   Divider
-========================================================== */
 
 mat-divider {
   margin: 0;
 }
 
-/* ==========================================================
-   Scrollbar
-========================================================== */
+button[mat-flat-button] {
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.25);
+}
 
-.settings-grid::-webkit-scrollbar {
+button[mat-flat-button]:hover {
+  transform: translateY(-1px);
+}
+
+/* Animation */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scrollbar */
+.settings-page::-webkit-scrollbar {
   width: 10px;
 }
 
-.settings-grid::-webkit-scrollbar-track {
+.settings-page::-webkit-scrollbar-track {
   background: #e2e8f0;
-
   border-radius: 20px;
 }
 
-.settings-grid::-webkit-scrollbar-thumb {
+.settings-page::-webkit-scrollbar-thumb {
   background: #94a3b8;
-
   border-radius: 20px;
 }
 
-.settings-grid::-webkit-scrollbar-thumb:hover {
+.settings-page::-webkit-scrollbar-thumb:hover {
   background: #64748b;
 }
 
-/* ==========================================================
-   Responsive - Large Tablets
-========================================================== */
-
+/* Large tablets */
 @media (max-width: 1200px) {
-  .settings-grid {
-    grid-template-columns: 1fr;
-  }
-
   .page-header {
     flex-direction: column;
-
     align-items: flex-start;
   }
 
   .header-actions {
     width: 100%;
-
     justify-content: flex-end;
   }
 }
 
-/* ==========================================================
-   Responsive - Tablets
-========================================================== */
-
+/* Tablets */
 @media (max-width: 768px) {
   .settings-page {
     padding: 16px;
-
     gap: 16px;
   }
 
@@ -544,7 +577,6 @@ mat-divider {
 
   .page-header h1 {
     font-size: 28px;
-
     margin-top: 12px;
   }
 
@@ -554,12 +586,9 @@ mat-divider {
 
   .header-actions {
     width: 100%;
-
     display: grid;
-
-    grid-template-columns: repeat(2, 1fr);
-
-    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
   }
 
   .header-actions button {
@@ -567,30 +596,44 @@ mat-divider {
   }
 
   .settings-grid {
-    padding: 16px 0;
-
-    gap: 16px;
+    gap: 10px;
   }
 
   .settings-card {
-    border-radius: 14px !important;
+    border-radius: 14px;
   }
 
-  .settings-card mat-card-header {
-    padding: 18px;
+  .card-header {
+    min-height: 64px;
+    padding: 16px 48px 16px 18px;
   }
 
-  .settings-card mat-card-content {
-    padding: 18px !important;
+  .card-header::after {
+    right: 20px;
+  }
+
+  .card-header h2 {
+    font-size: 17px;
+  }
+
+  .card-header p {
+    font-size: 12px;
+  }
+
+  .card-body {
+    padding: 16px 18px 18px;
+    gap: 14px;
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr;
+    gap: 14px;
   }
 
   .settings-footer {
     flex-direction: column;
-
     align-items: stretch;
-
-    gap: 16px;
-
+    gap: 14px;
     padding: 16px;
   }
 
@@ -600,25 +643,18 @@ mat-divider {
 
   .footer-right {
     width: 100%;
-
     display: grid;
-
-    grid-template-columns: repeat(3, 1fr);
-
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
   }
 
   .footer-right button {
     width: 100%;
-
-    min-width: auto;
+    min-width: 0;
   }
 }
 
-/* ==========================================================
-   Responsive - Mobile
-========================================================== */
-
+/* Mobile */
 @media (max-width: 480px) {
   .settings-page {
     padding: 12px;
@@ -636,16 +672,41 @@ mat-divider {
     grid-template-columns: 1fr;
   }
 
-  .settings-card mat-card-title {
-    font-size: 18px;
+  .card-header {
+    min-height: 60px;
+    padding: 15px 44px 15px 16px;
   }
 
-  .settings-card mat-card-subtitle {
-    font-size: 12px;
+  .card-header h2 {
+    font-size: 16px;
   }
 
-  .settings-card mat-card-content {
-    gap: 14px;
+  .card-header p {
+    font-size: 11px;
+  }
+
+  .card-header::after {
+    right: 17px;
+    width: 8px;
+    height: 8px;
+  }
+
+  .card-body {
+    padding: 14px 16px 16px;
+  }
+
+  .field-label {
+    font-size: 0.85rem;
+  }
+
+  .field-input,
+  select,
+  textarea {
+    font-size: 0.9rem;
+  }
+
+  .settings-footer {
+    position: static;
   }
 
   .footer-right {
@@ -657,39 +718,7 @@ mat-divider {
   }
 }
 
-/* ==========================================================
-   Darker Elevation on Hover
-========================================================== */
-
-.settings-card:hover {
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15) !important;
-}
-
-/* ==========================================================
-   Button Animation
-========================================================== */
-
-button {
-  transition:
-    background 0.2s,
-    transform 0.2s,
-    box-shadow 0.2s;
-}
-
-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-}
-
-button:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-/* ==========================================================
-   Nice Selection
-========================================================== */
-
 ::selection {
   background: #bfdbfe;
-
   color: #0f172a;
 }
