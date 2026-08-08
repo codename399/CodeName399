@@ -77,6 +77,7 @@ export interface Gainer {
   risk: string;
   reason: string;
   suggestion: string;
+  isSubscribed: boolean;
 
   // =========================
   // Trade Levels

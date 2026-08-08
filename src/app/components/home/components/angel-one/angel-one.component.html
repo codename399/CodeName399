@@ -159,7 +159,25 @@
 
                 <td class="symbol" *ngIf="isColumnVisible('symbol')">
                   <div class="symbol-content">
-                    <div class="symbol-name">{{ stock.symbol }}</div>
+                    <div class="symbol-name">
+                      <span
+                        class="subscription-indicator"
+                        [class.subscribed]="stock.isSubscribed"
+                        [class.not-subscribed]="!stock.isSubscribed"
+                        [title]="
+                          stock.isSubscribed
+                            ? 'Live market data subscribed'
+                            : 'Not subscribed'
+                        "
+                        [attr.aria-label]="
+                          stock.isSubscribed
+                            ? 'Live market data subscribed'
+                            : 'Not subscribed'
+                        "
+                      ></span>
+
+                      <span>{{ stock.symbol }}</span>
+                    </div>
                     <div class="symbol-meta">
                       <span
                         class="symbol-meta-item"
