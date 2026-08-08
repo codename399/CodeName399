@@ -132,6 +132,7 @@ export interface EvaluationSettings {
   lowChoppinessScore: number;
 
   momentumIncreasingScore: number;
+  pullbackIncreasingMomentumScore: number;
   lastCandleBullishScore: number;
   higherHighScore: number;
   higherLowScore: number;
