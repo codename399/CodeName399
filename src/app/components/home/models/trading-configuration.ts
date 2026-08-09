@@ -1,7 +1,146 @@
 import { TradingStrategy } from './enum/trading-strategy';
 
+export type InstrumentType = 'Equity' | 'Futures' | 'Options';
+export type OptionSide = 'Call' | 'Put' | 'Both';
+export type OptionTradeMode = 'LongOnly' | 'ShortOnly' | 'Both';
+
+export interface InstrumentTradingSettings {
+  exchange: string;
+  productType: string;
+  orderType: string;
+  duration: string;
+  minimumPrice: number;
+  minimumVolume: number;
+  atrStopMultiplier: number;
+  atrTargetMultiplier: number;
+  maximumStopPercent: number;
+  minimumStopPercent: number;
+  minimumRiskReward: number;
+  allowLong: boolean;
+  allowShort: boolean;
+  riskPercentage: number;
+  maxCapitalPerTrade: number;
+  minimumNetProfit: number;
+  minimumRoiPercent: number;
+  maximumChargesPerTrade: number;
+  minimumConfidence: number;
+  minimumFinalScore: number;
+  exitOrderTimeoutSeconds: number;
+  maxMarketDataAgeSeconds: number;
+  maximumExitRetries: number;
+  maximumSpreadPercent: number;
+  maximumSpreadAmount: number;
+  minimumBid: number;
+  minimumAsk: number;
+  greeksCacheSeconds: number;
+  maximumOpenPositions: number;
+  maximumRiskPerUnderlying: number;
+  maximumPositionsPerUnderlying: number;
+  maximumLotsPerTrade: number;
+  maximumMarginUtilizationPercent: number;
+  forceSquareOffBuffer: string;
+  evaluation: EvaluationSettings;
+  validation: ValidationSettings;
+}
+
+export interface FuturesTradingSettings extends InstrumentTradingSettings {
+  expiryType: string;
+  minimumOpenInterest: number;
+  minimumOIChangePercent: number;
+  maximumDailyLoss: number;
+  maximumDailyTrades: number;
+}
+
+export interface OptionsTradingSettings extends InstrumentTradingSettings {
+  optionSide: OptionSide;
+  expiryType: string;
+  strikeStepsFromAtm: number;
+  contractsPerUnderlying: number;
+  minimumOpenInterest: number;
+  minimumDelta: number;
+  maximumDelta: number;
+  maximumAbsoluteTheta: number;
+  maximumImpliedVolatility: number;
+  minimumGamma: number;
+  minimumVega: number;
+  strikeInterval: number;
+  minimumOptionVolume: number;
+  minimumTurnover: number;
+  minimumPremium: number;
+  maximumPremium: number;
+  minimumOIChangePercent: number;
+  allowExpiryDayTrading: boolean;
+  minimumMinutesBeforeExpiry: number;
+  maximumExpiryDayIV: number;
+  maximumDailyLoss: number;
+  maximumDailyTrades: number;
+  expiryMarketCloseTime: string;
+  requireMarketDepth: boolean;
+  maximumBidAskSpreadPercent: number;
+  maximumBidAskSpreadAmount: number;
+  minimumOptionTurnover: number;
+  requireFreshGreeks: boolean;
+  greeksFreshnessSeconds: number;
+  maximumStrikeCandidatesPerSide: number;
+  minimumCallScore: number;
+  minimumPutScore: number;
+  minimumPCR: number;
+  maximumPCR: number;
+  useUnderlyingMultiTimeframeTrend: boolean;
+  tradeMode: OptionTradeMode;
+  allowNakedWriting: boolean;
+  allowNakedCallWriting: boolean;
+  allowNakedPutWriting: boolean;
+  allowNakedWritingOnExpiryDay: boolean;
+  shortMinimumDelta: number;
+  shortMaximumDelta: number;
+  shortMinimumIV: number;
+  shortMaximumIV: number;
+  shortMinimumThetaAbs: number;
+  shortMaximumThetaAbs: number;
+  shortMinimumPremium: number;
+  shortMaximumPremium: number;
+  minimumShortCallScore: number;
+  minimumShortPutScore: number;
+  maximumNakedOptionRiskPerTrade: number;
+  maximumNakedOptionLotsPerTrade: number;
+  nakedOptionMarginSafetyMultiplier: number;
+  maximumUnderlyingDeltaExposure: number;
+  maximumExpiryDayRiskMultiplier: number;
+  nakedStressUnderlyingMovePercent: number;
+  nakedStressIVIncreasePercent: number;
+  maximumNakedStressLossPerTrade: number;
+  maximumUnderlyingStressLoss: number;
+  maximumOpenDeltaExposure: number;
+  maximumOpenGammaExposure: number;
+  maximumOpenVegaExposure: number;
+  maximumShortLotsPerExpiry: number;
+  maximumShortLotsPerUnderlying: number;
+  maximumShortLotsPerStrike: number;
+  maximumShortPremiumExposure: number;
+  allowNakedStrangle: boolean;
+  allowNakedStraddle: boolean;
+  emergencyDeltaExposure: number;
+  emergencyGammaExposure: number;
+  emergencyVegaExposure: number;
+  emergencyIVIncreasePercent: number;
+  emergencyStressLoss: number;
+  emergencyMarginUtilizationPercent: number;
+  nakedRiskMonitorSeconds: number;
+  maximumRiskPerTrade: number;
+}
+
+
 export interface TradingConfiguration {
   id: string;
+
+  instrumentType?: InstrumentType;
+
+  equity?: InstrumentTradingSettings;
+
+  futures?: FuturesTradingSettings;
+
+  options?: OptionsTradingSettings;
 
   enableAutoTrading: boolean;
 
