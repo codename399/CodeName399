@@ -1895,6 +1895,58 @@ export class TradingSettingsComponent implements OnInit {
       });
   }
 
+  // ======================================================
+// Download Configuration
+// ======================================================
+
+downloadConfiguration(): void {
+  const value = this.form.getRawValue();
+
+  const configuration = {
+    ...value,
+
+    // Convert UI time values back to backend TimeSpan format.
+    marketOpenTime: this.toTimeSpan(value.marketOpenTime),
+    marketCloseTime: this.toTimeSpan(value.marketCloseTime),
+
+    // Convert comma-separated UI text back to an array.
+    excludedSymbols: this.parseExcludedSymbols(value.excludedSymbolsText),
+
+    // UI-only field is not part of the configuration model.
+    excludedSymbolsText: undefined,
+  };
+
+  // Remove the UI-only property from the exported JSON.
+  delete (configuration as any).excludedSymbolsText;
+
+  const json = JSON.stringify(configuration, null, 2);
+
+  const blob = new Blob([json], {
+    type: 'application/json;charset=utf-8',
+  });
+
+  const url = URL.createObjectURL(blob);
+
+  const anchor = document.createElement('a');
+  anchor.href = url;
+
+  const timestamp = new Date()
+    .toISOString()
+    .replace(/[:.]/g, '-');
+
+  anchor.download = `trading-configuration-${timestamp}.json`;
+
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+
+  URL.revokeObjectURL(url);
+
+  this.#toastService.success(
+    'Trading configuration downloaded successfully.',
+  );
+}
+
   cancel(): void {
     if (this.form.dirty) {
       const confirmed = confirm('Discard unsaved changes?');

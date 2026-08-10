@@ -11,6 +11,15 @@
     </div>
 
     <div class="header-actions">
+<button
+  class="secondary-button"
+  type="button"
+  (click)="downloadConfiguration()"
+  [disabled]="loading || saving"
+>
+  ↓ Download JSON
+</button>
+
       <button
         class="secondary-button"
         type="button"
@@ -2270,6 +2279,15 @@
             </div>
           }
         </div>
+
+        <button
+  class="secondary-button"
+  type="button"
+  (click)="downloadConfiguration()"
+  [disabled]="loading || saving"
+>
+  ↓ Download JSON
+</button>
 
         <div class="footer-right">
           <button
