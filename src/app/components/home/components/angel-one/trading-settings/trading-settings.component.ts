@@ -1197,7 +1197,7 @@ export class TradingSettingsComponent implements OnInit {
       optionsMinimumOptionVolume: extra.minimumOptionVolume,
       optionsMinimumTurnover: extra.minimumTurnover,
       optionsMinimumPremium: extra.minimumPremium,
-      optionsMaximumPremium: extra.maximumPremium,
+      optionsMaximumPremium: this.toSafeUnlimitedDecimalInput(extra.maximumPremium),
       optionsMinimumOIChangePercent: extra.minimumOIChangePercent,
       optionsAllowExpiryDayTrading: extra.allowExpiryDayTrading,
       optionsMinimumMinutesBeforeExpiry: extra.minimumMinutesBeforeExpiry,
@@ -1215,7 +1215,7 @@ export class TradingSettingsComponent implements OnInit {
       optionsMinimumCallScore: extra.minimumCallScore,
       optionsMinimumPutScore: extra.minimumPutScore,
       optionsMinimumPCR: extra.minimumPCR,
-      optionsMaximumPCR: extra.maximumPCR,
+      optionsMaximumPCR: this.toSafeUnlimitedDecimalInput(extra.maximumPCR),
       optionsUseUnderlyingMultiTimeframeTrend: extra.useUnderlyingMultiTimeframeTrend,
       optionsTradeMode: extra.tradeMode,
       optionsAllowNakedWriting: extra.allowNakedWriting,
@@ -1229,7 +1229,7 @@ export class TradingSettingsComponent implements OnInit {
       optionsShortMinimumThetaAbs: extra.shortMinimumThetaAbs,
       optionsShortMaximumThetaAbs: extra.shortMaximumThetaAbs,
       optionsShortMinimumPremium: extra.shortMinimumPremium,
-      optionsShortMaximumPremium: extra.shortMaximumPremium,
+      optionsShortMaximumPremium: this.toSafeUnlimitedDecimalInput(extra.shortMaximumPremium),
       optionsMinimumShortCallScore: extra.minimumShortCallScore,
       optionsMinimumShortPutScore: extra.minimumShortPutScore,
       optionsMaximumNakedOptionRiskPerTrade: extra.maximumNakedOptionRiskPerTrade,
@@ -1321,6 +1321,23 @@ export class TradingSettingsComponent implements OnInit {
     }
 
     return base;
+  }
+
+
+  /**
+   * Keep the UI/browser away from decimal.MaxValue.
+   * .NET decimal.MaxValue round-tripped through JavaScript becomes a rounded
+   * JSON number that can sit just outside the Decimal range. The form already
+   * uses 999999999 as its practical "unlimited" sentinel.
+   */
+  private toSafeUnlimitedDecimalInput(value: number | null | undefined): number {
+    const numeric = Number(value);
+
+    if (!Number.isFinite(numeric) || numeric >= 1e28) {
+      return 999999999;
+    }
+
+    return numeric;
   }
 
   private toMinutes(value: string | undefined): number {
