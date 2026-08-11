@@ -498,6 +498,7 @@
           </div>
         </details>
 
+        @if (isEquity) {
         <details class="settings-card">
           <summary class="card-header">
             <div>
@@ -671,6 +672,7 @@
               />
             </div>
 
+            @if (isMomentum) {
             <div class="field-row">
               <label class="field-label">Increasing Momentum Score</label>
               <input
@@ -679,6 +681,8 @@
                 class="field-input"
               />
             </div>
+            }
+            @if (isPullback) {
             <div class="field-row">
               <label class="field-label"
                 >Pullback Increasing Momentum Score</label
@@ -689,6 +693,7 @@
                 class="field-input"
               />
             </div>
+            }
             <div class="field-row">
               <label class="field-label">Bullish Candle Score</label>
               <input
@@ -755,6 +760,7 @@
               />
             </div>
 
+            @if (isPullback) {
             <div class="field-row">
               <label class="field-label">Pullback High Volume Score</label>
               <input
@@ -763,6 +769,8 @@
                 class="field-input"
               />
             </div>
+            }
+            @if (isPullback) {
             <div class="field-row">
               <label class="field-label">Pullback Medium Volume Score</label>
               <input
@@ -771,6 +779,8 @@
                 class="field-input"
               />
             </div>
+            }
+            @if (isPullback) {
             <div class="field-row">
               <label class="field-label">Pullback Low Volume Score</label>
               <input
@@ -779,7 +789,9 @@
                 class="field-input"
               />
             </div>
+            }
 
+            @if (isMomentum) {
             <div class="field-row">
               <label class="field-label">Momentum Pullback Minimum</label>
               <input
@@ -789,6 +801,8 @@
                 class="field-input"
               />
             </div>
+            }
+            @if (isMomentum) {
             <div class="field-row">
               <label class="field-label">Momentum Pullback Ideal Maximum</label>
               <input
@@ -798,6 +812,8 @@
                 class="field-input"
               />
             </div>
+            }
+            @if (isMomentum) {
             <div class="field-row">
               <label class="field-label">Momentum Pullback Maximum</label>
               <input
@@ -807,6 +823,8 @@
                 class="field-input"
               />
             </div>
+            }
+            @if (isMomentum) {
             <div class="field-row">
               <label class="field-label">Momentum Pullback Ideal Score</label>
               <input
@@ -815,6 +833,8 @@
                 class="field-input"
               />
             </div>
+            }
+            @if (isMomentum) {
             <div class="field-row">
               <label class="field-label"
                 >Momentum Pullback Secondary Score</label
@@ -825,7 +845,9 @@
                 class="field-input"
               />
             </div>
+            }
 
+            @if (isPullback) {
             <div class="field-row">
               <label class="field-label">Pullback Minimum Distance</label>
               <input
@@ -835,6 +857,8 @@
                 class="field-input"
               />
             </div>
+            }
+            @if (isPullback) {
             <div class="field-row">
               <label class="field-label">Pullback Ideal Maximum</label>
               <input
@@ -844,6 +868,8 @@
                 class="field-input"
               />
             </div>
+            }
+            @if (isPullback) {
             <div class="field-row">
               <label class="field-label">Pullback Maximum Distance</label>
               <input
@@ -853,6 +879,8 @@
                 class="field-input"
               />
             </div>
+            }
+            @if (isPullback) {
             <div class="field-row">
               <label class="field-label">Pullback Ideal Score</label>
               <input
@@ -861,6 +889,8 @@
                 class="field-input"
               />
             </div>
+            }
+            @if (isPullback) {
             <div class="field-row">
               <label class="field-label">Pullback Secondary Score</label>
               <input
@@ -869,6 +899,7 @@
                 class="field-input"
               />
             </div>
+            }
             <div class="field-row">
               <label class="field-label">EMA9 Bounce Score</label>
               <input
@@ -910,6 +941,7 @@
                 class="field-input"
               />
             </div>
+            @if (isMomentum) {
             <div class="field-row">
               <label class="field-label">Momentum RSI Penalty</label>
               <input
@@ -918,6 +950,7 @@
                 class="field-input"
               />
             </div>
+            }
 
             <div class="field-row">
               <label class="field-label">MACD Bullish Score</label>
@@ -952,6 +985,7 @@
               />
             </div>
 
+            @if (isMomentum) {
             <div class="field-row">
               <label class="field-label">Momentum Wide Bollinger</label>
               <input
@@ -961,6 +995,8 @@
                 class="field-input"
               />
             </div>
+            }
+            @if (isMomentum) {
             <div class="field-row">
               <label class="field-label">Momentum Medium Bollinger</label>
               <input
@@ -970,6 +1006,8 @@
                 class="field-input"
               />
             </div>
+            }
+            @if (isMomentum) {
             <div class="field-row">
               <label class="field-label">Momentum Narrow Bollinger</label>
               <input
@@ -979,6 +1017,8 @@
                 class="field-input"
               />
             </div>
+            }
+            @if (isMomentum) {
             <div class="field-row">
               <label class="field-label">Momentum Wide Bollinger Score</label>
               <input
@@ -987,6 +1027,8 @@
                 class="field-input"
               />
             </div>
+            }
+            @if (isMomentum) {
             <div class="field-row">
               <label class="field-label">Momentum Medium Bollinger Score</label>
               <input
@@ -995,6 +1037,8 @@
                 class="field-input"
               />
             </div>
+            }
+            @if (isMomentum) {
             <div class="field-row">
               <label class="field-label"
                 >Momentum Narrow Bollinger Penalty</label
@@ -1005,7 +1049,9 @@
                 class="field-input"
               />
             </div>
+            }
 
+            @if (isPullback) {
             <div class="field-row">
               <label class="field-label">Pullback Wide Bollinger</label>
               <input
@@ -1015,6 +1061,8 @@
                 class="field-input"
               />
             </div>
+            }
+            @if (isPullback) {
             <div class="field-row">
               <label class="field-label">Pullback Narrow Bollinger</label>
               <input
@@ -1024,6 +1072,8 @@
                 class="field-input"
               />
             </div>
+            }
+            @if (isPullback) {
             <div class="field-row">
               <label class="field-label">Pullback Wide Bollinger Score</label>
               <input
@@ -1032,6 +1082,8 @@
                 class="field-input"
               />
             </div>
+            }
+            @if (isPullback) {
             <div class="field-row">
               <label class="field-label"
                 >Pullback Narrow Bollinger Penalty</label
@@ -1042,7 +1094,9 @@
                 class="field-input"
               />
             </div>
+            }
 
+            @if (isMomentum) {
             <div class="field-row">
               <label class="field-label">Momentum Exhausted Move Penalty</label>
               <input
@@ -1051,6 +1105,8 @@
                 class="field-input"
               />
             </div>
+            }
+            @if (isPullback) {
             <div class="field-row">
               <label class="field-label">Pullback Exhausted Move Penalty</label>
               <input
@@ -1059,6 +1115,7 @@
                 class="field-input"
               />
             </div>
+            }
             <div class="field-row">
               <label class="field-label">SuperTrend Bearish Penalty</label>
               <input
@@ -1077,6 +1134,7 @@
             </div>
           </div>
         </details>
+        }
 
         <details class="settings-card">
           <summary class="card-header">
@@ -1213,6 +1271,7 @@
               />
             </div>
 
+            @if (isPullback) {
             <div class="field-row">
               <label class="field-label" for="pullbackWarmupSeconds"
                 >Pullback Warmup (Seconds)</label
@@ -1224,9 +1283,11 @@
                 class="field-input"
               />
             </div>
+            }
           </div>
         </details>
 
+        @if (isEquity) {
         <details class="settings-card">
           <summary class="card-header">
             <div>
@@ -1557,6 +1618,7 @@
               />
             </div>
 
+            @if (isMomentum) {
             <div class="field-row">
               <label class="field-label" for="momentumMinimumPriceRatio"
                 >Momentum Minimum Price Ratio</label
@@ -1569,7 +1631,9 @@
                 class="field-input"
               />
             </div>
+            }
 
+            @if (isMomentum) {
             <div class="field-row">
               <label class="field-label" for="momentumMaximumDrawdown"
                 >Momentum Maximum Drawdown</label
@@ -1582,7 +1646,9 @@
                 class="field-input"
               />
             </div>
+            }
 
+            @if (isMomentum) {
             <div class="field-row">
               <label class="field-label" for="momentumHighestPriceTolerance"
                 >Momentum Highest Price Tolerance</label
@@ -1595,7 +1661,9 @@
                 class="field-input"
               />
             </div>
+            }
 
+            @if (isPullback) {
             <div class="field-row">
               <label class="field-label" for="pullbackMinimumPriceRatio"
                 >Pullback Minimum Price Ratio</label
@@ -1608,6 +1676,7 @@
                 class="field-input"
               />
             </div>
+            }
 
             <div class="field-row">
               <label class="field-label" for="maximumPullbackGain"
@@ -1672,6 +1741,7 @@
             </div>
           </div>
         </details>
+        }
 
         <details class="settings-card">
           <summary class="card-header">
@@ -1830,6 +1900,7 @@
           </div>
         </details>
 
+        @if (isEquity) {
         <details class="settings-card">
           <summary class="card-header">
             <div>
@@ -1957,6 +2028,7 @@
             </div>
           </div>
         </details>
+        }
 
         <details class="settings-card">
           <summary class="card-header">

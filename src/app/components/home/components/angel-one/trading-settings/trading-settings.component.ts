@@ -72,6 +72,7 @@ export class TradingSettingsComponent implements OnInit {
   ];
 
   private profileDrafts: Partial<Record<InstrumentType, InstrumentTradingSettings>> = {};
+  private activeInstrumentType: InstrumentType = 'Equity';
 
   get selectedInstrumentType(): InstrumentType {
     return (this.form?.controls?.instrumentType?.value as InstrumentType) ?? 'Equity';
@@ -83,6 +84,18 @@ export class TradingSettingsComponent implements OnInit {
 
   get isOptions(): boolean {
     return this.selectedInstrumentType === 'Options';
+  }
+
+  get isEquity(): boolean {
+    return this.selectedInstrumentType === 'Equity';
+  }
+
+  get isMomentum(): boolean {
+    return this.isEquity && Number(this.form?.controls?.strategy?.value) === TradingStrategy.Momentum;
+  }
+
+  get isPullback(): boolean {
+    return this.isEquity && Number(this.form?.controls?.strategy?.value) === TradingStrategy.Pullback;
   }
 
 
@@ -632,6 +645,12 @@ export class TradingSettingsComponent implements OnInit {
       }
     });
 
+    this.form.controls.strategy.valueChanges.subscribe(() => {
+      // Strategy visibility is derived from the current form value. Mark the form dirty
+      // because changing strategy changes which strategy-specific settings are active.
+      this.form.markAsDirty();
+    });
+
     this.loadConfiguration();
   }
 
@@ -1071,6 +1090,7 @@ export class TradingSettingsComponent implements OnInit {
     };
 
     this.patchActiveProfile(this.selectedInstrumentType);
+    this.activeInstrumentType = this.selectedInstrumentType;
     this.form.markAsPristine();
   }
 
@@ -1197,7 +1217,7 @@ export class TradingSettingsComponent implements OnInit {
       optionsMinimumOptionVolume: extra.minimumOptionVolume,
       optionsMinimumTurnover: extra.minimumTurnover,
       optionsMinimumPremium: extra.minimumPremium,
-      optionsMaximumPremium: this.toSafeUnlimitedDecimalInput(extra.maximumPremium),
+      optionsMaximumPremium: extra.maximumPremium,
       optionsMinimumOIChangePercent: extra.minimumOIChangePercent,
       optionsAllowExpiryDayTrading: extra.allowExpiryDayTrading,
       optionsMinimumMinutesBeforeExpiry: extra.minimumMinutesBeforeExpiry,
@@ -1215,7 +1235,7 @@ export class TradingSettingsComponent implements OnInit {
       optionsMinimumCallScore: extra.minimumCallScore,
       optionsMinimumPutScore: extra.minimumPutScore,
       optionsMinimumPCR: extra.minimumPCR,
-      optionsMaximumPCR: this.toSafeUnlimitedDecimalInput(extra.maximumPCR),
+      optionsMaximumPCR: extra.maximumPCR,
       optionsUseUnderlyingMultiTimeframeTrend: extra.useUnderlyingMultiTimeframeTrend,
       optionsTradeMode: extra.tradeMode,
       optionsAllowNakedWriting: extra.allowNakedWriting,
@@ -1229,7 +1249,7 @@ export class TradingSettingsComponent implements OnInit {
       optionsShortMinimumThetaAbs: extra.shortMinimumThetaAbs,
       optionsShortMaximumThetaAbs: extra.shortMaximumThetaAbs,
       optionsShortMinimumPremium: extra.shortMinimumPremium,
-      optionsShortMaximumPremium: this.toSafeUnlimitedDecimalInput(extra.shortMaximumPremium),
+      optionsShortMaximumPremium: extra.shortMaximumPremium,
       optionsMinimumShortCallScore: extra.minimumShortCallScore,
       optionsMinimumShortPutScore: extra.minimumShortPutScore,
       optionsMaximumNakedOptionRiskPerTrade: extra.maximumNakedOptionRiskPerTrade,
@@ -1262,11 +1282,14 @@ export class TradingSettingsComponent implements OnInit {
   }
 
   onInstrumentTypeChanged(type: InstrumentType): void {
-    const previous = this.selectedInstrumentType;
-    if (previous && this.profileDrafts[previous]) {
+    const previous = this.activeInstrumentType;
+
+    if (previous !== type && this.profileDrafts[previous]) {
       this.profileDrafts[previous] = this.readActiveProfile(this.profileDrafts[previous]!);
     }
+
     this.patchActiveProfile(type);
+    this.activeInstrumentType = type;
     this.form.markAsDirty();
   }
 
@@ -1321,23 +1344,6 @@ export class TradingSettingsComponent implements OnInit {
     }
 
     return base;
-  }
-
-
-  /**
-   * Keep the UI/browser away from decimal.MaxValue.
-   * .NET decimal.MaxValue round-tripped through JavaScript becomes a rounded
-   * JSON number that can sit just outside the Decimal range. The form already
-   * uses 999999999 as its practical "unlimited" sentinel.
-   */
-  private toSafeUnlimitedDecimalInput(value: number | null | undefined): number {
-    const numeric = Number(value);
-
-    if (!Number.isFinite(numeric) || numeric >= 1e28) {
-      return 999999999;
-    }
-
-    return numeric;
   }
 
   private toMinutes(value: string | undefined): number {
