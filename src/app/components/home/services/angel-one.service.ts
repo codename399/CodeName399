@@ -102,11 +102,26 @@ export class AngelOneService {
     return this.configuration()?.strategy;
   }
 
+  get selectedInstrumentType(): string {
+    return this.configuration()?.instrumentType ?? 'Equity';
+  }
+
+  get activeInstrumentSettings() {
+    const configuration = this.configuration();
+    if (!configuration) return undefined;
+    switch (configuration.instrumentType) {
+      case 'Futures': return configuration.futures;
+      case 'Options': return configuration.options;
+      default: return configuration.equity;
+    }
+  }
+
   get riskPercentage(): number {
-    return this.configuration()?.riskPercentage ?? 0;
+    return this.activeInstrumentSettings?.riskPercentage ?? this.configuration()?.riskPercentage ?? 0;
   }
 
   get maxDailyTrades(): number {
-    return this.configuration()?.maxDailyTrades ?? 0;
+    const settings = this.activeInstrumentSettings as any;
+    return settings?.maximumDailyTrades ?? this.configuration()?.maxDailyTrades ?? 0;
   }
 }

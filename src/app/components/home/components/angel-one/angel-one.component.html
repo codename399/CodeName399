@@ -106,6 +106,17 @@
                 <th *ngIf="isColumnVisible('stopLoss')">SL</th>
                 <th *ngIf="isColumnVisible('targetPrice')">Target</th>
                 <th *ngIf="isColumnVisible('token')">Token</th>
+                <th *ngIf="isColumnVisible('instrumentType')">Type</th>
+                <th *ngIf="isColumnVisible('exchange')">Exchange</th>
+                <th *ngIf="isColumnVisible('optionContract')">Option Contract</th>
+                <th *ngIf="isColumnVisible('oi')">OI</th>
+                <th *ngIf="isColumnVisible('oiChange')">OI Change %</th>
+                <th *ngIf="isColumnVisible('pcr')">PCR</th>
+                <th *ngIf="isColumnVisible('iv')">IV</th>
+                <th *ngIf="isColumnVisible('delta')">Delta</th>
+                <th *ngIf="isColumnVisible('gamma')">Gamma</th>
+                <th *ngIf="isColumnVisible('theta')">Theta</th>
+                <th *ngIf="isColumnVisible('vega')">Vega</th>
                 <th *ngIf="isColumnVisible('prevClose')">Prev Close</th>
                 <th *ngIf="isColumnVisible('vwap')">VWAP</th>
                 <th *ngIf="isColumnVisible('ema9')">EMA9</th>
@@ -220,6 +231,55 @@
 
                 <td *ngIf="isColumnVisible('token')">
                   {{ stock.symbolToken || "-" }}
+                </td>
+
+                <td *ngIf="isColumnVisible('instrumentType')">
+                  {{ stock.instrumentType || "Equity" }}
+                </td>
+
+                <td *ngIf="isColumnVisible('exchange')">
+                  {{ stock.exchange || stock.quote.exchange || "-" }}
+                </td>
+
+                <td *ngIf="isColumnVisible('optionContract')">
+                  <div class="fno-contract-cell">
+                    <strong *ngIf="stock.optionType">{{ stock.optionType }}</strong>
+                    <span *ngIf="stock.strike">K {{ stock.strike | number: "1.0-2" }}</span>
+                    <span *ngIf="stock.expiry">{{ stock.expiry }}</span>
+                    <span *ngIf="stock.isNakedOptionWrite">Naked Write</span><span *ngIf="!stock.isNakedOptionWrite && stock.direction">{{ stock.direction }}</span>
+                  </div>
+                </td>
+
+                <td *ngIf="isColumnVisible('oi')">
+                  {{ (stock.openInterest ?? stock.quote.openInterest ?? 0) | number: "1.0-0" }}
+                </td>
+
+                <td *ngIf="isColumnVisible('oiChange')">
+                  {{ (stock.oiChangePercent ?? stock.quote.oiChangePercent ?? 0) | number: "1.2-2" }}%
+                </td>
+
+                <td *ngIf="isColumnVisible('pcr')">
+                  {{ (stock.putCallRatio ?? stock.pcr ?? stock.quote.putCallRatio ?? 0) | number: "1.2-2" }}
+                </td>
+
+                <td *ngIf="isColumnVisible('iv')">
+                  {{ (stock.impliedVolatility ?? stock.quote.impliedVolatility ?? 0) | number: "1.2-2" }}%
+                </td>
+
+                <td *ngIf="isColumnVisible('delta')">
+                  {{ (stock.delta ?? stock.quote.delta ?? 0) | number: "1.3-3" }}
+                </td>
+
+                <td *ngIf="isColumnVisible('gamma')">
+                  {{ (stock.gamma ?? stock.quote.gamma ?? 0) | number: "1.4-4" }}
+                </td>
+
+                <td *ngIf="isColumnVisible('theta')">
+                  {{ (stock.theta ?? stock.quote.theta ?? 0) | number: "1.2-2" }}
+                </td>
+
+                <td *ngIf="isColumnVisible('vega')">
+                  {{ (stock.vega ?? stock.quote.vega ?? 0) | number: "1.2-2" }}
                 </td>
 
                 <td *ngIf="isColumnVisible('prevClose')">
@@ -392,6 +452,15 @@
           >
             <span>💵</span>
             <strong>₹ {{ availableCash() | number: "1.2-2" }}</strong>
+          </div>
+
+          <div
+            class="summary-stripe-item tooltip-trigger"
+            title="Instrument type"
+            tabindex="0"
+          >
+            <span>🎯</span>
+            <strong>{{ activeInstrumentType() }}</strong>
           </div>
 
           <div

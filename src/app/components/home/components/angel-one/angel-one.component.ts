@@ -75,6 +75,17 @@ export class AngelOneComponent implements OnInit, OnDestroy {
   readonly columnDefinitions = [
     { key: 'star', label: '⭐', defaultVisible: true },
     { key: 'symbol', label: 'Symbol', defaultVisible: true },
+    { key: 'instrumentType', label: 'Type', defaultVisible: true },
+    { key: 'exchange', label: 'Exchange', defaultVisible: false },
+    { key: 'optionContract', label: 'Option Contract', defaultVisible: false },
+    { key: 'oi', label: 'OI', defaultVisible: false },
+    { key: 'oiChange', label: 'OI Change %', defaultVisible: false },
+    { key: 'pcr', label: 'PCR', defaultVisible: false },
+    { key: 'iv', label: 'IV', defaultVisible: false },
+    { key: 'delta', label: 'Delta', defaultVisible: false },
+    { key: 'gamma', label: 'Gamma', defaultVisible: false },
+    { key: 'theta', label: 'Theta', defaultVisible: false },
+    { key: 'vega', label: 'Vega', defaultVisible: false },
     { key: 'token', label: 'Token', defaultVisible: false },
     { key: 'prevClose', label: 'Prev Close', defaultVisible: true },
     { key: 'vwap', label: 'VWAP', defaultVisible: false },
@@ -167,9 +178,24 @@ export class AngelOneComponent implements OnInit, OnDestroy {
     () => this.configuration()?.enableNotification ?? false,
   );
 
-  riskPercentage = computed(() => this.configuration()?.riskPercentage ?? 0);
+  activeInstrumentType = computed(() => this.configuration()?.instrumentType ?? 'Equity');
 
-  maxDailyTrades = computed(() => this.configuration()?.maxDailyTrades ?? 0);
+  activeInstrumentSettings = computed(() => {
+    const config = this.configuration();
+    if (!config) return undefined;
+    switch (config.instrumentType) {
+      case 'Futures': return config.futures;
+      case 'Options': return config.options;
+      default: return config.equity;
+    }
+  });
+
+  riskPercentage = computed(() => this.activeInstrumentSettings()?.riskPercentage ?? 0);
+
+  maxDailyTrades = computed(() => {
+    const settings = this.activeInstrumentSettings() as any;
+    return settings?.maximumDailyTrades ?? 0;
+  });
 
   // ======================================================
   // Lifecycle

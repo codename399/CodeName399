@@ -1,4 +1,40 @@
 export interface MarketQuoteData {
+  exchange?: string;
+  tradingSymbol?: string;
+  symbolToken?: string;
+  ltp?: number;
+  productType?: string;
+  instrumentType?: string;
+  optionType?: string;
+  strike?: number;
+  expiry?: string;
+  lotSize?: number;
+  bid?: number;
+  ask?: number;
+  openInterest?: number;
+  netChangeOpenInterest?: number;
+  oiChangePercent?: number;
+  tradeVolume?: number;
+  delta?: number;
+  gamma?: number;
+  theta?: number;
+  vega?: number;
+  impliedVolatility?: number;
+  underlyingSymbol?: string;
+  underlyingPrice?: number;
+  underlyingChangePercent?: number;
+  underlyingBullish?: boolean;
+  underlyingBearish?: boolean;
+  callOIAtMax?: number;
+  putOIAtMax?: number;
+  callOIResistanceStrike?: number;
+  putOISupportStrike?: number;
+  callOIChange?: number;
+  putOIChange?: number;
+  pcr?: number;
+  putCallRatio?: number;
+  oiBuildup?: string;
+  referenceLimitPrice?: number;
   symbol?: string;
   lastPrice?: number;
   previousClose?: number;
@@ -9,12 +45,56 @@ export interface MarketQuoteData {
   high?: number;
   low?: number;
   vwap?: number;
+  quoteTimeUtc?: string;
+  greeksUpdatedAtUtc?: string;
   [key: string]: unknown;
 }
 
 export interface Gainer {
   symbol: string;
   symbolToken: string;
+
+  // API instrument / derivative identity
+  instrumentType?: string;
+  direction?: string;
+  entryTransactionType?: string;
+  isNakedOptionWrite?: boolean;
+  exchange?: string;
+  productType?: string;
+  orderType?: string;
+  duration?: string;
+  underlyingSymbol?: string;
+  expiry?: string;
+  strike?: number;
+  optionType?: string;
+  lotSize?: number;
+  underlyingPrice?: number;
+  underlyingChangePercent?: number;
+  underlyingBullish?: boolean;
+  underlyingBearish?: boolean;
+
+  // F&O analytics returned by the API
+  openInterest?: number;
+  netChangeOpenInterest?: number;
+  oiChangePercent?: number;
+  delta?: number;
+  gamma?: number;
+  theta?: number;
+  vega?: number;
+  impliedVolatility?: number;
+  bid?: number;
+  ask?: number;
+  spread?: number;
+  spreadPercent?: number;
+  putCallRatio?: number;
+  pcr?: number;
+  oiBuildup?: string;
+  callOIAtMax?: number;
+  putOIAtMax?: number;
+  callOIResistanceStrike?: number;
+  putOISupportStrike?: number;
+  oiChangeCall?: number;
+  oiChangePut?: number;
 
   currentPrice: number;
   previousClose: number;

@@ -1493,3 +1493,6 @@ tbody tr:hover {
   background: #cbd5e1;
   border-color: #94a3b8;
 }
+
+.fno-contract-cell { display:flex; flex-direction:column; gap:2px; min-width:100px; }
+.fno-contract-cell span { font-size:11px; opacity:.78; }
