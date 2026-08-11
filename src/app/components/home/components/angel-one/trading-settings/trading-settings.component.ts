@@ -59,6 +59,44 @@ export class TradingSettingsComponent implements OnInit {
     { value: 'Options', text: 'Options' },
   ];
 
+  /** Exchanges supported by each instrument profile. */
+  readonly exchangeOptions: Record<InstrumentType, { value: string; text: string }[]> = {
+    Equity: [
+      { value: 'NSE', text: 'NSE' },
+      { value: 'BSE', text: 'BSE' },
+    ],
+    Futures: [
+      { value: 'NFO', text: 'NFO' },
+      { value: 'BFO', text: 'BFO' },
+      { value: 'MCX', text: 'MCX' },
+      { value: 'CDS', text: 'CDS' },
+    ],
+    Options: [
+      { value: 'NFO', text: 'NFO' },
+      { value: 'BFO', text: 'BFO' },
+      { value: 'MCX', text: 'MCX' },
+      { value: 'CDS', text: 'CDS' },
+    ],
+  };
+
+  get availableExchanges(): { value: string; text: string }[] {
+    return this.exchangeOptions[this.selectedInstrumentType] ?? this.exchangeOptions.Equity;
+  }
+
+  private defaultExchange(type: InstrumentType): string {
+    return type === 'Equity' ? 'NSE' : 'NFO';
+  }
+
+  private isExchangeAllowed(type: InstrumentType, exchange: unknown): boolean {
+    const value = String(exchange ?? '').trim().toUpperCase();
+    return this.exchangeOptions[type].some(option => option.value === value);
+  }
+
+  private normalizeExchange(type: InstrumentType, exchange: unknown): string {
+    const value = String(exchange ?? '').trim().toUpperCase();
+    return this.isExchangeAllowed(type, value) ? value : this.defaultExchange(type);
+  }
+
   readonly optionSides = [
     { value: 'Both', text: 'CE + PE' },
     { value: 'Call', text: 'Call (CE)' },
@@ -78,16 +116,16 @@ export class TradingSettingsComponent implements OnInit {
     return (this.form?.controls?.instrumentType?.value as InstrumentType) ?? 'Equity';
   }
 
+  get isEquity(): boolean {
+    return this.selectedInstrumentType === 'Equity';
+  }
+
   get isFutures(): boolean {
     return this.selectedInstrumentType === 'Futures';
   }
 
   get isOptions(): boolean {
     return this.selectedInstrumentType === 'Options';
-  }
-
-  get isEquity(): boolean {
-    return this.selectedInstrumentType === 'Equity';
   }
 
   get isMomentum(): boolean {
@@ -97,7 +135,6 @@ export class TradingSettingsComponent implements OnInit {
   get isPullback(): boolean {
     return this.isEquity && Number(this.form?.controls?.strategy?.value) === TradingStrategy.Pullback;
   }
-
 
   form = this.#fb.group({
     enableAutoTrading: [{ value: false, disabled: false }],
@@ -1145,7 +1182,7 @@ export class TradingSettingsComponent implements OnInit {
 
   private normalizeProfile(profile: InstrumentTradingSettings, type: InstrumentType): InstrumentTradingSettings {
     const base = {
-      exchange: type === 'Equity' ? 'NSE' : 'NFO', productType: 'INTRADAY', orderType: 'MARKET', duration: 'DAY',
+      exchange: this.defaultExchange(type), productType: 'INTRADAY', orderType: 'MARKET', duration: 'DAY',
       minimumPrice: type === 'Equity' ? 50 : 0, minimumVolume: type === 'Equity' ? 500000 : 0,
       atrStopMultiplier: 1.2, atrTargetMultiplier: 2.4, maximumStopPercent: 1.5, minimumStopPercent: 0.5, minimumRiskReward: 1.5,
       allowLong: true, allowShort: true, riskPercentage: 2, maxCapitalPerTrade: 10000, minimumNetProfit: 5, minimumRoiPercent: 0.3,
@@ -1154,7 +1191,14 @@ export class TradingSettingsComponent implements OnInit {
       maximumOpenPositions: 3, maximumRiskPerUnderlying: 2500, maximumPositionsPerUnderlying: 1, maximumLotsPerTrade: 0,
       maximumMarginUtilizationPercent: 70, forceSquareOffBuffer: '00:15:00',
     };
-    return { ...base, ...profile, evaluation: profile.evaluation ?? this.form?.controls?.evaluation?.value, validation: profile.validation ?? this.form?.controls?.validation?.value } as InstrumentTradingSettings;
+    const normalized = {
+      ...base,
+      ...profile,
+      exchange: this.normalizeExchange(type, profile.exchange),
+      evaluation: profile.evaluation ?? this.form?.controls?.evaluation?.value,
+      validation: profile.validation ?? this.form?.controls?.validation?.value,
+    };
+    return normalized as InstrumentTradingSettings;
   }
 
   private patchActiveProfile(type: InstrumentType): void {
@@ -1162,8 +1206,13 @@ export class TradingSettingsComponent implements OnInit {
     if (!profile) return;
 
     const extra = profile as Partial<FuturesTradingSettings & OptionsTradingSettings>;
+    const exchange = this.normalizeExchange(type, profile.exchange);
+    if (profile.exchange !== exchange) {
+      profile.exchange = exchange;
+    }
+
     this.form.patchValue({
-      exchange: profile.exchange,
+      exchange,
       productType: profile.productType,
       orderType: profile.orderType,
       duration: profile.duration,
@@ -1288,6 +1337,14 @@ export class TradingSettingsComponent implements OnInit {
       this.profileDrafts[previous] = this.readActiveProfile(this.profileDrafts[previous]!);
     }
 
+    // Always normalize the destination profile before displaying it.
+    // This prevents an Equity exchange such as NSE/BSE from leaking into
+    // an F&O profile when the instrument type changes.
+    const profile = this.profileDrafts[type];
+    if (profile) {
+      profile.exchange = this.normalizeExchange(type, profile.exchange);
+    }
+
     this.patchActiveProfile(type);
     this.activeInstrumentType = type;
     this.form.markAsDirty();
@@ -1330,7 +1387,7 @@ export class TradingSettingsComponent implements OnInit {
       maximumPositionsPerUnderlying: Number(value.maximumPositionsPerUnderlying),
       maximumLotsPerTrade: Number(value.maximumLotsPerTrade),
       maximumMarginUtilizationPercent: Number(value.maximumMarginUtilizationPercent),
-      forceSquareOffBuffer: `${Number(value.forceSquareOffBufferMinutes)}:00`,
+      forceSquareOffBuffer: this.minutesToTimeSpan(value.forceSquareOffBufferMinutes),
       evaluation: value.evaluation,
       validation: value.validation,
     };
@@ -1349,7 +1406,25 @@ export class TradingSettingsComponent implements OnInit {
   private toMinutes(value: string | undefined): number {
     if (!value) return 15;
     const parts = value.split(':').map(Number);
+    if (parts.some((part) => !Number.isFinite(part))) return 15;
     return (parts[0] || 0) * 60 + (parts[1] || 0);
+  }
+
+  /**
+   * Convert the UI's total-minute value to the API's TimeSpan format.
+   * Examples: 15 -> 00:15:00, 90 -> 01:30:00, 900 -> 15:00:00.
+   */
+  private minutesToTimeSpan(value: number | string | null | undefined): string {
+    const minutes = Number(value);
+    if (!Number.isFinite(minutes) || minutes < 0) {
+      return '00:15:00';
+    }
+
+    const totalMinutes = Math.round(minutes);
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+
+    return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:00`;
   }
 
   private toTimeInput(value: string | null | undefined): string {
@@ -1376,12 +1451,27 @@ export class TradingSettingsComponent implements OnInit {
     return value as TradingStrategy;
   }
 
-  private toTimeSpan(value: string | null): string {
+  private toTimeSpan(value: string | null | undefined): string {
     if (!value) {
       return '00:00:00';
     }
 
-    return `${value}:00`;
+    const parts = String(value).trim().split(':').map(Number);
+    if (parts.some(Number.isNaN) || parts.length < 2) {
+      return '00:00:00';
+    }
+
+    const hours = Math.max(0, Math.floor(parts[0] || 0));
+    const minutes = Math.max(0, Math.floor(parts[1] || 0));
+    const seconds = Math.max(0, Math.floor(parts[2] || 0));
+
+    // Normalize overflow instead of producing invalid values such as 900:00.
+    const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+    const normalizedHours = Math.floor(totalSeconds / 3600);
+    const normalizedMinutes = Math.floor((totalSeconds % 3600) / 60);
+    const normalizedSeconds = totalSeconds % 60;
+
+    return `${String(normalizedHours).padStart(2, '0')}:${String(normalizedMinutes).padStart(2, '0')}:${String(normalizedSeconds).padStart(2, '0')}`;
   }
 
   private parseExcludedSymbols(value: string | null | undefined): string[] {
