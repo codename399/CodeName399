@@ -1,180 +1,4 @@
-:host {
-  display: block;
-  min-height: 100%;
-  background: #eef4fb;
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-.settings-page {
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
-  padding: 28px 24px;
-  gap: 24px;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 24px;
-  flex-wrap: wrap;
-}
-
-.page-header h1 {
-  margin: 0 0 8px;
-  font-size: 32px;
-  font-weight: 800;
-  color: #102a43;
-}
-
-.page-header p {
-  margin: 0;
-  color: #627d98;
-  font-size: 15px;
-  line-height: 1.6;
-}
-
-.header-actions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-button {
-  cursor: pointer;
-  border: none;
-  border-radius: 999px;
-  padding: 0.85rem 1.4rem;
-  font-size: 0.95rem;
-  font-weight: 700;
-  transition:
-    transform 0.18s ease,
-    background-color 0.18s ease,
-    box-shadow 0.18s ease;
-}
-
-button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.primary-button {
-  background: #2563eb;
-  color: white;
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.18);
-}
-
-.primary-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  background: #1d4ed8;
-}
-
-.secondary-button,
-.nav-button {
-  background: white;
-  color: #334155;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
-}
-
-.secondary-button:hover:not(:disabled),
-.nav-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  background: #f8fafc;
-}
-
-.loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 280px;
-  font-size: 1.1rem;
-  color: #475569;
-  background: white;
-  border-radius: 18px;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
-}
-
-.settings-form {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-/*
- * Accordion layout
- * The HTML uses:
- *
- * <div class="settings-grid">
- *   <details class="settings-card">
- *     <summary class="card-header">...</summary>
- *     <div class="card-body">...</div>
- *   </details>
- * </div>
- */
-.settings-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-}
-
-.settings-card {
-  width: 100%;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  background: white;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.055);
-  overflow: hidden;
-  animation: fadeUp 0.2s ease;
-  transition:
-    border-color 0.18s ease,
-    box-shadow 0.18s ease;
-}
-
-.settings-card:hover {
-  border-color: rgba(37, 99, 235, 0.22);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
-}
-
-.settings-card[open] {
-  border-color: rgba(37, 99, 235, 0.28);
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.09);
-}
-
-.card-header {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  min-height: 72px;
-  margin: 0;
-  padding: 18px 52px 18px 22px;
-  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 0;
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-  transition:
-    background 0.18s ease,
-    border-color 0.18s ease;
-}
-
-.card-header::-webkit-details-marker {
-  display: none;
-}
-
-.card-header::marker {
-  content: "";
+:host{display:block;min-height:100%;background:#eef4fb}*,*::before,*::after{box-sizing:border-box}.settings-page{display:flex;flex-direction:column;min-height:100%;padding:28px 24px;gap:24px}.page-header{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap}.page-header h1{margin:0 0 8px;font-size:32px;font-weight:800;color:#102a43}.page-header p{margin:0;color:#627d98;font-size:15px;line-height:1.6}.header-actions{display:flex;gap:12px;flex-wrap:wrap}button{cursor:pointer;border:none;border-radius:999px;padding:0.85rem 1.4rem;font-size:0.95rem;font-weight:700;transition:transform 0.18s ease,background-color 0.18s ease,box-shadow 0.18s ease}button:disabled{opacity:0.55;cursor:not-allowed}.primary-button{background:#2563eb;color:white;box-shadow:0 8px 20px rgba(37,99,235,0.18)}.primary-button:hover:not(:disabled){transform:translateY(-1px);background:#1d4ed8}.secondary-button,.nav-button{background:white;color:#334155;box-shadow:0 10px 24px rgba(15,23,42,0.08)}.secondary-button:hover:not(:disabled),.nav-button:hover:not(:disabled){transform:translateY(-1px);background:#f8fafc}.loading{display:flex;justify-content:center;align-items:center;min-height:280px;font-size:1.1rem;color:#475569;background:white;border-radius:18px;box-shadow:0 12px 32px rgba(15,23,42,0.06)}.settings-form{display:flex;flex-direction:column;gap:18px}.settings-grid{display:flex;flex-direction:column;gap:12px;width:100%}.settings-card{width:100%;min-width:0;margin:0;padding:0;background:white;border:1px solid rgba(148,163,184,0.22);border-radius:16px;box-shadow:0 8px 24px rgba(15,23,42,0.055);overflow:hidden;animation:fadeUp 0.2s ease;transition:border-color 0.18s ease,box-shadow 0.18s ease}.settings-card:hover{border-color:rgba(37,99,235,0.22);box-shadow:0 12px 30px rgba(15,23,42,0.08)}.settings-card[open]{border-color:rgba(37,99,235,0.28);box-shadow:0 12px 32px rgba(15,23,42,0.09)}.card-header{position:relative;display:flex;align-items:center;justify-content:space-between;width:100%;min-height:72px;margin:0;padding:18px 52px 18px 22px;background:linear-gradient(180deg,#f8fafc 0%,#f1f5f9 100%);border:0;cursor:pointer;list-style:none;user-select:none;transition:background 0.18s ease,border-color 0.18s ease}.card-header::-webkit-details-marker{display:none}.card-header::marker{content:"";
 }
 
 .card-header::after {
@@ -453,7 +277,7 @@ textarea:hover:not(:focus) {
   color: #15803d;
 }
 
-/* Number inputs */
+
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
@@ -464,12 +288,12 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
-/* Time inputs */
+
 input[type="time"] {
   cursor: pointer;
 }
 
-/* Angular Material compatibility */
+
 .mat-mdc-form-field {
   width: 100%;
 }
@@ -519,7 +343,7 @@ button[mat-flat-button]:hover {
   transform: translateY(-1px);
 }
 
-/* Animation */
+
 @keyframes fadeUp {
   from {
     opacity: 0;
@@ -532,7 +356,7 @@ button[mat-flat-button]:hover {
   }
 }
 
-/* Scrollbar */
+
 .settings-page::-webkit-scrollbar {
   width: 10px;
 }
@@ -551,7 +375,7 @@ button[mat-flat-button]:hover {
   background: #64748b;
 }
 
-/* Large tablets */
+
 @media (max-width: 1200px) {
   .page-header {
     flex-direction: column;
@@ -564,7 +388,7 @@ button[mat-flat-button]:hover {
   }
 }
 
-/* Tablets */
+
 @media (max-width: 768px) {
   .settings-page {
     padding: 16px;
@@ -654,7 +478,7 @@ button[mat-flat-button]:hover {
   }
 }
 
-/* Mobile */
+
 @media (max-width: 480px) {
   .settings-page {
     padding: 12px;
@@ -723,7 +547,7 @@ button[mat-flat-button]:hover {
   color: #0f172a;
 }
 
-/* Instrument-type aware trading profiles */
+
 .instrument-profile-card,
 .fno-profile-card {
   border-left: 3px solid var(--accent-color, #4f46e5);
@@ -780,7 +604,7 @@ button[mat-flat-button]:hover {
   }
 }
 
-/* Autonomous paper-trading optimizer status */
+
 .optimization-status-card {
   width: 100%;
   padding: 18px 22px;
@@ -883,7 +707,7 @@ button[mat-flat-button]:hover {
   }
 }
 
-/* Trading-terminal redesign */
+
 :host{display:block;min-height:100%;color:#dbe7f3;background:#08111d}
 .settings-page{width:min(1680px,100%);margin:auto;padding:18px clamp(8px,2vw,28px) 110px;gap:14px;background:transparent}
 .terminal-header{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 16px;border:1px solid #1c3147;border-radius:12px;background:#0d1826;box-shadow:0 14px 40px rgba(0,0,0,.22)}
@@ -897,10 +721,7 @@ button[mat-flat-button]:hover {
 @media(max-width:600px){.settings-page{padding:8px 7px 104px;gap:8px}.terminal-header{padding:11px}.terminal-actions{display:grid;grid-template-columns:1fr 1fr}.terminal-actions .save-button{grid-column:span 2}.market-command-strip{grid-template-columns:1fr 1fr}.command-status{grid-column:span 2}.command-stat{padding:9px}.optimization-status-card{padding:12px}.optimizer-topline{flex-direction:column}.optimizer-grid{grid-template-columns:1fr 1fr;gap:6px}.optimizer-card,.optimizer-card-primary{grid-column:auto;min-height:72px;padding:10px}.metric-value{font-size:15px}.optimizer-idle-panel{grid-template-columns:1fr}.card-header{min-height:54px;padding:12px 36px 12px 12px}.card-body{padding:12px}.grid-2,.grid-3,.grid-4,.profile-selector-grid,.compact-profile-grid{grid-template-columns:1fr!important}.settings-footer{left:7px;right:7px;bottom:7px;flex-direction:column;align-items:stretch}.footer-left,.footer-right{width:100%}.footer-right{display:grid;grid-template-columns:1fr 1fr}.footer-right .primary-button{grid-column:span 2}}
 @media(max-width:380px){.market-command-strip{grid-template-columns:1fr}.command-status{grid-column:auto}.optimizer-grid{grid-template-columns:1fr}.terminal-actions{grid-template-columns:1fr}.terminal-actions .save-button{grid-column:auto}}
 
-/* ==========================================================================
-   SHARED TRADING THEME
-   Light is the default. Dark is opt-in and persisted with codename399-theme.
-   ========================================================================== */
+
 .settings-page.theme-light{
   --ts-bg:#f3f6fa;
   --ts-panel:#ffffff;
@@ -1095,9 +916,7 @@ button[mat-flat-button]:hover {
   .terminal-actions{display:grid;grid-template-columns:1fr 1fr}
 }
 
-/* ==========================================================================
-   FINAL LIGHT MODE GRID / FORM OVERRIDES
-   ========================================================================== */
+
 .settings-page.theme-light,
 .settings-page.theme-light .settings-form{
   background:#f3f6fa !important;
@@ -1220,126 +1039,4 @@ button[mat-flat-button]:hover {
 .settings-page.theme-light .status-pill.status-warning{
   background:#fffbeb !important;
   color:#92400e !important;
-}
-
-/* ==========================================================================
-   TRADING CONFIGURATION — THEME-AWARE ON/OFF SWITCHES
-   ========================================================================== */
-
-.settings-page .toggle-field{
-  position:relative;
-  display:flex;
-  align-items:center;
-  gap:10px;
-  min-height:44px;
-  padding:9px 12px;
-  box-sizing:border-box;
-  border-radius:9px;
-  transition:background .15s ease,border-color .15s ease,color .15s ease;
-}
-
-/* Keep the native checkbox functional, but visually turn it into a switch. */
-.settings-page .toggle-field input[type="checkbox"]{
-  appearance:none !important;
-  -webkit-appearance:none !important;
-  position:relative;
-  width:42px !important;
-  min-width:42px !important;
-  height:23px !important;
-  margin:0 !important;
-  padding:0 !important;
-  border:1px solid #b7c4d0 !important;
-  border-radius:999px !important;
-  background:#cbd5df !important;
-  box-shadow:inset 0 1px 2px rgba(15,23,42,.12) !important;
-  cursor:pointer;
-  outline:none;
-  transition:background .16s ease,border-color .16s ease,box-shadow .16s ease;
-}
-
-.settings-page .toggle-field input[type="checkbox"]::after{
-  content:"";
-  position:absolute;
-  top:2px;
-  left:2px;
-  width:17px;
-  height:17px;
-  border-radius:50%;
-  background:#ffffff;
-  box-shadow:0 1px 3px rgba(15,23,42,.25);
-  transition:transform .16s ease;
-}
-
-.settings-page .toggle-field input[type="checkbox"]:checked{
-  background:#198754 !important;
-  border-color:#198754 !important;
-  box-shadow:0 0 0 3px rgba(25,135,84,.12) !important;
-}
-
-.settings-page .toggle-field input[type="checkbox"]:checked::after{
-  transform:translateX(19px);
-}
-
-.settings-page .toggle-field input[type="checkbox"]:focus-visible{
-  box-shadow:0 0 0 3px rgba(37,99,235,.20) !important;
-}
-
-.settings-page .toggle-field span{
-  color:#334155 !important;
-  font-weight:700;
-  font-size:12px;
-}
-
-/* Light mode */
-.settings-page.theme-light .toggle-field{
-  background:#f7f9fc !important;
-  border:1px solid #d8e1eb !important;
-  color:#172536 !important;
-}
-.settings-page.theme-light .toggle-field:hover{
-  background:#edf6ff !important;
-  border-color:#b9d7ee !important;
-}
-.settings-page.theme-light .toggle-field input[type="checkbox"]{
-  background:#cbd5e1 !important;
-  border-color:#aebdcb !important;
-}
-.settings-page.theme-light .toggle-field input[type="checkbox"]:checked{
-  background:#16834b !important;
-  border-color:#16834b !important;
-}
-.settings-page.theme-light .toggle-field span{
-  color:#26384a !important;
-}
-
-/* Dark mode */
-.settings-page.theme-dark .toggle-field{
-  background:#0e1d2d !important;
-  border:1px solid #1c3147 !important;
-  color:#e7eef6 !important;
-}
-.settings-page.theme-dark .toggle-field:hover{
-  background:#12263a !important;
-  border-color:#315674 !important;
-}
-.settings-page.theme-dark .toggle-field input[type="checkbox"]{
-  background:#34475a !important;
-  border-color:#4b647b !important;
-  box-shadow:inset 0 1px 2px rgba(0,0,0,.30) !important;
-}
-.settings-page.theme-dark .toggle-field input[type="checkbox"]:checked{
-  background:#25a865 !important;
-  border-color:#25a865 !important;
-  box-shadow:0 0 0 3px rgba(37,168,101,.14) !important;
-}
-.settings-page.theme-dark .toggle-field span{
-  color:#d8e4ee !important;
-}
-
-/* Make the switch compact on phones without shrinking its touch target. */
-@media(max-width:600px){
-  .settings-page .toggle-field{
-    min-height:46px;
-    padding:10px 11px;
-  }
 }
