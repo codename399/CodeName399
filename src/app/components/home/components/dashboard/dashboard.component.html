@@ -1,154 +1,40 @@
-<main class="command-center" [class.theme-dark]="theme() === 'dark'" [class.theme-light]="theme() === 'light'">
-  <header class="dashboard-header">
-    <div class="brand-block">
-      <div class="brand-mark">
-        <span class="material-icons">query_stats</span>
-      </div>
-      <div>
-        <div class="eyebrow">CODENAME399 · TRADING PLATFORM</div>
-        <h1>Command Center</h1>
-        <p>Monitor your trading engine, optimizer and connected applications.</p>
-      </div>
-    </div>
-
-    <div class="header-status">
-      <button class="theme-button" type="button" (click)="toggleTheme()">
-        <span class="material-icons">{{ theme() === 'dark' ? 'light_mode' : 'dark_mode' }}</span>
-        {{ theme() === 'dark' ? 'Light' : 'Dark' }}
-      </button>
-      <span class="online-dot"></span>
-      <span>CONTROL DESK</span>
-    </div>
-  </header>
-
-  <section class="engine-strip">
-    <div class="engine-cell engine-primary">
-      <span class="engine-label">AUTONOMOUS OPTIMIZER</span>
-      <strong>{{ optimizerState }}</strong>
-      <small>
-        @if (optimizationStatus; as status) {
-          @if (status.candidate; as candidate) {
-            {{ candidate.candidateId }}
-          } @else {
-            @if (status.day; as day) {
-              {{ day.candidates?.length ?? 0 }} configurations today
-            } @else {
-              Waiting for telemetry
-            }
-          }
-        } @else {
-          Waiting for telemetry
-        }
-      </small>
-    </div>
-
-    <div class="engine-cell">
-      <span class="engine-label">PAPER P&amp;L</span>
-      <strong
-        [class.positive]="optimizerPnl > 0"
-        [class.negative]="optimizerPnl < 0">
-        ₹{{ optimizerPnl | number:'1.2-2' }}
-      </strong>
-      <small>Current candidate</small>
-    </div>
-
-    <div class="engine-cell">
-      <span class="engine-label">PAPER TRADES</span>
-      <strong>{{ optimizationStatus?.candidate?.metrics?.completedPaperTrades ?? 0 }}</strong>
-      <small>Completed</small>
-    </div>
-
-    <div class="engine-cell">
-      <span class="engine-label">WIN RATE</span>
-      <strong>{{ (optimizationStatus?.candidate?.metrics?.winRate ?? 0) | number:'1.1-1' }}%</strong>
-      <small>{{ optimizationStatus?.candidate?.metrics?.winningTrades ?? 0 }} W · {{ optimizationStatus?.candidate?.metrics?.losingTrades ?? 0 }} L</small>
-    </div>
-
-    <div class="engine-cell">
-      <span class="engine-label">PROFIT FACTOR</span>
-      <strong>{{ (optimizationStatus?.candidate?.metrics?.profitFactor ?? 0) | number:'1.2-2' }}</strong>
-      <small>Current candidate</small>
-    </div>
-  </section>
-
-  @if (optimizationStatus?.candidate; as candidate) {
-    <section class="optimizer-panel">
-      <div class="section-heading">
-        <div>
-          <div class="eyebrow">LIVE VALIDATION PIPELINE</div>
-          <h2>{{ candidate.candidateId }}</h2>
-        </div>
-        <span class="live-badge"><span></span> TESTING</span>
-      </div>
-
-      <div class="pipeline">
-        <div class="pipeline-node">
-          <strong>{{ candidate.activity?.scannedSymbols ?? 0 }}</strong>
-          <span>Scanned</span>
-        </div>
-        <i>→</i>
-        <div class="pipeline-node">
-          <strong>{{ candidate.activity?.evaluationSignals ?? 0 }}</strong>
-          <span>Signals</span>
-        </div>
-        <i>→</i>
-        <div class="pipeline-node">
-          <strong>{{ candidate.activity?.virtualCandidates ?? 0 }}</strong>
-          <span>Virtual</span>
-        </div>
-        <i>→</i>
-        <div class="pipeline-node">
-          <strong>{{ candidate.activity?.virtualConfirmations ?? 0 }}</strong>
-          <span>Confirmed</span>
-        </div>
-        <i>→</i>
-        <div class="pipeline-node">
-          <strong>{{ candidate.activity?.paperTrades ?? 0 }}</strong>
-          <span>Paper</span>
-        </div>
-      </div>
-    </section>
-  }
-
-  <section class="workspace-heading">
-    <div>
-      <div class="eyebrow">WORKSPACES</div>
-      <h2>Trading Applications</h2>
-    </div>
-    <span class="workspace-count">{{ activeProjectCount }} available</span>
-  </section>
-
-  <section class="project-grid">
-    @for (project of projects; track trackProject($index, project)) {
-      <article class="project-card" (click)="openProject(project)" tabindex="0"
-        (keydown.enter)="openProject(project)"
-        [class.trading-card]="project === tradingProject">
-        <div class="project-top">
-          <div class="project-icon">
-            <span class="material-icons">{{ project.navigationText || 'apps' }}</span>
+<div class="bg-gray-100 p-4">
+  <ul class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    @for(project of projects;track project.id){
+    <li><a (click)="openProject(project)"
+        class="cursor-pointer block h-full transition-all duration-200 bg-white border border-gray-200 rounded group hover:shadow-lg hover:border-green-500 hover:ring-1 hover:ring-green-500/20">
+        <div class="flex items-center p-6">
+          <div
+            class="flex items-center justify-center flex-shrink-0 w-16 h-16 transition-colors duration-200 rounded bg-green-50 group-hover:bg-green-100">
+            <span class="text-4xl" role="img"><span class="text-4xl text-indigo-600 material-icons">
+                {{project.navigationText}}
+              </span>
+            </span>
           </div>
 
-          @if (project === tradingProject) {
-            <span class="trading-badge">TRADING</span>
-          }
-        </div>
+          <div class="flex-grow ml-6">
+            <h3
+              class="text-lg font-semibold text-gray-900 transition-colors duration-200 line-clamp-1 group-hover:text-green-600">
+              {{project.name}}
+            </h3>
 
-        <div class="project-content">
-          <h3>{{ project.name }}</h3>
-          <p>{{ project.description || 'Open workspace' }}</p>
-        </div>
+            <div class="inline-flex items-center mt-1">
+              <span class="text-gray-600 rounded">
+                {{project.description}}
+              </span>
+            </div>
+          </div>
 
-        <div class="project-footer">
-          <span>OPEN WORKSPACE</span>
-          <span class="arrow">→</span>
+          <div class="flex-shrink-0 ml-4">
+            <svg class="w-5 h-5 text-gray-400 group-hover:text-green-500 transition-colors duration-200"
+              xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+              stroke="currentColor" aria-hidden="true" data-slot="icon">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"></path>
+            </svg>
+          </div>
         </div>
-      </article>
-    } @empty {
-      <div class="empty-state">
-        <span class="material-icons">dashboard_customize</span>
-        <strong>No workspaces available</strong>
-        <span>Your mapped applications will appear here.</span>
-      </div>
+      </a>
+    </li>
     }
-  </section>
-</main>
+  </ul>
+</div>

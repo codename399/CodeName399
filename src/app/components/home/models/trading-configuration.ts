@@ -131,7 +131,39 @@ export interface OptionsTradingSettings extends InstrumentTradingSettings {
 }
 
 
+export interface OptimizationSettings {
+  enabled: boolean;
+  paperTradingOnly: boolean;
+  sendConfigurationEmail: boolean;
+  sendDailyEmail: boolean;
+  autoPromoteBestConfiguration: boolean;
+
+  pollIntervalSeconds: number;
+  minimumCandidateMinutes: number;
+  noSignalTimeoutMinutes: number;
+  noVirtualConfirmationTimeoutMinutes: number;
+  noPaperTradeTimeoutMinutes: number;
+  maxVirtualTradeDurationMinutes: number;
+  maxPaperTradeDurationMinutes: number;
+  forceCloseTimedOutPaperTrades: boolean;
+  maximumCandidateMinutes: number;
+
+  maximumCandidatesPerDay: number;
+  minimumCompletedTradesForAcceptance: number;
+  preferredCompletedTrades: number;
+  minimumVirtualCandidatesForAnalysis: number;
+
+  minimumNetProfit: number;
+  minimumProfitFactor: number;
+  maximumDrawdownPercent: number;
+
+  dailyEmailDelayMinutes: number;
+  validationHistoryFile: string;
+  reportDirectory: string;
+}
+
 export interface TradingConfiguration {
+  optimization: OptimizationSettings;
   id: string;
 
   instrumentType?: InstrumentType;

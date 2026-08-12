@@ -1,4 +1,4 @@
-<div class="page-shell" [class.theme-dark]="theme() === 'dark'" [class.theme-light]="theme() === 'light'">
+<div class="page-shell">
   <div class="page-layout">
     <div
       class="sidebar-backdrop"
@@ -8,150 +8,76 @@
     ></div>
 
     <aside class="page-sidebar" [class.open]="showSettings()">
-      <div class="sidebar-brand">
-        <div class="sidebar-brand-icon"><span class="material-icons">tune</span></div>
-        <div>
-          <div class="terminal-eyebrow">TRADING CONTROL</div>
-          <strong>Scanner Controls</strong>
-        </div>
-        <button class="sidebar-close" type="button" (click)="toggleSettings()" aria-label="Close controls">
-          <span class="material-icons">close</span>
+      <div class="sidebar-header">
+        <div class="sidebar-title">Dashboard Controls</div>
+        <button
+          class="icon-button"
+          type="button"
+          (click)="toggleSettings()"
+          title="Close controls"
+          aria-label="Close controls"
+        >
+          <span class="material-icons">chevron_left</span>
         </button>
       </div>
 
-      <div class="sidebar-status">
-        <span class="sidebar-status-dot"
-          [class.open]="marketStatus() === 'OPEN'"
-          [class.closed]="marketStatus() === 'CLOSED'"></span>
-        <div>
-          <span>MARKET</span>
-          <strong>{{ marketStatus() }}</strong>
-          <small>{{ marketTimer() }}</small>
-        </div>
-      </div>
-
-      <div class="sidebar-section">
-        <div class="sidebar-section-title">QUICK ACTIONS</div>
-        <button class="sidebar-action primary" type="button" (click)="openSettings()">
-          <span class="material-icons">settings</span>
-          <span><strong>Trading Settings</strong><small>Risk, strategy & execution</small></span>
-          <span class="material-icons action-arrow">chevron_right</span>
-        </button>
-        <button class="sidebar-action" type="button" (click)="saveConfiguration()">
-          <span class="material-icons">save</span>
-          <span><strong>Save Columns</strong><small>Persist scanner layout</small></span>
-        </button>
-        <button class="sidebar-action" type="button" (click)="refresh()">
-          <span class="material-icons">refresh</span>
-          <span><strong>Refresh Market</strong><small>Reload configuration & data</small></span>
-        </button>
-      </div>
-
-      <div class="sidebar-section columns-section">
-        <div class="sidebar-section-title">
-          <span>VISIBLE COLUMNS</span>
-          <button class="sidebar-reset" type="button" (click)="resetColumns()">RESET</button>
-        </div>
-        <div class="column-options">
-          <label class="column-option" *ngFor="let column of columnDefinitions">
-            <input type="checkbox"
-              [checked]="isColumnVisible(column.key)"
-              (change)="toggleColumn(column.key)" />
-            <span>{{ column.label }}</span>
-          </label>
-        </div>
-      </div>
-
-      <div class="sidebar-section sidebar-footer-section">
-        <div class="sidebar-section-title">APPEARANCE</div>
-        <div class="theme-switch">
-          <button type="button" [class.active]="theme() === 'dark'" (click)="setTheme('dark')">
-            <span class="material-icons">dark_mode</span> Dark
+      <div class="page-actions">
+        <div class="action-buttons">
+          <button
+            class="pill-button accent"
+            type="button"
+            (click)="openSettings()"
+            title="Settings"
+            aria-label="Settings"
+          >
+            Settings
           </button>
-          <button type="button" [class.active]="theme() === 'light'" (click)="setTheme('light')">
-            <span class="material-icons">light_mode</span> Light
+
+          <button
+            class="pill-button accent"
+            type="button"
+            (click)="saveConfiguration()"
+            title="Save columns"
+            aria-label="Save columns"
+          >
+            Save Columns
           </button>
+        </div>
+
+        <div class="column-panel">
+          <div class="column-panel-header">
+            <span>Table Columns</span>
+            <button
+              class="text-link-button"
+              type="button"
+              (click)="resetColumns()"
+            >
+              Reset
+            </button>
+          </div>
+          <div class="column-options">
+            <label
+              class="column-option"
+              *ngFor="let column of columnDefinitions"
+            >
+              <input
+                type="checkbox"
+                [checked]="isColumnVisible(column.key)"
+                (change)="toggleColumn(column.key)"
+              />
+              <span>{{ column.label }}</span>
+            </label>
+          </div>
         </div>
       </div>
     </aside>
 
     <main class="page-main" [class.sidebar-open]="showSettings()">
-      <header class="trading-terminal-header">
-        <div class="terminal-heading">
-          <div class="terminal-icon">
-            <span class="material-icons">candlestick_chart</span>
-          </div>
-          <div>
-            <div class="terminal-eyebrow">ANGEL ONE · LIVE MARKET</div>
-            <h1>Market Scanner</h1>
-            <p>Live candidates, strategy signals, risk levels and technical context.</p>
-          </div>
-        </div>
-
-        <div class="terminal-actions">
-          <button class="terminal-action" type="button" (click)="openSettings()">
-            <span class="material-icons">tune</span>
-            Settings
-          </button>
-          <button class="terminal-action" type="button" (click)="refresh()">
-            <span class="material-icons">refresh</span>
-            Refresh
-          </button>
-        </div>
-      </header>
-
-      <section class="market-command-bar">
-        <div class="market-command-main">
-          <span class="market-dot"
-            [class.is-open]="marketStatus() === 'OPEN'"
-            [class.is-closed]="marketStatus() === 'CLOSED'"></span>
-          <div>
-            <span class="command-label">MARKET</span>
-            <strong>{{ marketStatus() }}</strong>
-            <small>{{ marketTimer() }}</small>
-          </div>
-        </div>
-        <div class="command-metric">
-          <span>CANDIDATES</span>
-          <strong>{{ filteredGainers().length }}</strong>
-        </div>
-        <div class="command-metric">
-          <span>STRATEGY</span>
-          <strong>{{ configuration()?.strategy }}</strong>
-        </div>
-        <div class="command-metric">
-          <span>INSTRUMENT</span>
-          <strong>{{ activeInstrumentType() }}</strong>
-        </div>
-        <div class="command-metric">
-          <span>AVAILABLE CASH</span>
-          <strong>₹{{ availableCash() | number:'1.0-0' }}</strong>
-        </div>
-        <div class="command-metric">
-          <span>AUTO</span>
-          <strong [class.metric-on]="autoTradingEnabled()">
-            {{ autoTradingEnabled() ? 'ON' : 'OFF' }}
-          </strong>
-        </div>
-        <div class="command-metric">
-          <span>PAPER</span>
-          <strong>{{ configuration()?.paperTrading ? 'ON' : 'OFF' }}</strong>
-        </div>
-      </section>
-
-      <div class="scanner-toolbar">
-        <div class="scanner-title">
-          <div>
-            <span class="terminal-eyebrow">LIVE SCAN</span>
-            <strong>{{ filteredGainers().length }} symbols</strong>
-          </div>
-          <span class="scan-description">Sorted by signal quality and score</span>
-        </div>
+      <div class="page-top">
         <div class="search-box" *ngIf="filteredGainers().length > 0">
-          <span class="material-icons">search</span>
           <input
             type="text"
-            placeholder="Search symbol..."
+            placeholder="Search symbol"
             [value]="searchText()"
             (input)="searchText.set($any($event.target).value)"
           />
@@ -160,8 +86,8 @@
 
       <section class="table-shell">
         <div class="table-header">
-          <div class="table-title">Market Candidates</div>
-          <div class="table-help">Scroll horizontally for technical / derivatives columns</div>
+          <div>{{ filteredGainers().length }} symbols found</div>
+          <div>Top candidates based on current scan</div>
         </div>
         <div class="table-scroll">
           <table>
@@ -242,7 +168,7 @@
                   <span *ngIf="stock.isOwned">★</span>
                 </td>
 
-                <td class="symbol sticky-symbol-cell" *ngIf="isColumnVisible('symbol')">
+                <td class="symbol" *ngIf="isColumnVisible('symbol')">
                   <div class="symbol-content">
                     <div class="symbol-name">
                       <span
@@ -432,7 +358,7 @@
                   {{ stock.bollingerBandwidth | number: "1.2-2" }}
                 </td>
 
-                <td class="sticky-score-cell" *ngIf="isColumnVisible('score')">
+                <td *ngIf="isColumnVisible('score')">
                   <div
                     class="score-badge"
                     [class.excellent]="stock.score >= 80"
@@ -443,7 +369,7 @@
                   </div>
                 </td>
 
-                <td class="sticky-signal-cell" *ngIf="isColumnVisible('signal')">
+                <td *ngIf="isColumnVisible('signal')">
                   <div
                     class="signal-pill"
                     [ngClass]="{
@@ -490,38 +416,112 @@
       </section>
 
       <section class="summary-panel">
-        <div class="summary-left">
-          <div class="summary-title">
-            <span class="material-icons">monitoring</span>
-            <div><span>MARKET MONITOR</span><strong>Live Trading Snapshot</strong></div>
-          </div>
-          <div class="summary-metric market-status"
+        <div class="summary-stripe">
+          <div
+            class="summary-stripe-item market-status tooltip-trigger"
             [class.market-open]="marketStatus() === 'OPEN'"
-            [class.market-closed]="marketStatus() === 'CLOSED'">
-            <span>STATUS</span><strong>{{ marketStatus() }}</strong><small>{{ marketTimer() }}</small>
+            [class.market-closed]="marketStatus() === 'CLOSED'"
+            [class.market-ignored]="
+              marketStatus() !== 'OPEN' && marketStatus() !== 'CLOSED'
+            "
+            title="Market status"
+            tabindex="0"
+          >
+            <span>⏱️</span>
+            <div>
+              <strong>{{ marketStatus() }}</strong>
+              <small>{{ marketTimer() }}</small>
+            </div>
           </div>
-          <div class="summary-metric"><span>CASH</span><strong>₹{{ availableCash() | number:'1.0-0' }}</strong></div>
-          <div class="summary-metric"><span>STRATEGY</span><strong>{{ configuration()?.strategy || '—' }}</strong></div>
-          <div class="summary-metric"><span>INSTRUMENT</span><strong>{{ activeInstrumentType() }}</strong></div>
-          <div class="summary-metric"><span>RISK</span><strong>{{ riskPercentage() | number:'1.1-1' }}%</strong></div>
-          <div class="summary-mode" [class.on]="autoTradingEnabled()">
-            <span class="material-icons">{{ autoTradingEnabled() ? 'smart_toy' : 'pan_tool' }}</span>
-            <div><span>AUTO</span><strong>{{ autoTradingEnabled() ? 'ON' : 'OFF' }}</strong></div>
+
+          <div
+            class="summary-stripe-item tooltip-trigger"
+            title="Ignore market hours"
+            tabindex="0"
+          >
+            <span>🕒</span>
+            <strong>{{
+              configuration()?.ignoreMarketHours ? "Ignored" : "Market Hours"
+            }}</strong>
           </div>
-          <div class="summary-mode paper" [class.on]="configuration()?.paperTrading">
-            <span class="material-icons">description</span>
-            <div><span>PAPER</span><strong>{{ configuration()?.paperTrading ? 'ON' : 'OFF' }}</strong></div>
+
+          <div
+            class="summary-stripe-item tooltip-trigger"
+            title="Available cash"
+            tabindex="0"
+          >
+            <span>💵</span>
+            <strong>₹ {{ availableCash() | number: "1.2-2" }}</strong>
+          </div>
+
+          <div
+            class="summary-stripe-item tooltip-trigger"
+            title="Instrument type"
+            tabindex="0"
+          >
+            <span>🎯</span>
+            <strong>{{ activeInstrumentType() }}</strong>
+          </div>
+
+          <div
+            class="summary-stripe-item tooltip-trigger"
+            title="Strategy"
+            tabindex="0"
+          >
+            <span>📈</span>
+            <strong>{{ configuration()?.strategy }}</strong>
+          </div>
+
+          <div
+            class="summary-stripe-item tooltip-trigger"
+            title="Auto trading"
+            tabindex="0"
+          >
+            <span>🤖</span>
+            <strong>{{
+              configuration()?.enableAutoTrading ? "On" : "Off"
+            }}</strong>
+          </div>
+
+          <div
+            class="summary-stripe-item tooltip-trigger"
+            title="Paper trading"
+            tabindex="0"
+          >
+            <span>📝</span>
+            <strong>{{ configuration()?.paperTrading ? "On" : "Off" }}</strong>
           </div>
         </div>
-        <div class="summary-right">
-          <button class="summary-icon-button" type="button" (click)="toggleSettings()" [title]="showSettings() ? 'Close controls' : 'Open controls'">
-            <span class="material-icons">{{ showSettings() ? 'close' : 'tune' }}</span>
+
+        <div class="summary-actions">
+          <button
+            class="sidebar-float-button"
+            [ngClass]="{
+              'market-open': marketStatus() === 'OPEN',
+              'market-closed': marketStatus() === 'CLOSED',
+              'market-ignored':
+                marketStatus() !== 'OPEN' && marketStatus() !== 'CLOSED',
+            }"
+            type="button"
+            (click)="toggleSettings()"
+            [title]="showSettings() ? 'Close controls' : 'Open controls'"
+            [attr.aria-label]="
+              showSettings() ? 'Close controls' : 'Open controls'
+            "
+          >
+            <span class="material-icons">{{
+              showSettings() ? "close" : "menu"
+            }}</span>
           </button>
-          <button class="summary-icon-button" type="button" (click)="toggleTheme()" [title]="theme() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'">
-            <span class="material-icons">{{ theme() === 'dark' ? 'light_mode' : 'dark_mode' }}</span>
-          </button>
-          <button class="summary-refresh" type="button" (click)="refresh()">
-            <span class="material-icons">refresh</span><span>Refresh</span>
+
+          <button
+            class="refresh-button"
+            type="button"
+            (click)="refresh()"
+            title="Refresh"
+            aria-label="Refresh"
+          >
+            <span class="material-icons">refresh</span>
           </button>
         </div>
       </section>
