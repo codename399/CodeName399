@@ -72,6 +72,12 @@ export class AngelOneComponent implements OnInit, OnDestroy {
 
   showLogs = signal(false);
 
+  theme = signal<'dark' | 'light'>(
+    typeof localStorage !== 'undefined' && localStorage.getItem('codename399-theme') === 'dark'
+      ? 'dark'
+      : 'light',
+  );
+
   readonly columnDefinitions = [
     { key: 'star', label: '⭐', defaultVisible: true },
     { key: 'symbol', label: 'Symbol', defaultVisible: true },
@@ -200,6 +206,17 @@ export class AngelOneComponent implements OnInit, OnDestroy {
   // ======================================================
   // Lifecycle
   // ======================================================
+
+  setTheme(theme: 'dark' | 'light'): void {
+    this.theme.set(theme);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('codename399-theme', theme);
+    }
+  }
+
+  toggleTheme(): void {
+    this.setTheme(this.theme() === 'dark' ? 'light' : 'dark');
+  }
 
   ngOnInit(): void {
     this.startMarketTimer();

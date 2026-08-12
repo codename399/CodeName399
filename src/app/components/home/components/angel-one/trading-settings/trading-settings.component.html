@@ -1,48 +1,77 @@
-<div class="settings-page">
-  <div class="page-header">
-    <div>
-      <button class="nav-button" type="button" (click)="cancel()">
-        ← Dashboard
-      </button>
-
-      <h1>Trading Configuration</h1>
-
-      <p>Configure your trading engine, risk management and scanner.</p>
+<div class="settings-page" [class.theme-dark]="theme() === 'dark'" [class.theme-light]="theme() === 'light'">
+  <header class="terminal-header">
+    <div class="terminal-title">
+      <button class="nav-button terminal-back" type="button" (click)="cancel()">← Dashboard</button>
+      <div class="title-stack">
+        <div class="eyebrow">CODE NAME 399 · TRADING ENGINE</div>
+        <h1>Trading Control Center</h1>
+        <p>Execution · Risk · Evaluation · Virtual Trading · Market Controls</p>
+      </div>
     </div>
-
-    <div class="header-actions">
-<button
-  class="secondary-button"
-  type="button"
-  (click)="downloadConfiguration()"
-  [disabled]="loading || saving"
->
-  ↓ Download JSON
-</button>
-
-      <button
-        class="secondary-button"
-        type="button"
-        (click)="reset()"
-        [disabled]="loading"
-      >
-        Reset
-      </button>
-
-      <button
-        class="primary-button"
-        type="button"
-        (click)="save()"
-        [disabled]="form.invalid || saving"
-      >
-        @if (saving) {
-          Saving...
-        } @else {
-          Save Configuration
-        }
+    <div class="terminal-actions">
+      <div class="theme-toggle" role="group" aria-label="Appearance">
+        <button type="button" [class.active]="theme() === 'light'" (click)="setTheme('light')">
+          <span class="material-icons">light_mode</span> Light
+        </button>
+        <button type="button" [class.active]="theme() === 'dark'" (click)="setTheme('dark')">
+          <span class="material-icons">dark_mode</span> Dark
+        </button>
+      </div>
+      <button class="secondary-button" type="button" (click)="downloadConfiguration()" [disabled]="loading || saving">↓ JSON</button>
+      <button class="secondary-button" type="button" (click)="reset()" [disabled]="loading || saving">Reset</button>
+      <button class="primary-button save-button" type="button" (click)="save()" [disabled]="form.invalid || saving">
+        @if (saving) { Saving... } @else { Save Configuration }
       </button>
     </div>
-  </div>
+  </header>
+
+  <section class="market-command-strip">
+    <div class="command-status">
+      <span class="status-dot" [class.dot-live]="form.controls.enableAutoTrading.value" [class.dot-paper]="form.controls.paperTrading.value && !form.controls.enableAutoTrading.value"></span>
+      <div><span class="command-label">ENGINE</span><strong>@if (form.controls.enableAutoTrading.value) { AUTO TRADING } @else if (form.controls.paperTrading.value) { PAPER MODE } @else { MANUAL / OFF }</strong></div>
+    </div>
+    <div class="command-stat"><span>STRATEGY</span><strong>{{ form.controls.strategy.value === 0 ? 'Momentum' : 'Pullback' }}</strong></div>
+    <div class="command-stat"><span>INSTRUMENT</span><strong>{{ selectedInstrumentType }}</strong></div>
+    <div class="command-stat"><span>EXCHANGE</span><strong>{{ form.controls.exchange.value || '—' }}</strong></div>
+    <div class="command-stat"><span>PAPER CAPITAL</span><strong>₹{{ (form.controls.paperTradingBalance.value || 0) | number:'1.0-0' }}</strong></div>
+    <div class="command-stat"><span>MARKET WINDOW</span><strong>{{ form.controls.marketOpenTime.value }} — {{ form.controls.marketCloseTime.value }}</strong></div>
+  </section>
+
+  <section class="optimization-status-card" aria-live="polite">
+    <div class="optimizer-topline">
+      <div><div class="eyebrow">AUTONOMOUS OPTIMIZER</div><h2>Paper Trading Optimization</h2><p>Unique configurations · market-hours only · evaluation → virtual → paper pipeline</p></div>
+      <div class="optimizer-state" [class.state-running]="optimizationStatus?.enabled && optimizationStatus?.candidate" [class.state-ready]="optimizationStatus?.enabled && !optimizationStatus?.candidate" [class.state-off]="!optimizationStatus?.enabled">
+        <span class="state-dot"></span>
+        @if (!optimizationStatus?.enabled) { OFF } @else if (optimizationStatus?.candidate) { TESTING } @else { READY }
+      </div>
+    </div>
+    @if (optimizationStatus?.candidate; as candidate) {
+      <div class="optimizer-grid">
+        <div class="optimizer-card optimizer-card-primary"><span class="metric-label">CURRENT CONFIG</span><strong class="metric-value">{{ candidate.candidateId }}</strong><span class="metric-sub">{{ candidate.decision || 'Configuration under evaluation' }}</span></div>
+        <div class="optimizer-card"><span class="metric-label">PAPER P&amp;L</span><strong class="metric-value" [class.pnl-positive]="(candidate.metrics?.netProfit ?? 0) > 0" [class.pnl-negative]="(candidate.metrics?.netProfit ?? 0) < 0">₹{{ (candidate.metrics?.netProfit ?? 0) | number:'1.2-2' }}</strong><span class="metric-sub">Net result</span></div>
+        <div class="optimizer-card"><span class="metric-label">WIN RATE</span><strong class="metric-value">{{ (candidate.metrics?.winRate ?? 0) | number:'1.1-1' }}%</strong><span class="metric-sub">{{ candidate.metrics?.winningTrades ?? 0 }} W · {{ candidate.metrics?.losingTrades ?? 0 }} L</span></div>
+        <div class="optimizer-card"><span class="metric-label">PROFIT FACTOR</span><strong class="metric-value">{{ (candidate.metrics?.profitFactor ?? 0) | number:'1.2-2' }}</strong><span class="metric-sub">Expectancy ₹{{ (candidate.metrics?.expectancy ?? 0) | number:'1.2-2' }}</span></div>
+        <div class="optimizer-card"><span class="metric-label">DRAWDOWN</span><strong class="metric-value">{{ (candidate.metrics?.maxDrawdownPercent ?? 0) | number:'1.1-1' }}%</strong><span class="metric-sub">Risk guardrail</span></div>
+        <div class="optimizer-card"><span class="metric-label">PAPER TRADES</span><strong class="metric-value">{{ candidate.metrics?.completedPaperTrades ?? 0 }}</strong><span class="metric-sub">Completed</span></div>
+      </div>
+      <div class="pipeline-monitor">
+        <div class="pipeline-heading"><span>PIPELINE ACTIVITY</span><span class="pipeline-live">LIVE</span></div>
+        <div class="pipeline-steps">
+          <div class="pipeline-step"><span class="step-count">{{ candidate.activity?.scannedSymbols ?? 0 }}</span><span>Scanned</span></div><div class="pipeline-arrow">→</div>
+          <div class="pipeline-step"><span class="step-count">{{ candidate.activity?.evaluationSignals ?? 0 }}</span><span>Signals</span></div><div class="pipeline-arrow">→</div>
+          <div class="pipeline-step"><span class="step-count">{{ candidate.activity?.virtualCandidates ?? 0 }}</span><span>Virtual</span></div><div class="pipeline-arrow">→</div>
+          <div class="pipeline-step"><span class="step-count">{{ candidate.activity?.virtualConfirmations ?? 0 }}</span><span>Confirmed</span></div><div class="pipeline-arrow">→</div>
+          <div class="pipeline-step"><span class="step-count">{{ candidate.activity?.paperTrades ?? 0 }}</span><span>Paper</span></div>
+        </div>
+      </div>
+    } @else {
+      @if (optimizationStatus?.day; as day) {
+        <div class="optimizer-idle-panel"><div><span class="metric-label">TODAY'S VALIDATION</span><strong>{{ day.candidates?.length ?? 0 }} configurations evaluated</strong></div><div><span class="metric-label">BEST CONFIGURATION</span><strong>{{ day.bestCandidateId || 'Not selected yet' }}</strong></div></div>
+      } @else {
+        <div class="optimizer-idle-panel"><div><span class="metric-label">STATUS</span><strong>Waiting for optimizer telemetry</strong></div></div>
+      }
+    }
+  </section>
 
   @if (loading) {
     <div class="loading">Loading Trading Configuration...</div>

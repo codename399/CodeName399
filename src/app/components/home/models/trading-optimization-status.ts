@@ -1,0 +1,40 @@
+export interface TradingOptimizationStatus {
+  enabled: boolean;
+  day: {
+    date?: string;
+    strategy?: number | string;
+    bestCandidateId?: string | null;
+    candidates?: OptimizationCandidateSummary[];
+  } | null;
+  candidate: OptimizationCandidateSummary | null;
+}
+
+export interface OptimizationCandidateSummary {
+  candidateId: string;
+  candidateNumber?: number;
+  strategy?: number | string;
+  startedUtc?: string;
+  endedUtc?: string;
+  decision?: string;
+  reason?: string;
+  activity?: {
+    scannedSymbols?: number;
+    evaluationSignals?: number;
+    virtualCandidates?: number;
+    virtualRejections?: number;
+    virtualConfirmations?: number;
+    paperTrades?: number;
+  };
+  metrics?: {
+    completedPaperTrades?: number;
+    winningTrades?: number;
+    losingTrades?: number;
+    winRate?: number;
+    netProfit?: number;
+    profitFactor?: number;
+    maxDrawdownPercent?: number;
+    expectancy?: number;
+    meetsMinimumEvidence?: boolean;
+    passesGuardrails?: boolean;
+  };
+}

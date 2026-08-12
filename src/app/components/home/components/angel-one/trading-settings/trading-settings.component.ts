@@ -1,11 +1,11 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
 
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { Router } from '@angular/router';
-import { finalize } from 'rxjs';
+import { Subscription, catchError, finalize, interval, of, startWith, switchMap } from 'rxjs';
 import { ToastService } from '../../../../../services/toast.service';
 import {
   TradingConfiguration,
@@ -14,6 +14,7 @@ import {
   FuturesTradingSettings,
   OptionsTradingSettings,
 } from '../../../models/trading-configuration';
+import { TradingOptimizationStatus } from '../../../models/trading-optimization-status';
 import { TradingStrategy } from '../../../models/enum/trading-strategy';
 import { AngelOneService } from '../../../services/angel-one.service';
 
@@ -28,7 +29,7 @@ import { AngelOneService } from '../../../services/angel-one.service';
 
   styleUrl: './trading-settings.component.css',
 })
-export class TradingSettingsComponent implements OnInit {
+export class TradingSettingsComponent implements OnInit, OnDestroy {
   readonly #fb = inject(FormBuilder);
 
   readonly #angel = inject(AngelOneService);
@@ -40,6 +41,28 @@ export class TradingSettingsComponent implements OnInit {
   loading = false;
 
   saving = false;
+
+  optimizationStatus: TradingOptimizationStatus | null = null;
+  optimizationStatusLoading = false;
+
+  /** Shared application appearance. Light is the default unless the user explicitly chose dark. */
+  theme = signal<'dark' | 'light'>(
+    typeof localStorage !== 'undefined' && localStorage.getItem('codename399-theme') === 'dark'
+      ? 'dark'
+      : 'light',
+  );
+
+  setTheme(theme: 'dark' | 'light'): void {
+    this.theme.set(theme);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('codename399-theme', theme);
+    }
+  }
+
+  toggleTheme(): void {
+    this.setTheme(this.theme() === 'dark' ? 'light' : 'dark');
+  }
+  #optimizationStatusSubscription?: Subscription;
 
   readonly strategies = [
     {
@@ -689,6 +712,35 @@ export class TradingSettingsComponent implements OnInit {
     });
 
     this.loadConfiguration();
+
+    this.startOptimizationStatusPolling();
+  }
+
+  private startOptimizationStatusPolling(): void {
+    this.optimizationStatusLoading = true;
+
+    this.#optimizationStatusSubscription = interval(10000)
+      .pipe(
+        startWith(0),
+        switchMap(() =>
+          this.#angel.getTradingOptimizationStatus().pipe(
+            catchError(() => of(null)),
+          ),
+        ),
+        finalize(() => {
+          this.optimizationStatusLoading = false;
+        }),
+      )
+      .subscribe((status) => {
+        if (status) {
+          this.optimizationStatus = status;
+        }
+        this.optimizationStatusLoading = false;
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.#optimizationStatusSubscription?.unsubscribe();
   }
 
   // ======================================================
