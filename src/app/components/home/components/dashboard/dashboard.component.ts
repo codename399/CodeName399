@@ -24,14 +24,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
   optimizationAvailable = false;
   #statusSubscription?: Subscription;
 
+  /**
+   * Dashboard appearance is shared with Angel One and Trading Configuration.
+   * Light is the default; Dark is only selected when explicitly persisted.
+   */
   theme = signal<'dark' | 'light'>(
-    typeof localStorage !== 'undefined' && localStorage.getItem('codename399-theme') === 'dark'
+    typeof localStorage !== 'undefined' &&
+      localStorage.getItem('codename399-theme') === 'dark'
       ? 'dark'
       : 'light',
   );
 
   setTheme(theme: 'dark' | 'light'): void {
     this.theme.set(theme);
+
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('codename399-theme', theme);
     }
