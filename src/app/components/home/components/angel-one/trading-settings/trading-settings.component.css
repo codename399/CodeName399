@@ -1120,3 +1120,40 @@ button[mat-flat-button]:hover {
   border-color:#1c3147 !important;
   color:#e7eef6 !important;
 }
+
+.optimization-runtime-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  margin-left:auto;
+}
+.optimization-refresh-button{
+  min-height:34px;
+  padding:7px 12px;
+  border:1px solid #cbd5e1;
+  border-radius:9px;
+  background:#fff;
+  color:#334155;
+  font-size:11px;
+  font-weight:800;
+  cursor:pointer;
+}
+.optimization-refresh-button:hover:not(:disabled){
+  background:#f8fafc;
+}
+.optimization-refresh-button:disabled{
+  opacity:.6;
+  cursor:wait;
+}
+.settings-page.theme-dark .optimization-refresh-button{
+  border-color:#29435b;
+  background:#0e1d2d;
+  color:#dbe8f3;
+}
+@media (max-width:768px){
+  .optimization-runtime-actions{
+    width:100%;
+    justify-content:flex-start;
+    margin:4px 0 0;
+  }
+}

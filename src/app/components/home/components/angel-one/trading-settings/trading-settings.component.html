@@ -56,6 +56,18 @@
         </p>
       </div>
 
+      <div class="optimization-runtime-actions">
+        <button
+          type="button"
+          class="optimization-refresh-button"
+          (click)="refreshOptimizationStatus()"
+          [disabled]="optimizationStatusLoading"
+          title="Refresh optimizer status"
+        >
+          {{ optimizationStatusLoading ? 'Refreshing…' : '↻ Refresh' }}
+        </button>
+      </div>
+
       <div class="optimization-runtime-badges">
         <span
           class="optimization-status-badge"

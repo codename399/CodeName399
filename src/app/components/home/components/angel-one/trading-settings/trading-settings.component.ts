@@ -5,7 +5,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { Router } from '@angular/router';
-import { Subscription, catchError, finalize, interval, of, startWith, switchMap } from 'rxjs';
+import { Subscription, catchError, finalize, of } from 'rxjs';
 import { ToastService } from '../../../../../services/toast.service';
 import {
   TradingConfiguration,
@@ -757,20 +757,24 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
 
     this.loadConfiguration();
 
-    this.startOptimizationStatusPolling();
+    // Load optimizer status once when this page is entered.
+    // Do not poll every few seconds: the optimizer is a backend process and
+    // page refreshes should not create a continuous HTTP polling loop.
+    this.refreshOptimizationStatus();
   }
 
-  private startOptimizationStatusPolling(): void {
+  refreshOptimizationStatus(): void {
+    if (this.optimizationStatusLoading) {
+      return;
+    }
+
     this.optimizationStatusLoading = true;
 
-    this.#optimizationStatusSubscription = interval(10000)
+    this.#optimizationStatusSubscription?.unsubscribe();
+    this.#optimizationStatusSubscription = this.#angel
+      .getTradingOptimizationStatus()
       .pipe(
-        startWith(0),
-        switchMap(() =>
-          this.#angel.getTradingOptimizationStatus().pipe(
-            catchError(() => of(null)),
-          ),
-        ),
+        catchError(() => of(null)),
         finalize(() => {
           this.optimizationStatusLoading = false;
         }),
@@ -779,7 +783,6 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
         if (status) {
           this.optimizationStatus = status;
         }
-        this.optimizationStatusLoading = false;
       });
   }
 
