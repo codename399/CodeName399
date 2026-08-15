@@ -110,6 +110,22 @@
           <span>Reason</span>
           <strong>{{ candidate.reason || 'Collecting evidence' }}</strong>
         </div>
+        <div>
+          <span>Mode</span>
+          <strong>{{ optimizationModeLabel(optimizationStatus?.mode) }}</strong>
+        </div>
+        @if (normalizeOptimizationMode(optimizationStatus?.mode) === 1) {
+          <div>
+            <span>Next Configuration</span>
+            <strong>
+              @if ((optimizationStatus?.remainingSeconds ?? 0) > 0) {
+                {{ ((optimizationStatus?.remainingSeconds ?? 0) / 60) | number:'1.0-0' }} min
+              } @else {
+                Due
+              }
+            </strong>
+          </div>
+        }
       </div>
 
       <div class="optimization-status-grid">
@@ -291,6 +307,43 @@
                 <input type="checkbox" formControlName="forceCloseTimedOutPaperTrades" />
                 <span>Force Close Timed-out Paper Trades</span>
               </label>
+            </div>
+
+            <div class="grid-4 compact-profile-grid">
+              <div class="field-row">
+                <label class="field-label" for="optimizationMode">Optimization Mode</label>
+                <select
+                  id="optimizationMode"
+                  formControlName="mode"
+                  class="field-input"
+                >
+                  <option [ngValue]="0">Count Based</option>
+                  <option [ngValue]="1">Time Based</option>
+                </select>
+                <small class="field-help">
+                  {{ optimizationModeLabel(form.controls.optimization.controls.mode.value) }}
+                  optimization rotates using
+                  {{ form.controls.optimization.controls.mode.value === 1 ? 'a fixed time interval' : 'the existing evidence/trade-count rules' }}.
+                </small>
+              </div>
+
+              @if (normalizeOptimizationMode(form.controls.optimization.controls.mode.value) === 1) {
+                <div class="field-row">
+                  <label class="field-label" for="timeBasedCandidateMinutes">Time-Based Candidate Duration</label>
+                  <div class="input-with-suffix">
+                    <input
+                      id="timeBasedCandidateMinutes"
+                      type="number"
+                      formControlName="timeBasedCandidateMinutes"
+                      class="field-input"
+                      min="1"
+                      step="1"
+                    />
+                    <span class="suffix">min</span>
+                  </div>
+                  <small class="field-help">A new configuration is generated after this interval.</small>
+                </div>
+              }
             </div>
 
             <div class="grid-4 compact-profile-grid">

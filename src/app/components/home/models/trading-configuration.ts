@@ -131,8 +131,12 @@ export interface OptionsTradingSettings extends InstrumentTradingSettings {
 }
 
 
+export type OptimizationMode = 'CountBased' | 'TimeBased' | 0 | 1;
+
 export interface OptimizationSettings {
   enabled: boolean;
+  mode: OptimizationMode;
+  timeBasedCandidateMinutes: number;
   paperTradingOnly: boolean;
   sendConfigurationEmail: boolean;
   sendDailyEmail: boolean;

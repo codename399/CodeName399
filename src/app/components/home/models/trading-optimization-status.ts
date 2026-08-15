@@ -1,5 +1,12 @@
 export interface TradingOptimizationStatus {
   enabled: boolean;
+  mode: 'CountBased' | 'TimeBased' | 0 | 1;
+  timeBasedCandidateMinutes: number;
+  maximumCandidatesPerDay?: number;
+  marketOpen?: boolean;
+  running?: boolean;
+  scheduledEndUtc?: string | null;
+  remainingSeconds?: number | null;
   day: {
     date?: string;
     strategy?: number | string;

@@ -14,6 +14,7 @@ import {
   FuturesTradingSettings,
   OptionsTradingSettings,
   OptimizationSettings,
+  OptimizationMode,
 } from '../../../models/trading-configuration';
 import { TradingOptimizationStatus } from '../../../models/trading-optimization-status';
 import { TradingStrategy } from '../../../models/enum/trading-strategy';
@@ -647,6 +648,11 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
     optimization: this.#fb.group({
       enabled: [true],
       paperTradingOnly: [true],
+      mode: [0 as OptimizationMode],
+      timeBasedCandidateMinutes: [
+        60,
+        [Validators.required, Validators.min(1)],
+      ],
       sendConfigurationEmail: [true],
       sendDailyEmail: [true],
       autoPromoteBestConfiguration: [true],
@@ -1134,6 +1140,12 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
         optimization: {
           enabled: configuration.optimization?.enabled ?? true,
           paperTradingOnly: configuration.optimization?.paperTradingOnly ?? true,
+          mode: this.normalizeOptimizationMode(
+            configuration.optimization?.mode ?? 0,
+          ),
+          timeBasedCandidateMinutes: Number(
+            configuration.optimization?.timeBasedCandidateMinutes ?? 60,
+          ),
           sendConfigurationEmail:
             configuration.optimization?.sendConfigurationEmail ?? true,
           sendDailyEmail: configuration.optimization?.sendDailyEmail ?? true,
@@ -1603,6 +1615,24 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
     return value.substring(0, 5);
   }
 
+  normalizeOptimizationMode(
+    value: OptimizationMode | string | number | null | undefined,
+  ): 0 | 1 {
+    if (value === 'TimeBased' || value === 1 || value === '1') {
+      return 1;
+    }
+
+    return 0;
+  }
+
+  optimizationModeLabel(
+    value: OptimizationMode | string | number | null | undefined,
+  ): string {
+    return this.normalizeOptimizationMode(value) === 1
+      ? 'Time Based'
+      : 'Count Based';
+  }
+
   private normalizeStrategy(
     value: TradingStrategy | string | number,
   ): TradingStrategy {
@@ -1695,6 +1725,10 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
       optimization: {
         enabled: value.optimization?.enabled ?? true,
         paperTradingOnly: value.optimization?.paperTradingOnly ?? true,
+        mode: this.normalizeOptimizationMode(value.optimization?.mode ?? 0),
+        timeBasedCandidateMinutes: Number(
+          value.optimization?.timeBasedCandidateMinutes ?? 60,
+        ),
         sendConfigurationEmail:
           value.optimization?.sendConfigurationEmail ?? true,
         sendDailyEmail: value.optimization?.sendDailyEmail ?? true,
