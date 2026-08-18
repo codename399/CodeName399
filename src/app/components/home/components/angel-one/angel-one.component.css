@@ -1496,3 +1496,660 @@ tbody tr:hover {
 
 .fno-contract-cell { display:flex; flex-direction:column; gap:2px; min-width:100px; }
 .fno-contract-cell span { font-size:11px; opacity:.78; }
+
+/* ======================================================
+   Trading Terminal UI - Light Theme
+   Keeps the dashboard dense, readable and scan-friendly.
+====================================================== */
+:host {
+  --trade-bg: #f3f6fa;
+  --trade-surface: #ffffff;
+  --trade-surface-alt: #f8fafc;
+  --trade-border: #d9e2ec;
+  --trade-text: #172033;
+  --trade-muted: #64748b;
+  --trade-blue: #2563eb;
+  --trade-green: #15803d;
+  --trade-red: #dc2626;
+  --trade-amber: #b45309;
+  background: var(--trade-bg);
+  color: var(--trade-text);
+}
+
+.page-shell {
+  padding: 14px 16px 24px;
+  background: var(--trade-bg);
+}
+
+.page-main {
+  gap: 14px;
+  padding-bottom: 92px;
+}
+
+.page-top {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+}
+
+.search-box {
+  width: min(420px, 100%);
+  min-width: 220px;
+}
+
+.search-box input {
+  min-height: 42px;
+  border-radius: 8px;
+  border-color: var(--trade-border);
+  background: var(--trade-surface);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.page-sidebar {
+  background: var(--trade-surface);
+  border-right: 1px solid var(--trade-border);
+  box-shadow: 12px 0 30px rgba(15, 23, 42, 0.10);
+}
+
+.sidebar-title {
+  letter-spacing: 0.02em;
+}
+
+.pill-button {
+  min-height: 40px;
+  border: 1px solid var(--trade-border);
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+.pill-button.accent {
+  background: var(--trade-blue);
+  border-color: var(--trade-blue);
+}
+
+.column-panel {
+  border-radius: 10px;
+  border-color: var(--trade-border);
+  background: var(--trade-surface-alt);
+}
+
+.table-shell {
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid var(--trade-border);
+  background: var(--trade-surface);
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.055);
+  overflow: hidden;
+}
+
+.table-header {
+  min-height: 48px;
+  margin: 0;
+  padding: 10px 14px;
+  background: var(--trade-surface);
+  border-bottom: 1px solid var(--trade-border);
+}
+
+.table-header div:first-child {
+  color: var(--trade-text);
+  font-weight: 800;
+}
+
+.table-header div:last-child {
+  color: var(--trade-muted);
+  font-size: 0.78rem;
+}
+
+.table-scroll {
+  max-height: calc(100dvh - 210px);
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+table {
+  min-width: 1180px;
+  font-variant-numeric: tabular-nums;
+}
+
+thead {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: #edf2f7;
+}
+
+th,
+td {
+  padding: 9px 11px;
+  font-size: 0.79rem;
+  white-space: nowrap;
+  border-bottom: 1px solid #e7edf3;
+}
+
+th {
+  color: #475569;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.045em;
+  font-weight: 800;
+}
+
+tbody tr {
+  background: #ffffff;
+}
+
+tbody tr:hover {
+  background: #eff6ff;
+  transform: none;
+}
+
+.owned-row {
+  background: #f0f7ff;
+}
+
+.symbol-name {
+  font-size: 0.92rem;
+}
+
+.symbol-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 8px;
+  margin-top: 4px;
+  color: var(--trade-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.signal-pill {
+  min-width: 82px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+}
+
+.score-badge {
+  min-width: 46px;
+  justify-content: center;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+}
+
+.positive {
+  color: var(--trade-green);
+  font-weight: 750;
+}
+
+.negative {
+  color: var(--trade-red);
+  font-weight: 750;
+}
+
+/* The global Home footer is outside this component's scroll container.
+   Keep the dashboard summary inside the routed content so it can never
+   cover the application footer. */
+.summary-panel {
+  position: sticky;
+  left: auto;
+  right: auto;
+  bottom: 0;
+  margin-top: 10px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid var(--trade-border);
+  border-radius: 10px;
+  box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.08);
+  z-index: 10;
+}
+
+.summary-stripe {
+  padding: 4px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  gap: 5px;
+}
+
+.summary-stripe-item {
+  min-height: 36px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.72rem;
+  border: 1px solid #e2e8f0;
+}
+
+.summary-stripe-item strong {
+  color: var(--trade-text);
+  font-size: 0.75rem;
+}
+
+.market-status.market-open,
+.summary-stripe-item.market-status.market-open {
+  background: #ecfdf3;
+  color: var(--trade-green);
+  border-color: #bbf7d0;
+}
+
+.market-status.market-closed,
+.summary-stripe-item.market-status.market-closed {
+  background: #fef2f2;
+  color: var(--trade-red);
+  border-color: #fecaca;
+}
+
+.market-status.market-ignored,
+.summary-stripe-item.market-status.market-ignored {
+  background: #fffbeb;
+  color: var(--trade-amber);
+  border-color: #fde68a;
+}
+
+.summary-actions {
+  gap: 8px;
+}
+
+.sidebar-float-button,
+.refresh-button {
+  width: 42px;
+  height: 42px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
+@media (max-width: 900px) {
+  .page-shell {
+    padding: 10px;
+  }
+
+  .page-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-box {
+    width: 100%;
+  }
+
+  .table-scroll {
+    max-height: calc(100dvh - 250px);
+  }
+
+  .summary-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .summary-stripe {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .summary-actions {
+    justify-content: flex-end;
+  }
+}
+
+/* ========================================================================
+   PROFESSIONAL TRADING TERMINAL — CONTROL RAIL
+   Light theme, dense layout, no decorative dashboard styling.
+   ======================================================================== */
+.page-shell {
+  background: #f4f7fb;
+  color: #172033;
+  padding: 10px 12px 18px;
+}
+
+.page-sidebar {
+  width: 286px;
+  padding: 14px;
+  background: #ffffff;
+  border: 1px solid #d7e0ea;
+  border-left: 0;
+  border-radius: 0 10px 10px 0;
+  box-shadow: 10px 0 28px rgba(15, 23, 42, 0.12);
+}
+
+.page-sidebar.open {
+  transform: translateX(0);
+}
+
+.sidebar-backdrop {
+  background: rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(1px);
+}
+
+.sidebar-header {
+  min-height: 42px;
+  margin-bottom: 12px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid #e5ebf2;
+}
+
+.sidebar-title {
+  color: #172033;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.sidebar-header .icon-button {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 1px solid #d7e0ea;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: #475569;
+}
+
+.page-actions {
+  gap: 14px;
+}
+
+.action-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.pill-button {
+  min-height: 38px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  border: 1px solid #d7e0ea;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .01em;
+}
+
+.pill-button.accent {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #ffffff;
+}
+
+.pill-button:hover,
+.icon-button:hover {
+  background: #eef4ff;
+  color: #1d4ed8;
+}
+
+.pill-button.accent:hover {
+  background: #1e40af;
+  color: #ffffff;
+}
+
+.column-panel {
+  margin-top: 0;
+  padding: 11px;
+  border: 1px solid #d7e0ea;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.column-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid #e5ebf2;
+  color: #334155;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.text-link-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #2563eb;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.column-options {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1px;
+  margin-top: 7px;
+}
+
+.column-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 5px 6px;
+  border-radius: 5px;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.column-option:hover {
+  background: #eef4ff;
+  color: #1e40af;
+}
+
+.column-option input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: #2563eb;
+}
+
+.page-main.sidebar-open {
+  margin-left: 286px;
+}
+
+/* Keep the trading grid visually attached to the terminal frame. */
+.table-shell {
+  background: #ffffff;
+  border-color: #d7e0ea;
+  border-radius: 8px;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.055);
+}
+
+.table-header {
+  background: #ffffff;
+  border-bottom-color: #d7e0ea;
+}
+
+.table-scroll {
+  background: #ffffff;
+}
+
+@media (max-width: 900px) {
+  .page-sidebar {
+    width: min(300px, 88vw);
+  }
+
+  .page-main.sidebar-open {
+    margin-left: 0;
+  }
+}
+
+
+/* ==========================================================================
+   MOBILE TRADING SUMMARY — FINAL RESPONSIVE OVERRIDES
+   The summary stays inside the routed content and never covers the
+   application header/footer. On phones it becomes a compact card grid.
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .summary-panel {
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+
+    display: block !important;
+    width: 100%;
+    box-sizing: border-box;
+
+    margin: 12px 0 8px !important;
+    padding: 8px !important;
+
+    background: #ffffff !important;
+    border: 1px solid #d7e0ea !important;
+    border-radius: 10px !important;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06) !important;
+
+    overflow: visible !important;
+    z-index: 2 !important;
+  }
+
+  .summary-stripe {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+
+    gap: 6px !important;
+    padding: 0 !important;
+
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+  }
+
+  .summary-stripe-item {
+    width: 100%;
+    min-width: 0 !important;
+    min-height: 42px !important;
+    box-sizing: border-box;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 7px !important;
+
+    padding: 7px 9px !important;
+
+    border: 1px solid #e1e7ef !important;
+    border-radius: 7px !important;
+    background: #f8fafc !important;
+
+    color: #475569 !important;
+    font-size: 10px !important;
+    line-height: 1.15;
+    overflow: hidden;
+  }
+
+  /* Market status gets the full row because it contains two values. */
+  .summary-stripe-item.market-status {
+    grid-column: 1 / -1;
+    min-height: 46px !important;
+    background: #f8fafc !important;
+  }
+
+  .summary-stripe-item > span {
+    flex: 0 0 auto;
+    font-size: 13px;
+    line-height: 1;
+  }
+
+  .summary-stripe-item > div {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .summary-stripe-item strong {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+
+    color: #172033 !important;
+    font-size: 10px !important;
+    font-weight: 800;
+    line-height: 1.2;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .summary-stripe-item small {
+    display: block;
+    margin-top: 2px;
+
+    color: #64748b !important;
+    font-size: 9px !important;
+    line-height: 1.15;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .summary-stripe-item.market-status.market-open {
+    background: #ecfdf3 !important;
+    border-color: #bbf7d0 !important;
+  }
+
+  .summary-stripe-item.market-status.market-closed {
+    background: #fef2f2 !important;
+    border-color: #fecaca !important;
+  }
+
+  .summary-stripe-item.market-status.market-ignored {
+    background: #fffbeb !important;
+    border-color: #fde68a !important;
+  }
+
+  .summary-actions {
+    display: flex !important;
+    width: 100%;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    margin-top: 7px;
+    gap: 6px !important;
+  }
+
+  .sidebar-float-button {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 38px !important;
+    min-height: 38px !important;
+
+    border-radius: 7px !important;
+    box-shadow: none !important;
+
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .page-main {
+    padding-bottom: 12px !important;
+  }
+}
+
+/* Very small phones: stack the secondary metrics cleanly. */
+@media (max-width: 420px) {
+  .summary-stripe {
+    grid-template-columns: 1fr !important;
+  }
+
+  .summary-stripe-item.market-status {
+    grid-column: auto;
+  }
+
+  .summary-stripe-item {
+    min-height: 40px !important;
+  }
+}
