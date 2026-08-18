@@ -1,7 +1,11 @@
 import {
+  AfterViewInit,
   Component,
+  ElementRef,
   OnDestroy,
   OnInit,
+  Renderer2,
+  ViewChild,
   computed,
   inject,
   signal,
@@ -31,7 +35,7 @@ import { TooltipDirective } from '../../../../directives/tooltip.directive';
 
   styleUrls: ['./angel-one.component.css'],
 })
-export class AngelOneComponent implements OnInit, OnDestroy {
+export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly #angel = inject(AngelOneService);
 
   readonly #market = inject(MarketService);
@@ -71,6 +75,46 @@ export class AngelOneComponent implements OnInit, OnDestroy {
   showPortfolio = signal(false);
 
   showLogs = signal(false);
+
+  @ViewChild('floatingToggle', { static: true })
+  private floatingToggle?: ElementRef<HTMLButtonElement>;
+
+  readonly #renderer = inject(Renderer2);
+
+  #footerResizeObserver?: ResizeObserver;
+
+  readonly #positionFloatingToggle = (): void => {
+    const button = this.floatingToggle?.nativeElement;
+    const footer = document.querySelector(
+      'app-home-footer .home-footer',
+    ) as HTMLElement | null;
+
+    if (!button || !footer) {
+      return;
+    }
+
+    const footerRect = footer.getBoundingClientRect();
+    const buttonHeight = button.getBoundingClientRect().height || 46;
+    const gap = 12;
+
+    // The button's bottom edge is placed exactly `gap` pixels above the
+    // rendered footer's top edge. This is based on the actual viewport
+    // geometry, not a guessed mobile footer height.
+    const bottom = Math.max(
+      8,
+      Math.ceil(window.innerHeight - footerRect.top + gap),
+    );
+
+    button.style.setProperty('position', 'fixed', 'important');
+    button.style.setProperty('top', 'auto', 'important');
+    button.style.setProperty('left', 'auto', 'important');
+    button.style.setProperty('right', '12px', 'important');
+    button.style.setProperty('bottom', `${bottom}px`, 'important');
+    button.style.setProperty('z-index', '2147483647', 'important');
+    button.style.setProperty('transform', 'none', 'important');
+    button.style.setProperty('visibility', 'visible', 'important');
+    button.style.setProperty('opacity', '1', 'important');
+  };
 
   readonly columnDefinitions = [
     { key: 'star', label: '⭐', defaultVisible: true },
@@ -178,19 +222,26 @@ export class AngelOneComponent implements OnInit, OnDestroy {
     () => this.configuration()?.enableNotification ?? false,
   );
 
-  activeInstrumentType = computed(() => this.configuration()?.instrumentType ?? 'Equity');
+  activeInstrumentType = computed(
+    () => this.configuration()?.instrumentType ?? 'Equity',
+  );
 
   activeInstrumentSettings = computed(() => {
     const config = this.configuration();
     if (!config) return undefined;
     switch (config.instrumentType) {
-      case 'Futures': return config.futures;
-      case 'Options': return config.options;
-      default: return config.equity;
+      case 'Futures':
+        return config.futures;
+      case 'Options':
+        return config.options;
+      default:
+        return config.equity;
     }
   });
 
-  riskPercentage = computed(() => this.activeInstrumentSettings()?.riskPercentage ?? 0);
+  riskPercentage = computed(
+    () => this.activeInstrumentSettings()?.riskPercentage ?? 0,
+  );
 
   maxDailyTrades = computed(() => {
     const settings = this.activeInstrumentSettings() as any;
@@ -207,7 +258,42 @@ export class AngelOneComponent implements OnInit, OnDestroy {
     this.initializeDashboard();
   }
 
+  ngAfterViewInit(): void {
+    const button = this.floatingToggle?.nativeElement;
+
+    if (button && button.parentElement !== document.body) {
+      this.#renderer.appendChild(document.body, button);
+    }
+
+    // Calculate the position from the REAL footer bounds rather than a
+    // hard-coded mobile/desktop offset.
+    requestAnimationFrame(() => this.#positionFloatingToggle());
+
+    window.addEventListener('resize', this.#positionFloatingToggle, {
+      passive: true,
+    });
+
+    const footer = document.querySelector('app-home-footer .home-footer');
+
+    if (footer) {
+      this.#footerResizeObserver = new ResizeObserver(() => {
+        this.#positionFloatingToggle();
+      });
+
+      this.#footerResizeObserver.observe(footer);
+    }
+  }
+
   ngOnDestroy(): void {
+    window.removeEventListener('resize', this.#positionFloatingToggle);
+    this.#footerResizeObserver?.disconnect();
+
+    const button = this.floatingToggle?.nativeElement;
+
+    if (button?.parentElement === document.body) {
+      this.#renderer.removeChild(document.body, button);
+    }
+
     if (this.timerId) {
       clearInterval(this.timerId);
     }
