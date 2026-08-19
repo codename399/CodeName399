@@ -488,8 +488,10 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   // ======================================================
 
   refresh(): void {
-    this.loadDashboard();
+    // Close the left controls panel first, then refresh the dashboard data.
+    this.showSettings.set(false);
 
+    this.loadDashboard();
     this.loadConfiguration();
   }
 

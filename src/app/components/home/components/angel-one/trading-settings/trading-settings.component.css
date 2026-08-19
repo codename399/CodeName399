@@ -1584,6 +1584,19 @@ textarea {
   background: #f8fafc;
 }
 
+/* Keep currency prefixes vertically centered inside compact amount inputs. */
+.input-with-suffix .prefix,
+.input-with-prefix .prefix {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  align-self: stretch !important;
+  height: auto !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
 .optimization-status-card {
   padding: 14px;
   border-radius: 8px;
