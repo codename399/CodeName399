@@ -2414,6 +2414,27 @@
             </div>
 
             <div class="field-row">
+              <label class="field-label" for="trailingActivationNetProfit">
+                Trailing Activation Net Profit
+              </label>
+              <div class="input-with-suffix">
+                <span class="prefix">₹</span>
+                <input
+                  id="trailingActivationNetProfit"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  formControlName="trailingActivationNetProfit"
+                  class="field-input"
+                />
+              </div>
+              <small class="field-help">
+                Trailing activates only after estimated round-trip net profit reaches this amount.
+                Use 0 to activate once net profit becomes positive.
+              </small>
+            </div>
+
+            <div class="field-row">
               <label class="field-label" for="trailingStopAtrMultiplier">
                 Trailing Stop ATR Multiplier
               </label>
