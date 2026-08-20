@@ -769,6 +769,37 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
     this.refreshOptimizationStatus();
   }
 
+  optimizationRuntimeLabel(): string {
+    const state = this.optimizationStatus?.state || this.optimizationStatus?.runtimeStateReason;
+    switch (state) {
+      case 'RUNNING':
+        return 'Running';
+      case 'MARKET_OPEN':
+        return 'Ready / Starting';
+      case 'WAITING_FOR_MARKET':
+        return 'Waiting for Market';
+      case 'LIVE_TRADE_OPEN':
+        return 'Paused — Live Trade Open';
+      case 'AUTO_TRADING_ENABLED':
+        return 'Paused — Auto Trading Enabled';
+      case 'PAPER_TRADING_ONLY_REQUIRED':
+        return 'Paused — Paper-Only Required';
+      case 'VALIDATION_HISTORY_UNAVAILABLE':
+        return 'Paused — Validation History Unavailable';
+      case 'NO_UNIQUE_CONFIGURATION':
+        return 'No Unique Configuration Remaining';
+      case 'MAXIMUM_CANDIDATES_REACHED':
+        return 'Daily Candidate Limit Reached';
+      case 'OPTIMIZATION_DISABLED':
+      case 'DISABLED':
+        return 'Disabled';
+      case 'NON_TRADING_DAY':
+        return 'Non-Trading Day';
+      default:
+        return state ? state.replaceAll('_', ' ') : 'Checking';
+    }
+  }
+
   refreshOptimizationStatus(): void {
     if (this.optimizationStatusLoading) {
       return;

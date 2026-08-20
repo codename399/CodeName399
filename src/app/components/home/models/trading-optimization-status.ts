@@ -5,6 +5,8 @@ export interface TradingOptimizationStatus {
   maximumCandidatesPerDay?: number;
   marketOpen?: boolean;
   running?: boolean;
+  runtimeActive?: boolean;
+  runtimeStateReason?: string;
   state?: 'DISABLED' | 'NON_TRADING_DAY' | 'WAITING_FOR_MARKET' | 'WAITING_FOR_RUNTIME' | 'RUNNING' | string;
   scheduledEndUtc?: string | null;
   remainingSeconds?: number | null;

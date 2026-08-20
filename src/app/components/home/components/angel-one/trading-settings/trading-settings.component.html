@@ -72,7 +72,7 @@
         <span
           class="optimization-status-badge"
           [class.is-running]="optimizationStatus?.running === true"
-          [class.is-waiting]="optimizationStatus?.marketOpen === true && optimizationStatus?.running !== true"
+          [class.is-waiting]="optimizationStatus?.running !== true && optimizationStatus?.marketOpen === true"
         >
           @if (optimizationStatusLoading) {
             Checking...
@@ -80,9 +80,19 @@
             Disabled by Configuration
           } @else if (optimizationStatus?.running === true) {
             Running
-          } @else if (optimizationStatus?.marketOpen === true) {
-            Waiting for Runtime
-          } @else if (optimizationStatus?.marketOpen === false) {
+          } @else if (optimizationStatus?.state === 'LIVE_TRADE_OPEN') {
+            Paused — Live Trade Open
+          } @else if (optimizationStatus?.state === 'AUTO_TRADING_ENABLED') {
+            Paused — Auto Trading Enabled
+          } @else if (optimizationStatus?.state === 'PAPER_TRADING_ONLY_REQUIRED') {
+            Paused — Paper-Only Required
+          } @else if (optimizationStatus?.state === 'VALIDATION_HISTORY_UNAVAILABLE') {
+            Paused — History Unavailable
+          } @else if (optimizationStatus?.state === 'NO_UNIQUE_CONFIGURATION') {
+            No Unique Configuration
+          } @else if (optimizationStatus?.state === 'MAXIMUM_CANDIDATES_REACHED') {
+            Daily Candidate Limit Reached
+          } @else if (optimizationStatus?.state === 'WAITING_FOR_MARKET' || optimizationStatus?.marketOpen === false) {
             Waiting for Market
           } @else if (optimizationStatus?.day) {
             Waiting
@@ -187,7 +197,7 @@
           </div>
           <div>
             <span class="optimization-label">Runtime</span>
-            <strong>Waiting</strong>
+            <strong>{{ optimizationRuntimeLabel() }}</strong>
           </div>
           <div>
             <span class="optimization-label">Configurations Tested</span>
@@ -202,8 +212,7 @@
         <div class="optimization-idle optimization-no-runtime">
           <strong>
             @if (form.controls.optimization.controls.enabled.value) {
-              Optimization is enabled. Runtime status will become active when the
-              market session starts and the optimizer can safely enter paper mode.
+              Optimization is enabled. Current runtime state: {{ optimizationRuntimeLabel() }}.
             } @else {
               Optimization is disabled in Trading Configuration.
             }
