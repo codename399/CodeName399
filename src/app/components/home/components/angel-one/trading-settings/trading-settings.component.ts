@@ -19,6 +19,7 @@ import {
 import { TradingOptimizationStatus } from '../../../models/trading-optimization-status';
 import { TradingStrategy } from '../../../models/enum/trading-strategy';
 import { AngelOneService } from '../../../services/angel-one.service';
+import { MarketService } from '../../../services/market.service';
 
 @Component({
   selector: 'app-trading-settings',
@@ -40,6 +41,8 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
 
   readonly #router = inject(Router);
 
+  readonly #market = inject(MarketService);
+
   loading = false;
 
   saving = false;
@@ -47,6 +50,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
   optimizationStatus: TradingOptimizationStatus | null = null;
   optimizationStatusLoading = false;
   #optimizationStatusSubscription?: Subscription;
+  #optimizationStatusSignalRSubscription?: Subscription;
 
   readonly strategies = [
     {
@@ -806,10 +810,11 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
 
     this.loadConfiguration();
 
-    // Load optimizer status once when this page is entered.
-    // Do not poll every few seconds: the optimizer is a backend process and
-    // page refreshes should not create a continuous HTTP polling loop.
+    // Load the current status immediately, then let the existing SignalR
+    // connection notify us whenever the optimizer completes a tick. This keeps
+    // candidate/runtime/metric values fresh without page refreshes or polling.
     this.refreshOptimizationStatus();
+    this.subscribeToOptimizationStatusUpdates();
   }
 
   optimizationRuntimeLabel(): string {
@@ -843,6 +848,18 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
     }
   }
 
+  private subscribeToOptimizationStatusUpdates(): void {
+    this.#optimizationStatusSignalRSubscription?.unsubscribe();
+    this.#optimizationStatusSignalRSubscription =
+      this.#market.optimizationStatusUpdated$.subscribe(() => {
+        this.refreshOptimizationStatus();
+      });
+
+    // The SignalR connection is shared with the Angel One page. startConnection()
+    // is idempotent, so this is safe even when the parent already started it.
+    void this.#market.startConnection();
+  }
+
   refreshOptimizationStatus(): void {
     if (this.optimizationStatusLoading) {
       return;
@@ -868,6 +885,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.#optimizationStatusSubscription?.unsubscribe();
+    this.#optimizationStatusSignalRSubscription?.unsubscribe();
   }
 
   // ======================================================

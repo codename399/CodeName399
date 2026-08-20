@@ -15,6 +15,9 @@ export class MarketService {
   private gainersSubject = new Subject<any[]>();
   gainers$ = this.gainersSubject.asObservable();
 
+  private optimizationStatusUpdatedSubject = new Subject<void>();
+  optimizationStatusUpdated$ = this.optimizationStatusUpdatedSubject.asObservable();
+
   async startConnection(): Promise<void> {
     if (this.hub?.state === signalR.HubConnectionState.Connected) {
       return;
@@ -40,6 +43,16 @@ export class MarketService {
 
         this.hub.on('GainersUpdated', (data: any[]) => {
           this.gainersSubject.next(data);
+        });
+
+        this.hub.on('OptimizationStatusUpdated', () => {
+          this.optimizationStatusUpdatedSubject.next();
+        });
+
+        this.hub.onreconnected(() => {
+          // A reconnect can happen while optimizer events were missed. Refresh the
+          // current status as soon as the SignalR connection is restored.
+          this.optimizationStatusUpdatedSubject.next();
         });
       }
 
