@@ -71,19 +71,23 @@
       <div class="optimization-runtime-badges">
         <span
           class="optimization-status-badge"
-          [class.is-running]="!!optimizationStatus?.candidate"
-          [class.is-waiting]="!!optimizationStatus?.day && !optimizationStatus?.candidate"
+          [class.is-running]="optimizationStatus?.running === true"
+          [class.is-waiting]="optimizationStatus?.marketOpen === true && optimizationStatus?.running !== true"
         >
           @if (optimizationStatusLoading) {
             Checking...
           } @else if (!form.controls.optimization.controls.enabled.value) {
             Disabled by Configuration
-          } @else if (optimizationStatus?.candidate) {
+          } @else if (optimizationStatus?.running === true) {
             Running
+          } @else if (optimizationStatus?.marketOpen === true) {
+            Waiting for Runtime
+          } @else if (optimizationStatus?.marketOpen === false) {
+            Waiting for Market
           } @else if (optimizationStatus?.day) {
             Waiting
           } @else {
-            Waiting for Market
+            Checking Status
           }
         </span>
 
@@ -138,7 +142,7 @@
           <strong>#{{ candidate.candidateNumber ?? 0 }}</strong>
         </div>
         <div>
-          <span class="optimization-label">Paper Trades</span>
+          <span class="optimization-label">Completed Paper Trades</span>
           <strong>{{ candidate.metrics?.completedPaperTrades ?? 0 }}</strong>
         </div>
         <div>
@@ -2411,27 +2415,6 @@
                 formControlName="minimumProfitPercent"
                 class="field-input"
               />
-            </div>
-
-            <div class="field-row">
-              <label class="field-label" for="trailingActivationNetProfit">
-                Trailing Activation Net Profit
-              </label>
-              <div class="input-with-suffix">
-                <span class="prefix">₹</span>
-                <input
-                  id="trailingActivationNetProfit"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  formControlName="trailingActivationNetProfit"
-                  class="field-input"
-                />
-              </div>
-              <small class="field-help">
-                Trailing activates only after estimated round-trip net profit reaches this amount.
-                Use 0 to activate once net profit becomes positive.
-              </small>
             </div>
 
             <div class="field-row">

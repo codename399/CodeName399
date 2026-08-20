@@ -693,10 +693,6 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
         0.25,
         [Validators.required, Validators.min(0), Validators.max(100)],
       ],
-      trailingActivationNetProfit: [
-        0,
-        [Validators.required, Validators.min(0)],
-      ],
       trailingStopAtrMultiplier: [
         0.6,
         [Validators.required, Validators.min(0), Validators.max(100)],
@@ -1220,8 +1216,6 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
           atrExitMultiplier: configuration.exit?.atrExitMultiplier ?? 0.4,
           minimumProfitPercent:
             configuration.exit?.minimumProfitPercent ?? 0.25,
-          trailingActivationNetProfit:
-            configuration.exit?.trailingActivationNetProfit ?? 0,
           trailingStopAtrMultiplier:
             configuration.exit?.trailingStopAtrMultiplier ?? 0.6,
         },
@@ -2158,9 +2152,6 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
       exit: {
         atrExitMultiplier: Number(value.exit?.atrExitMultiplier ?? 0.4),
         minimumProfitPercent: Number(value.exit?.minimumProfitPercent ?? 0.25),
-        trailingActivationNetProfit: Number(
-          value.exit?.trailingActivationNetProfit ?? 0,
-        ),
         trailingStopAtrMultiplier: Number(
           value.exit?.trailingStopAtrMultiplier ?? 0.6,
         ),

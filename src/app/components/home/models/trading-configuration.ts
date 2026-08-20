@@ -367,8 +367,6 @@ export interface EvaluationSettings {
 export interface ExitSettings {
   atrExitMultiplier: number;
   minimumProfitPercent: number;
-  /** Minimum estimated round-trip net profit required before trailing activates. */
-  trailingActivationNetProfit: number;
   trailingStopAtrMultiplier: number;
 }
 
