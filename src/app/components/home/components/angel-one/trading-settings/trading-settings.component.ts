@@ -140,8 +140,32 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
   }
 
   strategyName(strategy: TradingStrategy | number | string | null | undefined): string {
-    const value = Number(strategy);
-    return value === TradingStrategy.Pullback ? 'Pullback' : 'Momentum';
+    if (strategy === null || strategy === undefined || strategy === '') {
+      return '—';
+    }
+
+    if (typeof strategy === 'string') {
+      const normalized = strategy.trim().toLowerCase();
+
+      if (normalized === 'pullback') {
+        return 'Pullback';
+      }
+
+      if (normalized === 'momentum') {
+        return 'Momentum';
+      }
+
+      const numeric = Number(normalized);
+      if (!Number.isNaN(numeric)) {
+        return numeric === TradingStrategy.Pullback ? 'Pullback' : 'Momentum';
+      }
+
+      return '—';
+    }
+
+    return Number(strategy) === TradingStrategy.Pullback
+      ? 'Pullback'
+      : 'Momentum';
   }
 
   get isPullback(): boolean {
