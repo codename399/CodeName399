@@ -810,10 +810,9 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
 
     this.loadConfiguration();
 
-    // Load the current status immediately, then let the existing SignalR
-    // connection notify us whenever the optimizer completes a tick. This keeps
-    // candidate/runtime/metric values fresh without page refreshes or polling.
-    this.refreshOptimizationStatus();
+    // SignalR sends the current optimizer snapshot immediately after connection
+    // and sends subsequent snapshots whenever optimizer state changes. Do not
+    // make an initial REST status request here.
     this.subscribeToOptimizationStatusUpdates();
   }
 
@@ -851,8 +850,9 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
   private subscribeToOptimizationStatusUpdates(): void {
     this.#optimizationStatusSignalRSubscription?.unsubscribe();
     this.#optimizationStatusSignalRSubscription =
-      this.#market.optimizationStatusUpdated$.subscribe(() => {
-        this.refreshOptimizationStatus();
+      this.#market.optimizationStatusUpdated$.subscribe((status) => {
+        this.optimizationStatus = status;
+        this.optimizationStatusLoading = false;
       });
 
     // The SignalR connection is shared with the Angel One page. startConnection()

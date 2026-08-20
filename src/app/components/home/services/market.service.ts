@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
-import { Subject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { API_CONSTANTS } from '../../../../injectors/common-injector';
+import { TradingOptimizationStatus } from '../models/trading-optimization-status';
 
 @Injectable({
   providedIn: 'root',
@@ -15,7 +16,7 @@ export class MarketService {
   private gainersSubject = new Subject<any[]>();
   gainers$ = this.gainersSubject.asObservable();
 
-  private optimizationStatusUpdatedSubject = new Subject<void>();
+  private optimizationStatusUpdatedSubject = new BehaviorSubject<TradingOptimizationStatus | null>(null);
   optimizationStatusUpdated$ = this.optimizationStatusUpdatedSubject.asObservable();
 
   async startConnection(): Promise<void> {
@@ -45,14 +46,23 @@ export class MarketService {
           this.gainersSubject.next(data);
         });
 
-        this.hub.on('OptimizationStatusUpdated', () => {
-          this.optimizationStatusUpdatedSubject.next();
+        this.hub.on('OptimizationStatusUpdated', (status: TradingOptimizationStatus) => {
+          if (status) {
+            this.optimizationStatusUpdatedSubject.next(status);
+          }
         });
 
-        this.hub.onreconnected(() => {
-          // A reconnect can happen while optimizer events were missed. Refresh the
-          // current status as soon as the SignalR connection is restored.
-          this.optimizationStatusUpdatedSubject.next();
+        this.hub.onreconnected(async () => {
+          // Recover the authoritative snapshot through SignalR after reconnect.
+          // Do not fall back to the REST status endpoint here.
+          try {
+            const status = await this.hub?.invoke<TradingOptimizationStatus>('GetOptimizationStatus');
+            if (status) {
+              this.optimizationStatusUpdatedSubject.next(status);
+            }
+          } catch (err) {
+            console.error('Failed to recover optimization status after SignalR reconnect.', err);
+          }
         });
       }
 
