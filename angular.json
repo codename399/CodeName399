@@ -16,7 +16,9 @@
             "outputPath": "dist/CodeName399",
             "baseHref": "/",
             "browser": "src/main.ts",
-            "polyfills": ["zone.js"],
+            "polyfills": [
+              "zone.js"
+            ],
             "tsConfig": "tsconfig.app.json",
             "assets": [
               {
@@ -44,8 +46,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "24kB",
-                  "maximumError": "32kB"
+                  "maximumWarning": "48kB",
+                  "maximumError": "48kB"
                 }
               ],
               "outputHashing": "all",
@@ -83,7 +85,10 @@
         "test": {
           "builder": "@angular/build:karma",
           "options": {
-            "polyfills": ["zone.js", "zone.js/testing"],
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
+            ],
             "tsConfig": "tsconfig.spec.json",
             "assets": [
               {

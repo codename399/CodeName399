@@ -11,6 +11,7 @@ import { DashboardSummary } from '../models/dashboard-summary';
 
 import { Gainer } from '../models/gainer';
 import { TradingConfiguration } from '../models/trading-configuration';
+import { TradingOptimizationStatus } from '../models/trading-optimization-status';
 
 @Injectable({
   providedIn: 'root',
@@ -92,6 +93,12 @@ export class AngelOneService {
           this.configuration.set(configuration);
         }),
       );
+  }
+
+  getTradingOptimizationStatus() {
+    return this.#http.get<TradingOptimizationStatus>(
+      this.#api.getUrl('/api/trading-optimization/status', true),
+    );
   }
 
   get isAutoTradingEnabled(): boolean {

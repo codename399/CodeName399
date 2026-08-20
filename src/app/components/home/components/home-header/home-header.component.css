@@ -1,0 +1,12 @@
+/* Header is outside the scrollable main area and therefore never scrolls. */
+:host {
+  display: block;
+  width: 100%;
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 1000;
+}
+
+.home-header {
+  position: relative;
+}

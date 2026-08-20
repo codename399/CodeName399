@@ -9,7 +9,8 @@
 
     <aside class="page-sidebar" [class.open]="showSettings()">
       <div class="sidebar-header">
-        <div class="sidebar-title">Dashboard Controls</div>
+        <div class="sidebar-title">Dashboard Controls
+</div>
         <button
           class="icon-button"
           type="button"
@@ -20,6 +21,99 @@
           <span class="material-icons">chevron_left</span>
         </button>
       </div>
+
+      <section class="summary-panel">
+        <div class="summary-stripe">
+          <div
+            class="summary-stripe-item market-status tooltip-trigger"
+            [class.market-open]="marketStatus() === 'OPEN'"
+            [class.market-closed]="marketStatus() === 'CLOSED'"
+            [class.market-ignored]="
+              marketStatus() !== 'OPEN' && marketStatus() !== 'CLOSED'
+            "
+            title="Market status"
+            tabindex="0"
+          >
+            <span>⏱️</span>
+            <div>
+              <strong>{{ marketStatus() }}</strong>
+              <small>{{ marketTimer() }}</small>
+            </div>
+          </div>
+
+          <div
+            class="summary-stripe-item tooltip-trigger"
+            title="Ignore market hours"
+            tabindex="0"
+          >
+            <span>🕒</span>
+            <strong>{{
+              configuration()?.ignoreMarketHours ? "Ignored" : "Market Hours"
+            }}</strong>
+          </div>
+
+          <div
+            class="summary-stripe-item tooltip-trigger"
+            title="Available cash"
+            tabindex="0"
+          >
+            <span>💵</span>
+            <strong>₹ {{ availableCash() | number: "1.2-2" }}</strong>
+          </div>
+
+          <div
+            class="summary-stripe-item tooltip-trigger"
+            title="Instrument type"
+            tabindex="0"
+          >
+            <span>🎯</span>
+            <strong>{{ activeInstrumentType() }}</strong>
+          </div>
+
+          <div
+            class="summary-stripe-item tooltip-trigger"
+            title="Strategy"
+            tabindex="0"
+          >
+            <span>📈</span>
+            <strong>{{ configuration()?.strategy }}</strong>
+          </div>
+
+          <div
+            class="summary-stripe-item tooltip-trigger"
+            title="Auto trading"
+            tabindex="0"
+          >
+            <span>🤖</span>
+            <strong>{{
+              configuration()?.enableAutoTrading ? "On" : "Off"
+            }}</strong>
+          </div>
+
+          <div
+            class="summary-stripe-item tooltip-trigger"
+            title="Paper trading"
+            tabindex="0"
+          >
+            <span>📝</span>
+            <strong>{{ configuration()?.paperTrading ? "On" : "Off" }}</strong>
+          </div>
+        </div>
+
+        <div class="summary-actions">
+
+          <button
+            class="refresh-button"
+            type="button"
+            (click)="refresh()"
+            title="Refresh"
+            aria-label="Refresh"
+          >
+            <span class="material-icons">refresh</span>
+          </button>
+        </div>
+      </section>
+
 
       <div class="page-actions">
         <div class="action-buttons">
@@ -415,116 +509,22 @@
         </div>
       </section>
 
-      <section class="summary-panel">
-        <div class="summary-stripe">
-          <div
-            class="summary-stripe-item market-status tooltip-trigger"
-            [class.market-open]="marketStatus() === 'OPEN'"
-            [class.market-closed]="marketStatus() === 'CLOSED'"
-            [class.market-ignored]="
-              marketStatus() !== 'OPEN' && marketStatus() !== 'CLOSED'
-            "
-            title="Market status"
-            tabindex="0"
-          >
-            <span>⏱️</span>
-            <div>
-              <strong>{{ marketStatus() }}</strong>
-              <small>{{ marketTimer() }}</small>
-            </div>
-          </div>
 
-          <div
-            class="summary-stripe-item tooltip-trigger"
-            title="Ignore market hours"
-            tabindex="0"
-          >
-            <span>🕒</span>
-            <strong>{{
-              configuration()?.ignoreMarketHours ? "Ignored" : "Market Hours"
-            }}</strong>
-          </div>
-
-          <div
-            class="summary-stripe-item tooltip-trigger"
-            title="Available cash"
-            tabindex="0"
-          >
-            <span>💵</span>
-            <strong>₹ {{ availableCash() | number: "1.2-2" }}</strong>
-          </div>
-
-          <div
-            class="summary-stripe-item tooltip-trigger"
-            title="Instrument type"
-            tabindex="0"
-          >
-            <span>🎯</span>
-            <strong>{{ activeInstrumentType() }}</strong>
-          </div>
-
-          <div
-            class="summary-stripe-item tooltip-trigger"
-            title="Strategy"
-            tabindex="0"
-          >
-            <span>📈</span>
-            <strong>{{ configuration()?.strategy }}</strong>
-          </div>
-
-          <div
-            class="summary-stripe-item tooltip-trigger"
-            title="Auto trading"
-            tabindex="0"
-          >
-            <span>🤖</span>
-            <strong>{{
-              configuration()?.enableAutoTrading ? "On" : "Off"
-            }}</strong>
-          </div>
-
-          <div
-            class="summary-stripe-item tooltip-trigger"
-            title="Paper trading"
-            tabindex="0"
-          >
-            <span>📝</span>
-            <strong>{{ configuration()?.paperTrading ? "On" : "Off" }}</strong>
-          </div>
-        </div>
-
-        <div class="summary-actions">
-          <button
-            class="sidebar-float-button"
-            [ngClass]="{
-              'market-open': marketStatus() === 'OPEN',
-              'market-closed': marketStatus() === 'CLOSED',
-              'market-ignored':
-                marketStatus() !== 'OPEN' && marketStatus() !== 'CLOSED',
-            }"
-            type="button"
-            (click)="toggleSettings()"
-            [title]="showSettings() ? 'Close controls' : 'Open controls'"
-            [attr.aria-label]="
-              showSettings() ? 'Close controls' : 'Open controls'
-            "
-          >
-            <span class="material-icons">{{
-              showSettings() ? "close" : "menu"
-            }}</span>
-          </button>
-
-          <button
-            class="refresh-button"
-            type="button"
-            (click)="refresh()"
-            title="Refresh"
-            aria-label="Refresh"
-          >
-            <span class="material-icons">refresh</span>
-          </button>
-        </div>
-      </section>
     </main>
   </div>
+
+<button
+      #floatingToggle
+      class="sidebar-float-button"
+      [class.sidebar-open]="showSettings()"
+      type="button"
+      (click)="toggleSettings()"
+      [title]="showSettings() ? 'Close controls' : 'Open controls'"
+      [attr.aria-label]="showSettings() ? 'Close controls' : 'Open controls'"
+    >
+      <span class="material-icons">{{
+        showSettings() ? "close" : "menu"
+      }}</span>
+    </button>
+
 </div>

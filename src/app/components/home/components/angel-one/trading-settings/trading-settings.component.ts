@@ -1,11 +1,11 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
 
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { Router } from '@angular/router';
-import { finalize } from 'rxjs';
+import { Subscription, catchError, finalize, of } from 'rxjs';
 import { ToastService } from '../../../../../services/toast.service';
 import {
   TradingConfiguration,
@@ -13,9 +13,13 @@ import {
   InstrumentTradingSettings,
   FuturesTradingSettings,
   OptionsTradingSettings,
+  OptimizationSettings,
+  OptimizationMode,
 } from '../../../models/trading-configuration';
+import { TradingOptimizationStatus } from '../../../models/trading-optimization-status';
 import { TradingStrategy } from '../../../models/enum/trading-strategy';
 import { AngelOneService } from '../../../services/angel-one.service';
+import { MarketService } from '../../../services/market.service';
 
 @Component({
   selector: 'app-trading-settings',
@@ -28,7 +32,7 @@ import { AngelOneService } from '../../../services/angel-one.service';
 
   styleUrl: './trading-settings.component.css',
 })
-export class TradingSettingsComponent implements OnInit {
+export class TradingSettingsComponent implements OnInit, OnDestroy {
   readonly #fb = inject(FormBuilder);
 
   readonly #angel = inject(AngelOneService);
@@ -37,9 +41,16 @@ export class TradingSettingsComponent implements OnInit {
 
   readonly #router = inject(Router);
 
+  readonly #market = inject(MarketService);
+
   loading = false;
 
   saving = false;
+
+  optimizationStatus: TradingOptimizationStatus | null = null;
+  optimizationStatusLoading = false;
+  #optimizationStatusSubscription?: Subscription;
+  #optimizationStatusSignalRSubscription?: Subscription;
 
   readonly strategies = [
     {
@@ -130,6 +141,35 @@ export class TradingSettingsComponent implements OnInit {
 
   get isMomentum(): boolean {
     return this.isEquity && Number(this.form?.controls?.strategy?.value) === TradingStrategy.Momentum;
+  }
+
+  strategyName(strategy: TradingStrategy | number | string | null | undefined): string {
+    if (strategy === null || strategy === undefined || strategy === '') {
+      return '—';
+    }
+
+    if (typeof strategy === 'string') {
+      const normalized = strategy.trim().toLowerCase();
+
+      if (normalized === 'pullback') {
+        return 'Pullback';
+      }
+
+      if (normalized === 'momentum') {
+        return 'Momentum';
+      }
+
+      const numeric = Number(normalized);
+      if (!Number.isNaN(numeric)) {
+        return numeric === TradingStrategy.Pullback ? 'Pullback' : 'Momentum';
+      }
+
+      return '—';
+    }
+
+    return Number(strategy) === TradingStrategy.Pullback
+      ? 'Pullback'
+      : 'Momentum';
   }
 
   get isPullback(): boolean {
@@ -296,6 +336,17 @@ export class TradingSettingsComponent implements OnInit {
     ],
 
     minimumNetProfit: [5, Validators.required],
+
+    enableLiveTradingPerformanceGate: [false],
+    minimumLiveTradingPerformanceTrades: [10, [Validators.min(0)]],
+    minimumLiveTradingWinRate: [55, [Validators.min(0), Validators.max(100)]],
+    minimumLiveTradingProfitFactor: [1.2, [Validators.min(0)]],
+    minimumLiveTradingNetProfit: [0, [Validators.min(0)]],
+    minimumLiveTradingRiskReward: [1.5, [Validators.min(0)]],
+    minimumLiveTradingConfidence: [60, [Validators.min(0), Validators.max(100)]],
+    minimumRecentLiveTradingTrades: [5, [Validators.min(0)]],
+    requirePositiveRecentLiveTradingNetProfit: [true],
+    requireBestStrategyMatchForLiveTrading: [true],
 
     autoSquareOff: [true],
 
@@ -633,6 +684,45 @@ export class TradingSettingsComponent implements OnInit {
       riskRewardThreshold: [2, [Validators.min(0)]],
     }),
 
+    optimization: this.#fb.group({
+      enabled: [true],
+      paperTradingOnly: [true],
+      mode: [0 as OptimizationMode],
+      timeBasedCandidateMinutes: [
+        60,
+        [Validators.required, Validators.min(1)],
+      ],
+      sendConfigurationEmail: [true],
+      sendDailyEmail: [true],
+      autoPromoteBestConfiguration: [true],
+
+      pollIntervalSeconds: [5, [Validators.required, Validators.min(1)]],
+      minimumCandidateMinutes: [5, [Validators.required, Validators.min(0)]],
+      noSignalTimeoutMinutes: [20, [Validators.required, Validators.min(0)]],
+      noVirtualConfirmationTimeoutMinutes: [12, [Validators.required, Validators.min(0)]],
+      noPaperTradeTimeoutMinutes: [10, [Validators.required, Validators.min(0)]],
+      maxVirtualTradeDurationMinutes: [5, [Validators.required, Validators.min(0)]],
+      maxPaperTradeDurationMinutes: [20, [Validators.required, Validators.min(0)]],
+      forceCloseTimedOutPaperTrades: [true],
+      maximumCandidateMinutes: [45, [Validators.required, Validators.min(0)]],
+
+      maximumCandidatesPerDay: [20, [Validators.required, Validators.min(1)]],
+      minimumCompletedTradesForAcceptance: [10, [Validators.required, Validators.min(0)]],
+      preferredCompletedTrades: [20, [Validators.required, Validators.min(0)]],
+      minimumVirtualCandidatesForAnalysis: [5, [Validators.required, Validators.min(0)]],
+
+      minimumNetProfit: [0, [Validators.required]],
+      minimumProfitFactor: [1.2, [Validators.required, Validators.min(0)]],
+      maximumDrawdownPercent: [10, [Validators.required, Validators.min(0)]],
+
+      dailyEmailDelayMinutes: [5, [Validators.required, Validators.min(0)]],
+      validationHistoryFile: [
+        'OptimizationRuns/validation-configuration-history.json',
+        [Validators.required],
+      ],
+      reportDirectory: ['OptimizationRuns', [Validators.required]],
+    }),
+
     exit: this.#fb.group({
       atrExitMultiplier: [
         0.4,
@@ -642,8 +732,16 @@ export class TradingSettingsComponent implements OnInit {
         0.25,
         [Validators.required, Validators.min(0), Validators.max(100)],
       ],
+      trailingActivationNetProfit: [
+        0,
+        [Validators.required, Validators.min(0)],
+      ],
       trailingStopAtrMultiplier: [
         0.6,
+        [Validators.required, Validators.min(0), Validators.max(100)],
+      ],
+      trailingProfitRetentionPercent: [
+        70,
         [Validators.required, Validators.min(0), Validators.max(100)],
       ],
     }),
@@ -651,6 +749,28 @@ export class TradingSettingsComponent implements OnInit {
 
   enableAutoTradingFormControl = this.form?.controls?.enableAutoTrading;
   enableAutoTradingPreviousValue = this.enableAutoTradingFormControl?.value;
+
+  /** Keep the configuration page to one open accordion at a time. */
+  onAccordionToggle(event: Event): void {
+    const current = event.currentTarget as HTMLDetailsElement | null;
+
+    if (!current?.open) {
+      return;
+    }
+
+    const container = current.closest('.accordion-grid');
+    if (!container) {
+      return;
+    }
+
+    container
+      .querySelectorAll<HTMLDetailsElement>('details.settings-card[open]')
+      .forEach((accordion) => {
+        if (accordion !== current) {
+          accordion.open = false;
+        }
+      });
+  }
 
   // ======================================================
   // Lifecycle
@@ -689,6 +809,83 @@ export class TradingSettingsComponent implements OnInit {
     });
 
     this.loadConfiguration();
+
+    // SignalR sends the current optimizer snapshot immediately after connection
+    // and sends subsequent snapshots whenever optimizer state changes. Do not
+    // make an initial REST status request here.
+    this.subscribeToOptimizationStatusUpdates();
+  }
+
+  optimizationRuntimeLabel(): string {
+    const state = this.optimizationStatus?.state || this.optimizationStatus?.runtimeStateReason;
+    switch (state) {
+      case 'RUNNING':
+        return 'Running';
+      case 'MARKET_OPEN':
+        return 'Ready / Starting';
+      case 'WAITING_FOR_MARKET':
+        return 'Waiting for Market';
+      case 'LIVE_TRADE_OPEN':
+        return 'Paused — Live Trade Open';
+      case 'AUTO_TRADING_ENABLED':
+        return 'Paused — Auto Trading Enabled';
+      case 'PAPER_TRADING_ONLY_REQUIRED':
+        return 'Paused — Paper-Only Required';
+      case 'VALIDATION_HISTORY_UNAVAILABLE':
+        return 'Paused — Validation History Unavailable';
+      case 'NO_UNIQUE_CONFIGURATION':
+        return 'No Unique Configuration Remaining';
+      case 'MAXIMUM_CANDIDATES_REACHED':
+        return 'Daily Candidate Limit Reached';
+      case 'OPTIMIZATION_DISABLED':
+      case 'DISABLED':
+        return 'Disabled';
+      case 'NON_TRADING_DAY':
+        return 'Non-Trading Day';
+      default:
+        return state ? state.replaceAll('_', ' ') : 'Checking';
+    }
+  }
+
+  private subscribeToOptimizationStatusUpdates(): void {
+    this.#optimizationStatusSignalRSubscription?.unsubscribe();
+    this.#optimizationStatusSignalRSubscription =
+      this.#market.optimizationStatusUpdated$.subscribe((status) => {
+        this.optimizationStatus = status;
+        this.optimizationStatusLoading = false;
+      });
+
+    // The SignalR connection is shared with the Angel One page. startConnection()
+    // is idempotent, so this is safe even when the parent already started it.
+    void this.#market.startConnection();
+  }
+
+  refreshOptimizationStatus(): void {
+    if (this.optimizationStatusLoading) {
+      return;
+    }
+
+    this.optimizationStatusLoading = true;
+
+    this.#optimizationStatusSubscription?.unsubscribe();
+    this.#optimizationStatusSubscription = this.#angel
+      .getTradingOptimizationStatus()
+      .pipe(
+        catchError(() => of(null)),
+        finalize(() => {
+          this.optimizationStatusLoading = false;
+        }),
+      )
+      .subscribe((status) => {
+        if (status) {
+          this.optimizationStatus = status;
+        }
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.#optimizationStatusSubscription?.unsubscribe();
+    this.#optimizationStatusSignalRSubscription?.unsubscribe();
   }
 
   // ======================================================
@@ -765,6 +962,27 @@ export class TradingSettingsComponent implements OnInit {
         minimumRoiPercent: configuration.minimumRoiPercent,
 
         minimumNetProfit: configuration.minimumNetProfit,
+
+        enableLiveTradingPerformanceGate:
+          configuration.enableLiveTradingPerformanceGate ?? false,
+        minimumLiveTradingPerformanceTrades:
+          configuration.minimumLiveTradingPerformanceTrades ?? 10,
+        minimumLiveTradingWinRate:
+          configuration.minimumLiveTradingWinRate ?? 55,
+        minimumLiveTradingProfitFactor:
+          configuration.minimumLiveTradingProfitFactor ?? 1.2,
+        minimumLiveTradingNetProfit:
+          configuration.minimumLiveTradingNetProfit ?? 0,
+        minimumLiveTradingRiskReward:
+          configuration.minimumLiveTradingRiskReward ?? 1.5,
+        minimumLiveTradingConfidence:
+          configuration.minimumLiveTradingConfidence ?? 60,
+        minimumRecentLiveTradingTrades:
+          configuration.minimumRecentLiveTradingTrades ?? 5,
+        requirePositiveRecentLiveTradingNetProfit:
+          configuration.requirePositiveRecentLiveTradingNetProfit ?? true,
+        requireBestStrategyMatchForLiveTrading:
+          configuration.requireBestStrategyMatchForLiveTrading ?? true,
 
         autoSquareOff: configuration.autoSquareOff,
 
@@ -1032,12 +1250,91 @@ export class TradingSettingsComponent implements OnInit {
             configuration.virtualTrading?.pullbackWarmupSeconds ?? 8,
         },
 
+        optimization: {
+          enabled: configuration.optimization?.enabled ?? true,
+          paperTradingOnly: configuration.optimization?.paperTradingOnly ?? true,
+          mode: this.normalizeOptimizationMode(
+            configuration.optimization?.mode ?? 0,
+          ),
+          timeBasedCandidateMinutes: Number(
+            configuration.optimization?.timeBasedCandidateMinutes ?? 60,
+          ),
+          sendConfigurationEmail:
+            configuration.optimization?.sendConfigurationEmail ?? true,
+          sendDailyEmail: configuration.optimization?.sendDailyEmail ?? true,
+          autoPromoteBestConfiguration:
+            configuration.optimization?.autoPromoteBestConfiguration ?? true,
+
+          pollIntervalSeconds: Number(
+            configuration.optimization?.pollIntervalSeconds ?? 5,
+          ),
+          minimumCandidateMinutes: Number(
+            configuration.optimization?.minimumCandidateMinutes ?? 5,
+          ),
+          noSignalTimeoutMinutes: Number(
+            configuration.optimization?.noSignalTimeoutMinutes ?? 20,
+          ),
+          noVirtualConfirmationTimeoutMinutes: Number(
+            configuration.optimization?.noVirtualConfirmationTimeoutMinutes ?? 12,
+          ),
+          noPaperTradeTimeoutMinutes: Number(
+            configuration.optimization?.noPaperTradeTimeoutMinutes ?? 10,
+          ),
+          maxVirtualTradeDurationMinutes: Number(
+            configuration.optimization?.maxVirtualTradeDurationMinutes ?? 5,
+          ),
+          maxPaperTradeDurationMinutes: Number(
+            configuration.optimization?.maxPaperTradeDurationMinutes ?? 20,
+          ),
+          forceCloseTimedOutPaperTrades:
+            configuration.optimization?.forceCloseTimedOutPaperTrades ?? true,
+          maximumCandidateMinutes: Number(
+            configuration.optimization?.maximumCandidateMinutes ?? 45,
+          ),
+
+          maximumCandidatesPerDay: Number(
+            configuration.optimization?.maximumCandidatesPerDay ?? 20,
+          ),
+          minimumCompletedTradesForAcceptance: Number(
+            configuration.optimization?.minimumCompletedTradesForAcceptance ?? 10,
+          ),
+          preferredCompletedTrades: Number(
+            configuration.optimization?.preferredCompletedTrades ?? 20,
+          ),
+          minimumVirtualCandidatesForAnalysis: Number(
+            configuration.optimization?.minimumVirtualCandidatesForAnalysis ?? 5,
+          ),
+
+          minimumNetProfit: Number(
+            configuration.optimization?.minimumNetProfit ?? 0,
+          ),
+          minimumProfitFactor: Number(
+            configuration.optimization?.minimumProfitFactor ?? 1.2,
+          ),
+          maximumDrawdownPercent: Number(
+            configuration.optimization?.maximumDrawdownPercent ?? 10,
+          ),
+
+          dailyEmailDelayMinutes: Number(
+            configuration.optimization?.dailyEmailDelayMinutes ?? 5,
+          ),
+          validationHistoryFile:
+            configuration.optimization?.validationHistoryFile ??
+            'OptimizationRuns/validation-configuration-history.json',
+          reportDirectory:
+            configuration.optimization?.reportDirectory ?? 'OptimizationRuns',
+        },
+
         exit: {
           atrExitMultiplier: configuration.exit?.atrExitMultiplier ?? 0.4,
           minimumProfitPercent:
             configuration.exit?.minimumProfitPercent ?? 0.25,
+          trailingActivationNetProfit:
+            configuration.exit?.trailingActivationNetProfit ?? 0,
           trailingStopAtrMultiplier:
             configuration.exit?.trailingStopAtrMultiplier ?? 0.6,
+          trailingProfitRetentionPercent:
+            configuration.exit?.trailingProfitRetentionPercent ?? 70,
         },
         confidence: {
           maximumGainBonus: configuration.confidence?.maximumGainBonus ?? 15,
@@ -1435,6 +1732,24 @@ export class TradingSettingsComponent implements OnInit {
     return value.substring(0, 5);
   }
 
+  normalizeOptimizationMode(
+    value: OptimizationMode | string | number | null | undefined,
+  ): 0 | 1 {
+    if (value === 'TimeBased' || value === 1 || value === '1') {
+      return 1;
+    }
+
+    return 0;
+  }
+
+  optimizationModeLabel(
+    value: OptimizationMode | string | number | null | undefined,
+  ): string {
+    return this.normalizeOptimizationMode(value) === 1
+      ? 'Time Based'
+      : 'Count Based';
+  }
+
   private normalizeStrategy(
     value: TradingStrategy | string | number,
   ): TradingStrategy {
@@ -1524,6 +1839,76 @@ export class TradingSettingsComponent implements OnInit {
 
     const configuration: TradingConfiguration = {
       id: 'DEFAULT',
+      optimization: {
+        enabled: value.optimization?.enabled ?? true,
+        paperTradingOnly: value.optimization?.paperTradingOnly ?? true,
+        mode: this.normalizeOptimizationMode(value.optimization?.mode ?? 0),
+        timeBasedCandidateMinutes: Number(
+          value.optimization?.timeBasedCandidateMinutes ?? 60,
+        ),
+        sendConfigurationEmail:
+          value.optimization?.sendConfigurationEmail ?? true,
+        sendDailyEmail: value.optimization?.sendDailyEmail ?? true,
+        autoPromoteBestConfiguration:
+          value.optimization?.autoPromoteBestConfiguration ?? true,
+
+        pollIntervalSeconds: Number(value.optimization?.pollIntervalSeconds ?? 5),
+        minimumCandidateMinutes: Number(
+          value.optimization?.minimumCandidateMinutes ?? 5,
+        ),
+        noSignalTimeoutMinutes: Number(
+          value.optimization?.noSignalTimeoutMinutes ?? 20,
+        ),
+        noVirtualConfirmationTimeoutMinutes: Number(
+          value.optimization?.noVirtualConfirmationTimeoutMinutes ?? 12,
+        ),
+        noPaperTradeTimeoutMinutes: Number(
+          value.optimization?.noPaperTradeTimeoutMinutes ?? 10,
+        ),
+        maxVirtualTradeDurationMinutes: Number(
+          value.optimization?.maxVirtualTradeDurationMinutes ?? 5,
+        ),
+        maxPaperTradeDurationMinutes: Number(
+          value.optimization?.maxPaperTradeDurationMinutes ?? 20,
+        ),
+        forceCloseTimedOutPaperTrades:
+          value.optimization?.forceCloseTimedOutPaperTrades ?? true,
+        maximumCandidateMinutes: Number(
+          value.optimization?.maximumCandidateMinutes ?? 45,
+        ),
+
+        maximumCandidatesPerDay: Number(
+          value.optimization?.maximumCandidatesPerDay ?? 20,
+        ),
+        minimumCompletedTradesForAcceptance: Number(
+          value.optimization?.minimumCompletedTradesForAcceptance ?? 10,
+        ),
+        preferredCompletedTrades: Number(
+          value.optimization?.preferredCompletedTrades ?? 20,
+        ),
+        minimumVirtualCandidatesForAnalysis: Number(
+          value.optimization?.minimumVirtualCandidatesForAnalysis ?? 5,
+        ),
+
+        minimumNetProfit: Number(value.optimization?.minimumNetProfit ?? 0),
+        minimumProfitFactor: Number(
+          value.optimization?.minimumProfitFactor ?? 1.2,
+        ),
+        maximumDrawdownPercent: Number(
+          value.optimization?.maximumDrawdownPercent ?? 10,
+        ),
+
+        dailyEmailDelayMinutes: Number(
+          value.optimization?.dailyEmailDelayMinutes ?? 5,
+        ),
+        validationHistoryFile:
+          value.optimization?.validationHistoryFile ??
+          'OptimizationRuns/validation-configuration-history.json',
+        reportDirectory:
+          value.optimization?.reportDirectory ?? 'OptimizationRuns',
+      },
+
+
       instrumentType: this.selectedInstrumentType,
       equity: this.profileDrafts.Equity,
       futures: this.profileDrafts.Futures as FuturesTradingSettings,
@@ -1566,6 +1951,32 @@ export class TradingSettingsComponent implements OnInit {
       minimumRoiPercent: Number(value.minimumRoiPercent ?? 0.3),
 
       minimumNetProfit: Number(value.minimumNetProfit ?? 5),
+
+      enableLiveTradingPerformanceGate:
+        value.enableLiveTradingPerformanceGate ?? false,
+      minimumLiveTradingPerformanceTrades: Number(
+        value.minimumLiveTradingPerformanceTrades ?? 10,
+      ),
+      minimumLiveTradingWinRate: Number(value.minimumLiveTradingWinRate ?? 55),
+      minimumLiveTradingProfitFactor: Number(
+        value.minimumLiveTradingProfitFactor ?? 1.2,
+      ),
+      minimumLiveTradingNetProfit: Number(
+        value.minimumLiveTradingNetProfit ?? 0,
+      ),
+      minimumLiveTradingRiskReward: Number(
+        value.minimumLiveTradingRiskReward ?? 1.5,
+      ),
+      minimumLiveTradingConfidence: Number(
+        value.minimumLiveTradingConfidence ?? 60,
+      ),
+      minimumRecentLiveTradingTrades: Number(
+        value.minimumRecentLiveTradingTrades ?? 5,
+      ),
+      requirePositiveRecentLiveTradingNetProfit:
+        value.requirePositiveRecentLiveTradingNetProfit ?? true,
+      requireBestStrategyMatchForLiveTrading:
+        value.requireBestStrategyMatchForLiveTrading ?? true,
 
       autoSquareOff: value.autoSquareOff ?? false,
 
@@ -1884,8 +2295,14 @@ export class TradingSettingsComponent implements OnInit {
       exit: {
         atrExitMultiplier: Number(value.exit?.atrExitMultiplier ?? 0.4),
         minimumProfitPercent: Number(value.exit?.minimumProfitPercent ?? 0.25),
+        trailingActivationNetProfit: Number(
+          value.exit?.trailingActivationNetProfit ?? 0,
+        ),
         trailingStopAtrMultiplier: Number(
           value.exit?.trailingStopAtrMultiplier ?? 0.6,
+        ),
+        trailingProfitRetentionPercent: Number(
+          value.exit?.trailingProfitRetentionPercent ?? 70,
         ),
       },
       confidence: {

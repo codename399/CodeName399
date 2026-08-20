@@ -1,10 +1,9 @@
-<!-- Navbar -->
-<app-home-header [user]="user"></app-home-header>
+<div class="home-shell">
+  <app-home-header [user]="user"></app-home-header>
 
-<!-- 🧱 Main Content -->
-<main class="py-20 sm:py-24 md:py-24">
-  <router-outlet></router-outlet>
-</main>
+  <main class="home-main">
+    <router-outlet></router-outlet>
+  </main>
 
-<!-- 🔻 Sticky Footer -->
-<app-home-footer></app-home-footer>
+  <app-home-footer></app-home-footer>
+</div>

@@ -1496,3 +1496,1710 @@ tbody tr:hover {
 
 .fno-contract-cell { display:flex; flex-direction:column; gap:2px; min-width:100px; }
 .fno-contract-cell span { font-size:11px; opacity:.78; }
+
+/* ======================================================
+   Trading Terminal UI - Light Theme
+   Keeps the dashboard dense, readable and scan-friendly.
+====================================================== */
+:host {
+  --trade-bg: #f3f6fa;
+  --trade-surface: #ffffff;
+  --trade-surface-alt: #f8fafc;
+  --trade-border: #d9e2ec;
+  --trade-text: #172033;
+  --trade-muted: #64748b;
+  --trade-blue: #2563eb;
+  --trade-green: #15803d;
+  --trade-red: #dc2626;
+  --trade-amber: #b45309;
+  background: var(--trade-bg);
+  color: var(--trade-text);
+}
+
+.page-shell {
+  padding: 14px 16px 24px;
+  background: var(--trade-bg);
+}
+
+.page-main {
+  gap: 14px;
+  padding-bottom: 92px;
+}
+
+.page-top {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+}
+
+.search-box {
+  width: min(420px, 100%);
+  min-width: 220px;
+}
+
+.search-box input {
+  min-height: 42px;
+  border-radius: 8px;
+  border-color: var(--trade-border);
+  background: var(--trade-surface);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.page-sidebar {
+  background: var(--trade-surface);
+  border-right: 1px solid var(--trade-border);
+  box-shadow: 12px 0 30px rgba(15, 23, 42, 0.10);
+}
+
+.sidebar-title {
+  letter-spacing: 0.02em;
+}
+
+.pill-button {
+  min-height: 40px;
+  border: 1px solid var(--trade-border);
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+.pill-button.accent {
+  background: var(--trade-blue);
+  border-color: var(--trade-blue);
+}
+
+.column-panel {
+  border-radius: 10px;
+  border-color: var(--trade-border);
+  background: var(--trade-surface-alt);
+}
+
+.table-shell {
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid var(--trade-border);
+  background: var(--trade-surface);
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.055);
+  overflow: hidden;
+}
+
+.table-header {
+  min-height: 48px;
+  margin: 0;
+  padding: 10px 14px;
+  background: var(--trade-surface);
+  border-bottom: 1px solid var(--trade-border);
+}
+
+.table-header div:first-child {
+  color: var(--trade-text);
+  font-weight: 800;
+}
+
+.table-header div:last-child {
+  color: var(--trade-muted);
+  font-size: 0.78rem;
+}
+
+.table-scroll {
+  max-height: calc(100dvh - 210px);
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+table {
+  min-width: 1180px;
+  font-variant-numeric: tabular-nums;
+}
+
+thead {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: #edf2f7;
+}
+
+th,
+td {
+  padding: 9px 11px;
+  font-size: 0.79rem;
+  white-space: nowrap;
+  border-bottom: 1px solid #e7edf3;
+}
+
+th {
+  color: #475569;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.045em;
+  font-weight: 800;
+}
+
+tbody tr {
+  background: #ffffff;
+}
+
+tbody tr:hover {
+  background: #eff6ff;
+  transform: none;
+}
+
+.owned-row {
+  background: #f0f7ff;
+}
+
+.symbol-name {
+  font-size: 0.92rem;
+}
+
+.symbol-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 8px;
+  margin-top: 4px;
+  color: var(--trade-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.signal-pill {
+  min-width: 82px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+}
+
+.score-badge {
+  min-width: 46px;
+  justify-content: center;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+}
+
+.positive {
+  color: var(--trade-green);
+  font-weight: 750;
+}
+
+.negative {
+  color: var(--trade-red);
+  font-weight: 750;
+}
+
+/* The global Home footer is outside this component's scroll container.
+   Keep the dashboard summary inside the routed content so it can never
+   cover the application footer. */
+.summary-panel {
+  position: sticky;
+  left: auto;
+  right: auto;
+  bottom: 0;
+  margin-top: 10px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid var(--trade-border);
+  border-radius: 10px;
+  box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.08);
+  z-index: 10;
+}
+
+.summary-stripe {
+  padding: 4px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  gap: 5px;
+}
+
+.summary-stripe-item {
+  min-height: 36px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.72rem;
+  border: 1px solid #e2e8f0;
+}
+
+.summary-stripe-item strong {
+  color: var(--trade-text);
+  font-size: 0.75rem;
+}
+
+.market-status.market-open,
+.summary-stripe-item.market-status.market-open {
+  background: #ecfdf3;
+  color: var(--trade-green);
+  border-color: #bbf7d0;
+}
+
+.market-status.market-closed,
+.summary-stripe-item.market-status.market-closed {
+  background: #fef2f2;
+  color: var(--trade-red);
+  border-color: #fecaca;
+}
+
+.market-status.market-ignored,
+.summary-stripe-item.market-status.market-ignored {
+  background: #fffbeb;
+  color: var(--trade-amber);
+  border-color: #fde68a;
+}
+
+.summary-actions {
+  gap: 8px;
+}
+
+.sidebar-float-button,
+.refresh-button {
+  width: 42px;
+  height: 42px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
+@media (max-width: 900px) {
+  .page-shell {
+    padding: 10px;
+  }
+
+  .page-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-box {
+    width: 100%;
+  }
+
+  .table-scroll {
+    max-height: calc(100dvh - 250px);
+  }
+
+  .summary-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .summary-stripe {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .summary-actions {
+    justify-content: flex-end;
+  }
+}
+
+/* ========================================================================
+   PROFESSIONAL TRADING TERMINAL — CONTROL RAIL
+   Light theme, dense layout, no decorative dashboard styling.
+   ======================================================================== */
+.page-shell {
+  background: #f4f7fb;
+  color: #172033;
+  padding: 10px 12px 18px;
+}
+
+.page-sidebar {
+  width: 286px;
+  padding: 14px;
+  background: #ffffff;
+  border: 1px solid #d7e0ea;
+  border-left: 0;
+  border-radius: 0 10px 10px 0;
+  box-shadow: 10px 0 28px rgba(15, 23, 42, 0.12);
+}
+
+.page-sidebar.open {
+  transform: translateX(0);
+}
+
+.sidebar-backdrop {
+  background: rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(1px);
+}
+
+.sidebar-header {
+  min-height: 42px;
+  margin-bottom: 12px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid #e5ebf2;
+}
+
+.sidebar-title {
+  color: #172033;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.sidebar-header .icon-button {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 1px solid #d7e0ea;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: #475569;
+}
+
+.page-actions {
+  gap: 14px;
+}
+
+.action-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.pill-button {
+  min-height: 38px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  border: 1px solid #d7e0ea;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .01em;
+}
+
+.pill-button.accent {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #ffffff;
+}
+
+.pill-button:hover,
+.icon-button:hover {
+  background: #eef4ff;
+  color: #1d4ed8;
+}
+
+.pill-button.accent:hover {
+  background: #1e40af;
+  color: #ffffff;
+}
+
+.column-panel {
+  margin-top: 0;
+  padding: 11px;
+  border: 1px solid #d7e0ea;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.column-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid #e5ebf2;
+  color: #334155;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.text-link-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #2563eb;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.column-options {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1px;
+  margin-top: 7px;
+}
+
+.column-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 5px 6px;
+  border-radius: 5px;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.column-option:hover {
+  background: #eef4ff;
+  color: #1e40af;
+}
+
+.column-option input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: #2563eb;
+}
+
+.page-main.sidebar-open {
+  margin-left: 286px;
+}
+
+/* Keep the trading grid visually attached to the terminal frame. */
+.table-shell {
+  background: #ffffff;
+  border-color: #d7e0ea;
+  border-radius: 8px;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.055);
+}
+
+.table-header {
+  background: #ffffff;
+  border-bottom-color: #d7e0ea;
+}
+
+.table-scroll {
+  background: #ffffff;
+}
+
+@media (max-width: 900px) {
+  .page-sidebar {
+    width: min(300px, 88vw);
+  }
+
+  .page-main.sidebar-open {
+    margin-left: 0;
+  }
+}
+
+
+/* ==========================================================================
+   MOBILE TRADING SUMMARY — FINAL RESPONSIVE OVERRIDES
+   The summary stays inside the routed content and never covers the
+   application header/footer. On phones it becomes a compact card grid.
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .summary-panel {
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+
+    display: block !important;
+    width: 100%;
+    box-sizing: border-box;
+
+    margin: 12px 0 8px !important;
+    padding: 8px !important;
+
+    background: #ffffff !important;
+    border: 1px solid #d7e0ea !important;
+    border-radius: 10px !important;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06) !important;
+
+    overflow: visible !important;
+    z-index: 2 !important;
+  }
+
+  .summary-stripe {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+
+    gap: 6px !important;
+    padding: 0 !important;
+
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+  }
+
+  .summary-stripe-item {
+    width: 100%;
+    min-width: 0 !important;
+    min-height: 42px !important;
+    box-sizing: border-box;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 7px !important;
+
+    padding: 7px 9px !important;
+
+    border: 1px solid #e1e7ef !important;
+    border-radius: 7px !important;
+    background: #f8fafc !important;
+
+    color: #475569 !important;
+    font-size: 10px !important;
+    line-height: 1.15;
+    overflow: hidden;
+  }
+
+  /* Market status gets the full row because it contains two values. */
+  .summary-stripe-item.market-status {
+    grid-column: 1 / -1;
+    min-height: 46px !important;
+    background: #f8fafc !important;
+  }
+
+  .summary-stripe-item > span {
+    flex: 0 0 auto;
+    font-size: 13px;
+    line-height: 1;
+  }
+
+  .summary-stripe-item > div {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .summary-stripe-item strong {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+
+    color: #172033 !important;
+    font-size: 10px !important;
+    font-weight: 800;
+    line-height: 1.2;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .summary-stripe-item small {
+    display: block;
+    margin-top: 2px;
+
+    color: #64748b !important;
+    font-size: 9px !important;
+    line-height: 1.15;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .summary-stripe-item.market-status.market-open {
+    background: #ecfdf3 !important;
+    border-color: #bbf7d0 !important;
+  }
+
+  .summary-stripe-item.market-status.market-closed {
+    background: #fef2f2 !important;
+    border-color: #fecaca !important;
+  }
+
+  .summary-stripe-item.market-status.market-ignored {
+    background: #fffbeb !important;
+    border-color: #fde68a !important;
+  }
+
+  .summary-actions {
+    display: flex !important;
+    width: 100%;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    margin-top: 7px;
+    gap: 6px !important;
+  }
+
+  .sidebar-float-button {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 38px !important;
+    min-height: 38px !important;
+
+    border-radius: 7px !important;
+    box-shadow: none !important;
+
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .page-main {
+    padding-bottom: 12px !important;
+  }
+}
+
+/* Very small phones: stack the secondary metrics cleanly. */
+@media (max-width: 420px) {
+  .summary-stripe {
+    grid-template-columns: 1fr !important;
+  }
+
+  .summary-stripe-item.market-status {
+    grid-column: auto;
+  }
+
+  .summary-stripe-item {
+    min-height: 40px !important;
+  }
+}
+
+
+/* ==========================================================================
+   PROFESSIONAL TRADING TERMINAL — POSITION GRID + SUMMARY
+   Fast-access layout for desktop and mobile.
+   ========================================================================== */
+
+.summary-panel {
+  position: sticky !important;
+  top: 8px;
+  z-index: 30 !important;
+
+  width: 100%;
+  box-sizing: border-box;
+  margin: 8px 0 10px !important;
+  padding: 8px !important;
+
+  background: #ffffff !important;
+  border: 1px solid #d7e0ea !important;
+  border-radius: 9px !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06) !important;
+}
+
+.summary-stripe {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(130px, 1fr)) !important;
+  gap: 6px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.summary-stripe-item {
+  min-width: 0 !important;
+  min-height: 44px !important;
+  box-sizing: border-box;
+
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+
+  padding: 7px 9px !important;
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 7px !important;
+
+  overflow: hidden;
+}
+
+.summary-stripe-item strong {
+  display: block;
+  color: #172033 !important;
+  font-size: 11px !important;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.summary-stripe-item small {
+  display: block;
+  margin-top: 2px;
+  color: #64748b !important;
+  font-size: 9px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.summary-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 6px !important;
+  margin-top: 7px;
+}
+
+.position-grid,
+.positions-grid,
+.position-panel {
+  position: relative;
+  z-index: 1;
+
+  width: 100%;
+  box-sizing: border-box;
+
+  background: #ffffff;
+  border: 1px solid #d7e0ea;
+  border-radius: 9px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+
+  scroll-margin-top: 76px;
+}
+
+.position-grid-header,
+.positions-grid-header,
+.position-panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 7px 10px;
+  box-sizing: border-box;
+
+  background: #f8fafc;
+  border-bottom: 1px solid #d7e0ea;
+  border-radius: 8px 8px 0 0;
+}
+
+.position-grid-header h2,
+.positions-grid-header h2,
+.position-panel-header h2 {
+  margin: 0;
+  color: #172033;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: .02em;
+}
+
+.position-grid table,
+.positions-grid table,
+.position-panel table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.position-grid thead,
+.positions-grid thead,
+.position-panel thead {
+  position: sticky;
+  top: 42px;
+  z-index: 9;
+}
+
+.position-grid th,
+.positions-grid th,
+.position-panel th {
+  padding: 7px 9px;
+  background: #f1f5f9;
+  border-bottom: 1px solid #d7e0ea;
+  color: #475569;
+  font-size: 9px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: .035em;
+  white-space: nowrap;
+}
+
+.position-grid td,
+.positions-grid td,
+.position-panel td {
+  padding: 8px 9px;
+  border-bottom: 1px solid #edf1f5;
+  color: #263449;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.position-grid tbody tr:hover,
+.positions-grid tbody tr:hover,
+.position-panel tbody tr:hover {
+  background: #f8fbff;
+}
+
+.position-grid .profit,
+.positions-grid .profit,
+.position-panel .profit {
+  color: #15803d;
+  font-weight: 800;
+}
+
+.position-grid .loss,
+.positions-grid .loss,
+.position-panel .loss {
+  color: #dc2626;
+  font-weight: 800;
+}
+
+/* Keep the primary trading information visible while allowing the rest
+   of the page to scroll naturally. */
+.page-main {
+  min-width: 0 !important;
+}
+
+@media (min-width: 769px) {
+  .summary-panel {
+    top: 8px;
+  }
+
+  .position-grid,
+  .positions-grid,
+  .position-panel {
+    margin-top: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .summary-panel {
+    position: sticky !important;
+    top: 4px !important;
+    margin: 5px 0 7px !important;
+    padding: 6px !important;
+    border-radius: 8px !important;
+  }
+
+  .summary-stripe {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+  }
+
+  .summary-stripe-item {
+    min-height: 40px !important;
+    padding: 6px 7px !important;
+  }
+
+  .summary-stripe-item strong {
+    font-size: 10px !important;
+  }
+
+  .summary-stripe-item small {
+    font-size: 8px !important;
+  }
+
+  .summary-actions {
+    margin-top: 5px;
+  }
+
+  .position-grid,
+  .positions-grid,
+  .position-panel {
+    margin-top: 7px;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .position-grid-header,
+  .positions-grid-header,
+  .position-panel-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    min-height: 38px;
+    padding: 6px 8px;
+  }
+
+  .position-grid-header h2,
+  .positions-grid-header h2,
+  .position-panel-header h2 {
+    font-size: 11px;
+  }
+
+  .position-grid thead,
+  .positions-grid thead,
+  .position-panel thead {
+    top: 38px;
+  }
+
+  .position-grid th,
+  .positions-grid th,
+  .position-panel th {
+    padding: 6px 7px;
+    font-size: 8px;
+  }
+
+  .position-grid td,
+  .positions-grid td,
+  .position-panel td {
+    padding: 7px;
+    font-size: 9px;
+  }
+
+  /* Preserve all columns through horizontal scrolling instead of
+     squeezing trading values into unreadable cells. */
+  .position-grid,
+  .positions-grid,
+  .position-panel {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .position-grid table,
+  .positions-grid table,
+  .position-panel table {
+    min-width: 720px;
+  }
+}
+
+@media (max-width: 420px) {
+  .summary-stripe {
+    grid-template-columns: 1fr !important;
+  }
+
+  .summary-stripe-item {
+    min-height: 38px !important;
+  }
+
+  .position-grid table,
+  .positions-grid table,
+  .position-panel table {
+    min-width: 680px;
+  }
+}
+
+
+/* ==========================================================================
+   FINAL TRADING TERMINAL LAYOUT
+   Summary lives in the left control rail.
+   One persistent bottom-right control toggles the rail.
+   ========================================================================== */
+
+/* Left rail */
+.page-sidebar {
+  width: min(360px, 92vw) !important;
+  padding: 12px 12px 28px !important;
+  background: #ffffff !important;
+  border-right: 1px solid #d7e0ea !important;
+  box-shadow: 12px 0 32px rgba(15, 23, 42, 0.10) !important;
+  z-index: 100 !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+}
+
+.sidebar-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 20 !important;
+  margin: -12px -12px 8px !important;
+  padding: 10px 12px !important;
+  background: rgba(255,255,255,.98) !important;
+  border-bottom: 1px solid #e5eaf0 !important;
+  backdrop-filter: blur(8px);
+}
+
+.sidebar-title {
+  color: #172033 !important;
+  font-size: 12px !important;
+  letter-spacing: .02em;
+}
+
+.page-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Summary is now a compact, always-near-the-top module inside the rail. */
+.page-sidebar .summary-panel {
+  position: sticky !important;
+  top: 48px !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+
+  display: block !important;
+  width: 100% !important;
+  box-sizing: border-box;
+
+  margin: 0 0 10px !important;
+  padding: 8px !important;
+
+  background: #ffffff !important;
+  border: 1px solid #d7e0ea !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, .07) !important;
+
+  z-index: 15 !important;
+}
+
+.page-sidebar .summary-stripe {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 5px !important;
+  width: 100% !important;
+}
+
+.page-sidebar .summary-stripe-item {
+  min-width: 0 !important;
+  min-height: 40px !important;
+  padding: 6px 7px !important;
+  box-sizing: border-box;
+
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+
+  overflow: hidden;
+}
+
+.page-sidebar .summary-stripe-item strong {
+  display: block;
+  min-width: 0;
+  color: #172033 !important;
+  font-size: 9px !important;
+  font-weight: 850 !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.page-sidebar .summary-stripe-item small {
+  display: block;
+  margin-top: 1px;
+  color: #64748b !important;
+  font-size: 8px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.page-sidebar .summary-stripe-item.market-status {
+  grid-column: 1 / -1;
+}
+
+.page-sidebar .summary-actions {
+  display: flex !important;
+  justify-content: flex-end !important;
+  margin-top: 6px !important;
+  gap: 5px !important;
+}
+
+/* The old summary action button is no longer the panel toggle. */
+.page-sidebar .summary-actions .refresh-button {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 6px !important;
+}
+
+/* Persistent bottom-right rail toggle. */
+.page-shell > .sidebar-float-button {
+  position: fixed !important;
+  right: 18px !important;
+  bottom: 18px !important;
+  left: auto !important;
+  top: auto !important;
+
+  width: 50px !important;
+  height: 50px !important;
+  min-width: 50px !important;
+  min-height: 50px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  border: 1px solid #1d4ed8 !important;
+  border-radius: 50% !important;
+  background: #2563eb !important;
+  color: #ffffff !important;
+
+  box-shadow:
+    0 8px 20px rgba(15, 23, 42, .20),
+    0 0 0 3px rgba(37, 99, 235, .10) !important;
+
+  z-index: 500 !important;
+}
+
+.page-shell > .sidebar-float-button:hover {
+  transform: translateY(-2px);
+  background: #1d4ed8 !important;
+}
+
+.page-shell > .sidebar-float-button.sidebar-open {
+  background: #0f172a !important;
+  border-color: #0f172a !important;
+}
+
+/* ==========================================================================
+   SIGNAL-CODED GRID ROWS
+   ========================================================================== */
+
+table tbody tr.signal-row-buy {
+  background: rgba(34, 197, 94, 0.075) !important;
+  box-shadow: inset 3px 0 0 #22c55e;
+}
+
+table tbody tr.signal-row-sell {
+  background: rgba(239, 68, 68, 0.075) !important;
+  box-shadow: inset 3px 0 0 #ef4444;
+}
+
+table tbody tr.signal-row-hold {
+  background: rgba(100, 116, 139, 0.055) !important;
+  box-shadow: inset 3px 0 0 #94a3b8;
+}
+
+table tbody tr.signal-row-setup {
+  background: rgba(245, 158, 11, 0.085) !important;
+  box-shadow: inset 3px 0 0 #f59e0b;
+}
+
+table tbody tr.signal-row-buy:hover {
+  background: rgba(34, 197, 94, 0.14) !important;
+}
+
+table tbody tr.signal-row-sell:hover {
+  background: rgba(239, 68, 68, 0.14) !important;
+}
+
+table tbody tr.signal-row-hold:hover {
+  background: rgba(100, 116, 139, 0.11) !important;
+}
+
+table tbody tr.signal-row-setup:hover {
+  background: rgba(245, 158, 11, 0.15) !important;
+}
+
+/* Keep cells transparent so the signal color reads across the entire row. */
+table tbody tr.signal-row-buy td,
+table tbody tr.signal-row-sell td,
+table tbody tr.signal-row-hold td,
+table tbody tr.signal-row-setup td {
+  background: transparent !important;
+}
+
+/* Signal pill remains the strongest visual indicator. */
+.signal-pill.buy {
+  background: #dcfce7 !important;
+  color: #166534 !important;
+  border-color: #86efac !important;
+}
+
+.signal-pill.sell {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+  border-color: #fca5a5 !important;
+}
+
+.signal-pill.hold {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border-color: #cbd5e1 !important;
+}
+
+.signal-pill.setup {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+  border-color: #fcd34d !important;
+}
+
+/* Mobile rail */
+@media (max-width: 768px) {
+  .page-sidebar {
+    width: min(360px, 94vw) !important;
+    padding: 10px 9px 24px !important;
+  }
+
+  .sidebar-header {
+    margin: -10px -9px 7px !important;
+    padding: 9px !important;
+  }
+
+  .page-sidebar .summary-panel {
+    top: 44px !important;
+    margin-bottom: 8px !important;
+    padding: 6px !important;
+  }
+
+  .page-sidebar .summary-stripe {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+  }
+
+  .page-sidebar .summary-stripe-item {
+    min-height: 38px !important;
+    padding: 5px 6px !important;
+  }
+
+  .page-sidebar .summary-stripe-item strong {
+    font-size: 8.5px !important;
+  }
+
+  .page-sidebar .summary-stripe-item small {
+    font-size: 7.5px !important;
+  }
+
+  .page-shell > .sidebar-float-button {
+    right: 14px !important;
+    bottom: 14px !important;
+    width: 46px !important;
+    height: 46px !important;
+    min-width: 46px !important;
+    min-height: 46px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .page-sidebar {
+    width: 100vw !important;
+  }
+
+  .page-sidebar .summary-stripe {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+
+/* FINAL: persistent control button — viewport bottom-right */
+.page-shell > .sidebar-float-button {
+  position: fixed !important;
+  top: auto !important;
+  left: auto !important;
+  right: 18px !important;
+  bottom: 18px !important;
+  margin: 0 !important;
+  transform: none !important;
+
+  width: 50px !important;
+  height: 50px !important;
+  min-width: 50px !important;
+  min-height: 50px !important;
+
+  z-index: 9999 !important;
+}
+
+.page-shell > .sidebar-float-button:hover {
+  transform: translateY(-2px) !important;
+}
+
+@media (max-width: 768px) {
+  .page-shell > .sidebar-float-button {
+    top: auto !important;
+    left: auto !important;
+    right: 14px !important;
+    bottom: 14px !important;
+    margin: 0 !important;
+
+    width: 46px !important;
+    height: 46px !important;
+    min-width: 46px !important;
+    min-height: 46px !important;
+  }
+}
+
+
+/* FINAL POSITION: always-accessible right-side panel toggle.
+   Vertically centered so it remains reachable while the main content
+   or footer is being scrolled. */
+.page-shell > .sidebar-float-button {
+  position: fixed !important;
+  top: 50% !important;
+  right: max(14px, env(safe-area-inset-right)) !important;
+  bottom: auto !important;
+  left: auto !important;
+  margin: 0 !important;
+  transform: translateY(-50%) !important;
+
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  min-height: 48px !important;
+
+  z-index: 2147483000 !important;
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+}
+
+.page-shell > .sidebar-float-button:hover {
+  transform: translateY(-50%) scale(1.05) !important;
+}
+
+.page-shell > .sidebar-float-button:active {
+  transform: translateY(-50%) scale(0.96) !important;
+}
+
+@media (max-width: 768px) {
+  .page-shell > .sidebar-float-button {
+    top: 50% !important;
+    right: max(10px, env(safe-area-inset-right)) !important;
+    bottom: auto !important;
+    left: auto !important;
+
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+}
+
+
+/* FINAL FIX: button is outside .page-shell so it cannot be clipped by the
+   shell's overflow or affected by the sidebar/main layout. */
+.sidebar-float-button {
+  position: fixed !important;
+  top: 50vh !important;
+  right: 16px !important;
+  bottom: auto !important;
+  left: auto !important;
+
+  transform: translate3d(0, -50%, 0) !important;
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  min-height: 48px !important;
+
+  z-index: 2147483647 !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  touch-action: manipulation !important;
+}
+
+.sidebar-float-button:hover {
+  transform: translate3d(0, -50%, 0) scale(1.05) !important;
+}
+
+.sidebar-float-button:active {
+  transform: translate3d(0, -50%, 0) scale(.96) !important;
+}
+
+@media (max-width: 768px) {
+  .sidebar-float-button {
+    top: 50vh !important;
+    right: max(10px, env(safe-area-inset-right)) !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+}
+
+
+/* ==========================================================================
+   FINAL LEFT PANEL / FOOTER SAFETY
+   ========================================================================== */
+
+/* Keep the complete drawer above the application footer. */
+.page-sidebar {
+  top: 0 !important;
+  bottom: 0 !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  box-sizing: border-box !important;
+
+  padding-bottom: max(28px, env(safe-area-inset-bottom)) !important;
+
+  z-index: 10000 !important;
+}
+
+/* The sidebar itself owns its scrolling; the footer can never cover it. */
+.page-sidebar.open {
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Sticky header remains reachable at the top of the drawer. */
+.page-sidebar .sidebar-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10001 !important;
+}
+
+/* Dedicated close button inside the left panel. */
+.sidebar-close-button {
+  flex: 0 0 auto !important;
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+
+  border: 1px solid #d7e0ea !important;
+  border-radius: 7px !important;
+  background: #ffffff !important;
+  color: #475569 !important;
+
+  cursor: pointer !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .08) !important;
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.sidebar-close-button:hover {
+  background: #fef2f2 !important;
+  border-color: #fca5a5 !important;
+  color: #dc2626 !important;
+}
+
+.sidebar-close-button:active {
+  transform: scale(.96);
+}
+
+.sidebar-close-button .material-icons {
+  font-size: 19px !important;
+  line-height: 1 !important;
+}
+
+/* Never allow the footer or other application layers to paint over the drawer. */
+.page-sidebar,
+.page-sidebar.open,
+.sidebar-backdrop {
+  isolation: isolate;
+}
+
+/* Mobile: account for bottom safe-area while keeping the entire panel usable. */
+@media (max-width: 768px) {
+  .page-sidebar {
+    width: min(360px, 94vw) !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    padding-bottom: max(24px, env(safe-area-inset-bottom)) !important;
+  }
+
+  .sidebar-close-button {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .page-sidebar {
+    width: 100vw !important;
+  }
+}
+
+
+/* ==========================================================================
+   FINAL FLOATING TOGGLE
+   Bottom-right, permanently accessible, positioned ABOVE the application
+   footer. No left-panel close button is used.
+   ========================================================================== */
+
+.sidebar-float-button {
+  position: fixed !important;
+
+  top: auto !important;
+  left: auto !important;
+  right: max(16px, env(safe-area-inset-right)) !important;
+
+  /* Footer-safe position. */
+  bottom: calc(72px + env(safe-area-inset-bottom)) !important;
+
+  margin: 0 !important;
+  transform: none !important;
+
+  width: 50px !important;
+  height: 50px !important;
+  min-width: 50px !important;
+  min-height: 50px !important;
+
+  z-index: 2147483647 !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  touch-action: manipulation !important;
+}
+
+.sidebar-float-button:hover {
+  transform: translateY(-2px) !important;
+}
+
+.sidebar-float-button:active {
+  transform: translateY(0) scale(.96) !important;
+}
+
+@media (max-width: 768px) {
+  .sidebar-float-button {
+    top: auto !important;
+    left: auto !important;
+    right: max(12px, env(safe-area-inset-right)) !important;
+
+    /* Keep it above the mobile footer/safe area. */
+    bottom: calc(64px + env(safe-area-inset-bottom)) !important;
+
+    width: 46px !important;
+    height: 46px !important;
+    min-width: 46px !important;
+    min-height: 46px !important;
+  }
+}
+
+/* Remove any legacy close-button styling from affecting layout. */
+.sidebar-close-button {
+  display: none !important;
+}
+
+
+/* ==========================================================================
+   DEFINITIVE VIEWPORT TOGGLE
+   The Angular component moves this button directly under <body>. Therefore
+   it is not affected by home-main's overflow:auto or any routed-component
+   scrolling context.
+   ========================================================================== */
+
+body > .sidebar-float-button {
+  position: fixed !important;
+  top: auto !important;
+  left: auto !important;
+  right: 16px !important;
+
+  /* Footer is approximately 48-60px on desktop. Keep a clear 12px gap. */
+  bottom: 72px !important;
+
+  margin: 0 !important;
+  transform: none !important;
+
+  width: 50px !important;
+  height: 50px !important;
+  min-width: 50px !important;
+  min-height: 50px !important;
+
+  z-index: 2147483647 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  pointer-events: auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  touch-action: manipulation !important;
+}
+
+body > .sidebar-float-button:hover {
+  transform: translateY(-2px) !important;
+}
+
+body > .sidebar-float-button:active {
+  transform: translateY(0) scale(.96) !important;
+}
+
+@media (max-width: 768px) {
+  body > .sidebar-float-button {
+    right: max(12px, env(safe-area-inset-right)) !important;
+
+    /* Mobile footer wraps into a taller row. */
+    bottom: 104px !important;
+
+    width: 46px !important;
+    height: 46px !important;
+    min-width: 46px !important;
+    min-height: 46px !important;
+  }
+}
+
+
+/* ==========================================================================
+   MOBILE FOOTER-SAFE FLOATING TOGGLE — FINAL OVERRIDE
+   The footer can wrap/become taller on narrow phones. Keep the toggle
+   completely above it with a generous clearance.
+   ========================================================================== */
+
+body > .sidebar-float-button {
+  position: fixed !important;
+  top: auto !important;
+  left: auto !important;
+  right: max(16px, env(safe-area-inset-right)) !important;
+  bottom: 76px !important;
+  z-index: 2147483647 !important;
+}
+
+@media (max-width: 768px) {
+  body > .sidebar-float-button {
+    position: fixed !important;
+    top: auto !important;
+    left: auto !important;
+
+    /* 112px clears the mobile footer even when it wraps.
+       Add the device safe-area inset on phones with a home indicator. */
+    right: max(12px, env(safe-area-inset-right)) !important;
+    bottom: calc(112px + env(safe-area-inset-bottom)) !important;
+
+    width: 46px !important;
+    height: 46px !important;
+    min-width: 46px !important;
+    min-height: 46px !important;
+
+    transform: none !important;
+  }
+}
+
+@media (max-width: 420px) {
+  body > .sidebar-float-button {
+    /* Extra clearance for the narrowest layouts where the footer
+       can occupy multiple lines. */
+    bottom: calc(128px + env(safe-area-inset-bottom)) !important;
+    right: max(10px, env(safe-area-inset-right)) !important;
+  }
+}
+
+
+/* ==========================================================================
+   DEFINITIVE FOOTER-AWARE TOGGLE
+   TypeScript calculates the exact bottom offset from the rendered footer.
+   CSS deliberately does NOT use a fixed pixel footer offset anymore.
+   ========================================================================== */
+
+body > .sidebar-float-button {
+  position: fixed !important;
+  top: auto !important;
+  left: auto !important;
+  right: max(12px, env(safe-area-inset-right)) !important;
+  bottom: 12px !important; /* runtime replaces this with footer-aware value */
+
+  z-index: 2147483647 !important;
+  margin: 0 !important;
+  transform: none !important;
+
+  pointer-events: auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  touch-action: manipulation !important;
+}
+
+@media (max-width: 768px) {
+  body > .sidebar-float-button {
+    right: max(10px, env(safe-area-inset-right)) !important;
+    bottom: 12px !important; /* runtime calculates the real footer clearance */
+    width: 46px !important;
+    height: 46px !important;
+    min-width: 46px !important;
+    min-height: 46px !important;
+  }
+}
+
+
+/* The toggle is moved to document.body by AngelOneComponent. Its exact
+   vertical position is applied inline from the real footer geometry. */
+:host ::ng-deep body > .sidebar-float-button {
+  position: fixed !important;
+  top: auto !important;
+  left: auto !important;
+  right: 12px !important;
+  z-index: 2147483647 !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+@media (max-width: 768px) {
+  :host ::ng-deep body > .sidebar-float-button {
+    right: max(10px, env(safe-area-inset-right)) !important;
+  }
+}

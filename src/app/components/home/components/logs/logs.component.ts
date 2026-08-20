@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, inject, OnChanges, SimpleChanges } from '@angular/core';
+import { finalize } from 'rxjs';
 import { LogFileEntry, LogsService } from '../../../../services/logs.service';
 import { ToastService } from '../../../../services/toast.service';
 
@@ -20,7 +21,7 @@ export class LogsComponent implements OnChanges {
   isLoadingLogs = false;
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['isOpen'] && this.isOpen) {
+    if (changes['isOpen']?.currentValue === true) {
       this.loadLogs();
     }
   }
@@ -28,17 +29,26 @@ export class LogsComponent implements OnChanges {
   loadLogs() {
     this.isLoadingLogs = true;
 
-    this.#logsService.getLogs().subscribe({
-      next: (response) => {
-        this.logs = this.normalizeLogs(response ?? []);
-        this.isLoadingLogs = false;
-      },
-      error: () => {
-        this.logs = [];
-        this.isLoadingLogs = false;
-        this.#toastService.error('Unable to load logs at the moment.');
-      }
-    });
+    this.#logsService.getLogs()
+      .pipe(
+        finalize(() => {
+          // Always clear the loading state, including unexpected response/stream failures.
+          this.isLoadingLogs = false;
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          // The API may return either a raw array or a wrapped payload
+          // (for example { logs: [...] } / { files: [...] } / { data: [...] }).
+          // Normalize it before mapping so a valid HTTP response can never
+          // leave the panel permanently stuck on "Loading logs...".
+          this.logs = this.normalizeLogs(response);
+        },
+        error: () => {
+          this.logs = [];
+          this.#toastService.error('Unable to load logs at the moment.');
+        }
+      });
   }
 
   downloadLog(fileName: string) {
@@ -77,8 +87,30 @@ export class LogsComponent implements OnChanges {
     this.close.emit();
   }
 
-  private normalizeLogs(response: Array<Partial<LogFileEntry> | any>): LogFileEntry[] {
-    return (response ?? []).map((log: any) => ({
+  private normalizeLogs(response: unknown): LogFileEntry[] {
+    const payload = response as any;
+
+    const entries = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.logs)
+        ? payload.logs
+        : Array.isArray(payload?.Logs)
+          ? payload.Logs
+          : Array.isArray(payload?.files)
+            ? payload.files
+            : Array.isArray(payload?.Files)
+              ? payload.Files
+              : Array.isArray(payload?.data)
+                ? payload.data
+                : Array.isArray(payload?.Data)
+                  ? payload.Data
+                  : Array.isArray(payload?.items)
+                    ? payload.items
+                    : Array.isArray(payload?.Items)
+                      ? payload.Items
+                      : [];
+
+    return entries.map((log: any) => ({
       name: log?.name ?? log?.Name ?? '',
       size: log?.size ?? log?.Size ?? 0,
       created: log?.created ?? log?.Created ?? '',

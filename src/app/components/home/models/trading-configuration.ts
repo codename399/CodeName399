@@ -131,7 +131,43 @@ export interface OptionsTradingSettings extends InstrumentTradingSettings {
 }
 
 
+export type OptimizationMode = 'CountBased' | 'TimeBased' | 0 | 1;
+
+export interface OptimizationSettings {
+  enabled: boolean;
+  mode: OptimizationMode;
+  timeBasedCandidateMinutes: number;
+  paperTradingOnly: boolean;
+  sendConfigurationEmail: boolean;
+  sendDailyEmail: boolean;
+  autoPromoteBestConfiguration: boolean;
+
+  pollIntervalSeconds: number;
+  minimumCandidateMinutes: number;
+  noSignalTimeoutMinutes: number;
+  noVirtualConfirmationTimeoutMinutes: number;
+  noPaperTradeTimeoutMinutes: number;
+  maxVirtualTradeDurationMinutes: number;
+  maxPaperTradeDurationMinutes: number;
+  forceCloseTimedOutPaperTrades: boolean;
+  maximumCandidateMinutes: number;
+
+  maximumCandidatesPerDay: number;
+  minimumCompletedTradesForAcceptance: number;
+  preferredCompletedTrades: number;
+  minimumVirtualCandidatesForAnalysis: number;
+
+  minimumNetProfit: number;
+  minimumProfitFactor: number;
+  maximumDrawdownPercent: number;
+
+  dailyEmailDelayMinutes: number;
+  validationHistoryFile: string;
+  reportDirectory: string;
+}
+
 export interface TradingConfiguration {
+  optimization: OptimizationSettings;
   id: string;
 
   instrumentType?: InstrumentType;
@@ -183,6 +219,17 @@ export interface TradingConfiguration {
   minimumRoiPercent: number;
 
   minimumNetProfit: number;
+
+  enableLiveTradingPerformanceGate?: boolean;
+  minimumLiveTradingPerformanceTrades?: number;
+  minimumLiveTradingWinRate?: number;
+  minimumLiveTradingProfitFactor?: number;
+  minimumLiveTradingNetProfit?: number;
+  minimumLiveTradingRiskReward?: number;
+  minimumLiveTradingConfidence?: number;
+  minimumRecentLiveTradingTrades?: number;
+  requirePositiveRecentLiveTradingNetProfit?: boolean;
+  requireBestStrategyMatchForLiveTrading?: boolean;
 
   autoSquareOff: boolean;
 
@@ -331,7 +378,9 @@ export interface EvaluationSettings {
 export interface ExitSettings {
   atrExitMultiplier: number;
   minimumProfitPercent: number;
+  trailingActivationNetProfit?: number;
   trailingStopAtrMultiplier: number;
+  trailingProfitRetentionPercent?: number;
 }
 
 // ValidationSettings is defined later with extended fields.

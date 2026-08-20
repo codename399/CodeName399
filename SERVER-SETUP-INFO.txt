@@ -1,0 +1,18 @@
+CodeName399 Windows server package prepared from the supplied API and Angular projects.
+
+Server:
+C:\Users\gauda\source\repos\codename399
+C:\Servers\CodeName399
+
+Public:
+https://codename399.com
+https://api.codename399.com
+
+Cloudflare Tunnel:
+codename399-tunnel
+b123fc44-8e96-45dd-b9fe-4de51eed6e81
+
+Run setup-server.bat once as Administrator.
+Then use deploy-windows.bat for normal deployments.
+
+The setup prompts for secrets rather than storing them in the batch file.

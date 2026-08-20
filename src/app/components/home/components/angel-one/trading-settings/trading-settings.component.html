@@ -44,12 +44,190 @@
     </div>
   </div>
 
+  <section class="optimization-status-card" aria-live="polite">
+    <div class="optimization-status-header">
+      <div class="optimization-status-title">
+        <span class="optimization-kicker">AUTONOMOUS PAPER OPTIMIZATION</span>
+        <h2>Optimizer Runtime Status</h2>
+        <p>
+          Tests unique configurations during market hours using virtual and paper
+          trading, then rotates to the next configuration when the current one
+          completes or times out.
+        </p>
+      </div>
+
+      <div class="optimization-runtime-actions">
+        <button
+          type="button"
+          class="optimization-refresh-button"
+          (click)="refreshOptimizationStatus()"
+          [disabled]="optimizationStatusLoading"
+          title="Refresh optimizer status"
+        >
+          {{ optimizationStatusLoading ? 'Refreshing…' : '↻ Refresh' }}
+        </button>
+      </div>
+
+      <div class="optimization-runtime-badges">
+        <span
+          class="optimization-status-badge"
+          [class.is-running]="optimizationStatus?.running === true"
+          [class.is-waiting]="optimizationStatus?.running !== true && optimizationStatus?.marketOpen === true"
+        >
+          @if (optimizationStatusLoading) {
+            Checking...
+          } @else if (!form.controls.optimization.controls.enabled.value) {
+            Disabled by Configuration
+          } @else if (optimizationStatus?.running === true) {
+            Running
+          } @else if (optimizationStatus?.state === 'LIVE_TRADE_OPEN') {
+            Paused — Live Trade Open
+          } @else if (optimizationStatus?.state === 'AUTO_TRADING_ENABLED') {
+            Paused — Auto Trading Enabled
+          } @else if (optimizationStatus?.state === 'PAPER_TRADING_ONLY_REQUIRED') {
+            Paused — Paper-Only Required
+          } @else if (optimizationStatus?.state === 'VALIDATION_HISTORY_UNAVAILABLE') {
+            Paused — History Unavailable
+          } @else if (optimizationStatus?.state === 'NO_UNIQUE_CONFIGURATION') {
+            No Unique Configuration
+          } @else if (optimizationStatus?.state === 'MAXIMUM_CANDIDATES_REACHED') {
+            Daily Candidate Limit Reached
+          } @else if (optimizationStatus?.state === 'WAITING_FOR_MARKET' || optimizationStatus?.marketOpen === false) {
+            Waiting for Market
+          } @else if (optimizationStatus?.day) {
+            Waiting
+          } @else {
+            Checking Status
+          }
+        </span>
+
+        <span
+          class="optimization-config-badge"
+          [class.is-enabled]="form.controls.optimization.controls.enabled.value"
+        >
+          {{ form.controls.optimization.controls.enabled.value ? 'Configured: ON' : 'Configured: OFF' }}
+        </span>
+      </div>
+    </div>
+
+    @if (optimizationStatus?.candidate; as candidate) {
+      <div class="optimization-current-banner">
+        <div>
+          <span>ACTIVE CONFIGURATION</span>
+          <strong>{{ candidate.candidateId }}</strong>
+        </div>
+        <div>
+          <span>Decision</span>
+          <strong>{{ candidate.decision || 'Testing' }}</strong>
+        </div>
+        <div>
+          <span>Reason</span>
+          <strong>{{ candidate.reason || 'Collecting evidence' }}</strong>
+        </div>
+        <div>
+          <span>Mode</span>
+          <strong>{{ optimizationModeLabel(optimizationStatus?.mode) }}</strong>
+        </div>
+        @if (normalizeOptimizationMode(optimizationStatus?.mode) === 1) {
+          <div>
+            <span>Next Configuration</span>
+            <strong>
+              @if ((optimizationStatus?.remainingSeconds ?? 0) > 0) {
+                {{ ((optimizationStatus?.remainingSeconds ?? 0) / 60) | number:'1.0-0' }} min
+              } @else {
+                Due
+              }
+            </strong>
+          </div>
+        }
+      </div>
+
+      <div class="optimization-status-grid">
+        <div>
+          <span class="optimization-label">Strategy</span>
+          <strong>{{ strategyName(candidate.strategy) }}</strong>
+        </div>
+        <div>
+          <span class="optimization-label">Candidate</span>
+          <strong>#{{ candidate.candidateNumber ?? 0 }}</strong>
+        </div>
+        <div>
+          <span class="optimization-label">Completed Paper Trades</span>
+          <strong>{{ candidate.metrics?.completedPaperTrades ?? 0 }}</strong>
+        </div>
+        <div>
+          <span class="optimization-label">Win Rate</span>
+          <strong>{{ (candidate.metrics?.winRate ?? 0) | number:'1.0-1' }}%</strong>
+        </div>
+        <div>
+          <span class="optimization-label">Net P&amp;L</span>
+          <strong
+            [class.optimization-profit]="(candidate.metrics?.netProfit ?? 0) >= 0"
+            [class.optimization-loss]="(candidate.metrics?.netProfit ?? 0) < 0"
+          >
+            {{ (candidate.metrics?.netProfit ?? 0) | number:'1.2-2' }}
+          </strong>
+        </div>
+        <div>
+          <span class="optimization-label">Profit Factor</span>
+          <strong>{{ (candidate.metrics?.profitFactor ?? 0) | number:'1.2-2' }}</strong>
+        </div>
+        <div>
+          <span class="optimization-label">Drawdown</span>
+          <strong>{{ (candidate.metrics?.maxDrawdownPercent ?? 0) | number:'1.1-1' }}%</strong>
+        </div>
+        <div>
+          <span class="optimization-label">Evidence</span>
+          <strong>{{ candidate.metrics?.meetsMinimumEvidence ? 'Sufficient' : 'Collecting' }}</strong>
+        </div>
+      </div>
+
+      <div class="optimization-activity-grid">
+        <span>Evaluations <strong>{{ candidate.activity?.evaluationSignals ?? 0 }}</strong></span>
+        <span>Virtual Candidates <strong>{{ candidate.activity?.virtualCandidates ?? 0 }}</strong></span>
+        <span>Virtual Confirmed <strong>{{ candidate.activity?.virtualConfirmations ?? 0 }}</strong></span>
+        <span>Paper Trades <strong>{{ candidate.activity?.paperTrades ?? 0 }}</strong></span>
+      </div>
+    } @else {
+      @if (optimizationStatus?.day; as day) {
+        <div class="optimization-idle">
+          <div>
+            <span class="optimization-label">Today</span>
+            <strong>{{ day.date | date:'dd MMM yyyy' }}</strong>
+          </div>
+          <div>
+            <span class="optimization-label">Runtime</span>
+            <strong>{{ optimizationRuntimeLabel() }}</strong>
+          </div>
+          <div>
+            <span class="optimization-label">Configurations Tested</span>
+            <strong>{{ day.candidates?.length ?? 0 }}</strong>
+          </div>
+          <div>
+            <span class="optimization-label">Best Configuration</span>
+            <strong>{{ day.bestCandidateId || 'Not selected yet' }}</strong>
+          </div>
+        </div>
+      } @else {
+        <div class="optimization-idle optimization-no-runtime">
+          <strong>
+            @if (form.controls.optimization.controls.enabled.value) {
+              Optimization is enabled. Current runtime state: {{ optimizationRuntimeLabel() }}.
+            } @else {
+              Optimization is disabled in Trading Configuration.
+            }
+          </strong>
+        </div>
+      }
+    }
+  </section>
+
   @if (loading) {
     <div class="loading">Loading Trading Configuration...</div>
   } @else {
     <form class="settings-form" [formGroup]="form">
       <div class="settings-grid accordion-grid">
-        <details class="settings-card" open>
+        <details class="settings-card" open (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>
               <h2>Trading</h2>
@@ -108,7 +286,193 @@
           </div>
         </details>
 
-        <details class="settings-card instrument-profile-card" open>
+        <details class="settings-card optimization-settings-card" (toggle)="onAccordionToggle($event)">
+          <summary class="card-header">
+            <div>
+              <h2>Optimization Settings</h2>
+              <p>Controls autonomous configuration testing, virtual/paper trade timeouts, rotation and reporting.</p>
+            </div>
+          </summary>
+
+          <div class="card-body" formGroupName="optimization">
+            <div class="grid-2">
+              <label class="toggle-field">
+                <input type="checkbox" formControlName="enabled" />
+                <span>Enable Autonomous Optimization</span>
+              </label>
+              <label class="toggle-field">
+                <input type="checkbox" formControlName="paperTradingOnly" />
+                <span>Paper Trading Only</span>
+              </label>
+              <label class="toggle-field">
+                <input type="checkbox" formControlName="sendConfigurationEmail" />
+                <span>Email Summary Before Configuration Switch</span>
+              </label>
+              <label class="toggle-field">
+                <input type="checkbox" formControlName="sendDailyEmail" />
+                <span>Send Daily Optimization Email</span>
+              </label>
+              <label class="toggle-field">
+                <input type="checkbox" formControlName="autoPromoteBestConfiguration" />
+                <span>Auto Promote Best Configuration</span>
+              </label>
+              <label class="toggle-field">
+                <input type="checkbox" formControlName="forceCloseTimedOutPaperTrades" />
+                <span>Force Close Timed-out Paper Trades</span>
+              </label>
+            </div>
+
+            <div class="grid-4 compact-profile-grid">
+              <div class="field-row">
+                <label class="field-label" for="optimizationMode">Optimization Mode</label>
+                <select
+                  id="optimizationMode"
+                  formControlName="mode"
+                  class="field-input"
+                >
+                  <option [ngValue]="0">Count Based</option>
+                  <option [ngValue]="1">Time Based</option>
+                </select>
+                <small class="field-help">
+                  {{ optimizationModeLabel(form.controls.optimization.controls.mode.value) }}
+                  optimization rotates using
+                  {{ form.controls.optimization.controls.mode.value === 1 ? 'a fixed time interval' : 'the existing evidence/trade-count rules' }}.
+                </small>
+              </div>
+
+              @if (normalizeOptimizationMode(form.controls.optimization.controls.mode.value) === 1) {
+                <div class="field-row">
+                  <label class="field-label" for="timeBasedCandidateMinutes">Time-Based Candidate Duration</label>
+                  <div class="input-with-suffix">
+                    <input
+                      id="timeBasedCandidateMinutes"
+                      type="number"
+                      formControlName="timeBasedCandidateMinutes"
+                      class="field-input"
+                      min="1"
+                      step="1"
+                    />
+                    <span class="suffix">min</span>
+                  </div>
+                  <small class="field-help">A new configuration is generated after this interval.</small>
+                </div>
+              }
+            </div>
+
+            <div class="grid-4 compact-profile-grid">
+              <div class="field-row">
+                <label class="field-label" for="optimizationPollIntervalSeconds">Poll Interval</label>
+                <div class="input-with-suffix">
+                  <input id="optimizationPollIntervalSeconds" type="number" formControlName="pollIntervalSeconds" class="field-input" min="1" />
+                  <span class="suffix">sec</span>
+                </div>
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="minimumCandidateMinutes">Minimum Candidate Duration</label>
+                <div class="input-with-suffix">
+                  <input id="minimumCandidateMinutes" type="number" formControlName="minimumCandidateMinutes" class="field-input" min="0" />
+                  <span class="suffix">min</span>
+                </div>
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="maximumCandidateMinutes">Maximum Candidate Duration</label>
+                <div class="input-with-suffix">
+                  <input id="maximumCandidateMinutes" type="number" formControlName="maximumCandidateMinutes" class="field-input" min="0" />
+                  <span class="suffix">min</span>
+                </div>
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="noSignalTimeoutMinutes">No Signal Timeout</label>
+                <div class="input-with-suffix">
+                  <input id="noSignalTimeoutMinutes" type="number" formControlName="noSignalTimeoutMinutes" class="field-input" min="0" />
+                  <span class="suffix">min</span>
+                </div>
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="noVirtualConfirmationTimeoutMinutes">No Virtual Confirmation Timeout</label>
+                <div class="input-with-suffix">
+                  <input id="noVirtualConfirmationTimeoutMinutes" type="number" formControlName="noVirtualConfirmationTimeoutMinutes" class="field-input" min="0" />
+                  <span class="suffix">min</span>
+                </div>
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="noPaperTradeTimeoutMinutes">No Paper Trade Timeout</label>
+                <div class="input-with-suffix">
+                  <input id="noPaperTradeTimeoutMinutes" type="number" formControlName="noPaperTradeTimeoutMinutes" class="field-input" min="0" />
+                  <span class="suffix">min</span>
+                </div>
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="maxVirtualTradeDurationMinutes">Max Virtual Trade Duration</label>
+                <div class="input-with-suffix">
+                  <input id="maxVirtualTradeDurationMinutes" type="number" formControlName="maxVirtualTradeDurationMinutes" class="field-input" min="0" />
+                  <span class="suffix">min</span>
+                </div>
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="maxPaperTradeDurationMinutes">Max Paper Trade Duration</label>
+                <div class="input-with-suffix">
+                  <input id="maxPaperTradeDurationMinutes" type="number" formControlName="maxPaperTradeDurationMinutes" class="field-input" min="0" />
+                  <span class="suffix">min</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid-4 compact-profile-grid">
+              <div class="field-row">
+                <label class="field-label" for="maximumCandidatesPerDay">Maximum Candidates / Day</label>
+                <input id="maximumCandidatesPerDay" type="number" formControlName="maximumCandidatesPerDay" class="field-input" min="1" />
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="minimumCompletedTradesForAcceptance">Minimum Completed Trades</label>
+                <input id="minimumCompletedTradesForAcceptance" type="number" formControlName="minimumCompletedTradesForAcceptance" class="field-input" min="0" />
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="preferredCompletedTrades">Preferred Completed Trades</label>
+                <input id="preferredCompletedTrades" type="number" formControlName="preferredCompletedTrades" class="field-input" min="0" />
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="minimumVirtualCandidatesForAnalysis">Minimum Virtual Candidates</label>
+                <input id="minimumVirtualCandidatesForAnalysis" type="number" formControlName="minimumVirtualCandidatesForAnalysis" class="field-input" min="0" />
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="minimumNetProfit">Minimum Net Profit</label>
+                <input id="minimumNetProfit" type="number" formControlName="minimumNetProfit" class="field-input" step="0.01" />
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="minimumProfitFactor">Minimum Profit Factor</label>
+                <input id="minimumProfitFactor" type="number" formControlName="minimumProfitFactor" class="field-input" min="0" step="0.01" />
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="maximumDrawdownPercent">Maximum Drawdown</label>
+                <div class="input-with-suffix">
+                  <input id="maximumDrawdownPercent" type="number" formControlName="maximumDrawdownPercent" class="field-input" min="0" step="0.1" />
+                  <span class="suffix">%</span>
+                </div>
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="dailyEmailDelayMinutes">Daily Email Delay</label>
+                <div class="input-with-suffix">
+                  <input id="dailyEmailDelayMinutes" type="number" formControlName="dailyEmailDelayMinutes" class="field-input" min="0" />
+                  <span class="suffix">min</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="field-row">
+                <label class="field-label" for="validationHistoryFile">Validation History File</label>
+                <input id="validationHistoryFile" type="text" formControlName="validationHistoryFile" class="field-input" />
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="reportDirectory">Report Directory</label>
+                <input id="reportDirectory" type="text" formControlName="reportDirectory" class="field-input" />
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="settings-card instrument-profile-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>
               <h2>Instrument Profile</h2>
@@ -203,7 +567,7 @@
           </div>
         </details>
 
-        <details class="settings-card">
+        <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>
               <h2>Execution & Position Safety</h2>
@@ -230,7 +594,7 @@
         </details>
 
         @if (isFutures) {
-          <details class="settings-card fno-profile-card" open>
+          <details class="settings-card fno-profile-card" (toggle)="onAccordionToggle($event)">
             <summary class="card-header"><div><h2>Futures</h2><p>Expiry, OI and futures-specific risk controls.</p></div></summary>
             <div class="card-body grid-4 compact-profile-grid">
               <div class="field-row"><label class="field-label">Expiry</label><select formControlName="futuresExpiryType" class="field-input"><option value="NEAR">NEAR</option><option value="NEXT">NEXT</option><option value="FAR">FAR</option></select></div>
@@ -243,7 +607,7 @@
         }
 
         @if (isOptions) {
-          <details class="settings-card fno-profile-card" open>
+          <details class="settings-card fno-profile-card" (toggle)="onAccordionToggle($event)">
             <summary class="card-header"><div><h2>Options — Contract Selection</h2><p>CE/PE selection, expiry, liquidity and Greeks.</p></div></summary>
             <div class="card-body grid-4 compact-profile-grid">
               <div class="field-row"><label class="field-label">Option Side</label><select formControlName="optionsOptionSide" class="field-input">@for (item of optionSides; track item.value) {<option [ngValue]="item.value">{{ item.text }}</option>}</select></div>
@@ -276,7 +640,7 @@
             </div>
           </details>
 
-          <details class="settings-card fno-profile-card">
+          <details class="settings-card fno-profile-card" (toggle)="onAccordionToggle($event)">
             <summary class="card-header"><div><h2>Options — Long / Short Mode</h2><p>Control premium buying and naked writing independently.</p></div></summary>
             <div class="card-body grid-4 compact-profile-grid">
               <div class="field-row"><label class="field-label">Trade Mode</label><select formControlName="optionsTradeMode" class="field-input">@for (item of optionTradeModes; track item.value) {<option [ngValue]="item.value">{{ item.text }}</option>}</select></div>
@@ -303,7 +667,7 @@
             </div>
           </details>
 
-          <details class="settings-card fno-profile-card">
+          <details class="settings-card fno-profile-card" (toggle)="onAccordionToggle($event)">
             <summary class="card-header"><div><h2>Naked Options — Stress & Emergency Risk</h2><p>Hard limits for short CE/PE exposure and emergency exits.</p></div></summary>
             <div class="card-body grid-4 compact-profile-grid">
               <div class="field-row"><label class="field-label">Expiry Risk Multiplier</label><input type="number" formControlName="optionsMaximumExpiryDayRiskMultiplier" class="field-input" min="0" step="0.05" /></div>
@@ -329,7 +693,7 @@
           </details>
         }
 
-        <details class="settings-card">
+        <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>
               <h2>Risk Management</h2>
@@ -397,7 +761,63 @@
           </div>
         </details>
 
-        <details class="settings-card">
+                <details class="settings-card live-trading-performance-card" (toggle)="onAccordionToggle($event)">
+          <summary class="card-header">
+            <div>
+              <h2>Live Trading Performance Gate</h2>
+              <p>Optional hard gate for real-money orders based on per-stock historical performance. Paper trading is not blocked.</p>
+            </div>
+          </summary>
+          <div class="card-body">
+            <div class="grid-2">
+              <label class="toggle-field">
+                <input type="checkbox" formControlName="enableLiveTradingPerformanceGate" />
+                <span>Enable Live Trading Performance Gate</span>
+              </label>
+              <label class="toggle-field">
+                <input type="checkbox" formControlName="requireBestStrategyMatchForLiveTrading" />
+                <span>Require Current Strategy Match</span>
+              </label>
+              <label class="toggle-field">
+                <input type="checkbox" formControlName="requirePositiveRecentLiveTradingNetProfit" />
+                <span>Require Positive Recent Net Profit</span>
+              </label>
+            </div>
+
+            <div class="grid-4 compact-profile-grid">
+              <div class="field-row">
+                <label class="field-label" for="minimumLiveTradingPerformanceTrades">Minimum Performance Trades</label>
+                <input id="minimumLiveTradingPerformanceTrades" type="number" formControlName="minimumLiveTradingPerformanceTrades" class="field-input" min="0" />
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="minimumLiveTradingWinRate">Minimum Win Rate</label>
+                <div class="input-with-suffix"><input id="minimumLiveTradingWinRate" type="number" formControlName="minimumLiveTradingWinRate" class="field-input" min="0" max="100" step="1" /><span class="suffix">%</span></div>
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="minimumLiveTradingProfitFactor">Minimum Profit Factor</label>
+                <input id="minimumLiveTradingProfitFactor" type="number" formControlName="minimumLiveTradingProfitFactor" class="field-input" min="0" step="0.01" />
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="minimumLiveTradingNetProfit">Minimum Net Profit</label>
+                <div class="input-with-suffix"><input id="minimumLiveTradingNetProfit" type="number" formControlName="minimumLiveTradingNetProfit" class="field-input" min="0" step="0.01" /><span class="suffix">₹</span></div>
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="minimumLiveTradingRiskReward">Minimum Risk / Reward</label>
+                <input id="minimumLiveTradingRiskReward" type="number" formControlName="minimumLiveTradingRiskReward" class="field-input" min="0" step="0.1" />
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="minimumLiveTradingConfidence">Minimum Confidence</label>
+                <div class="input-with-suffix"><input id="minimumLiveTradingConfidence" type="number" formControlName="minimumLiveTradingConfidence" class="field-input" min="0" max="100" step="1" /><span class="suffix">%</span></div>
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="minimumRecentLiveTradingTrades">Minimum Recent Trades</label>
+                <input id="minimumRecentLiveTradingTrades" type="number" formControlName="minimumRecentLiveTradingTrades" class="field-input" min="0" />
+              </div>
+            </div>
+          </div>
+        </details>
+
+<details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>
               <h2>Virtual Trading</h2>
@@ -496,7 +916,7 @@
         </details>
 
         @if (isEquity) {
-        <details class="settings-card">
+        <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>
               <h2>Evaluation Scoring</h2>
@@ -1133,7 +1553,7 @@
         </details>
         }
 
-        <details class="settings-card">
+        <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>
               <h2>Virtual Trading Tuning</h2>
@@ -1285,7 +1705,7 @@
         </details>
 
         @if (isEquity) {
-        <details class="settings-card">
+        <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>
               <h2>Validation Thresholds</h2>
@@ -1740,7 +2160,7 @@
         </details>
         }
 
-        <details class="settings-card">
+        <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>
               <h2>Confidence Scoring</h2>
@@ -1825,7 +2245,7 @@
           </div>
         </details>
 
-        <details class="settings-card">
+        <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>
               <h2>Reporting Settings</h2>
@@ -1898,7 +2318,7 @@
         </details>
 
         @if (isEquity) {
-        <details class="settings-card">
+        <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>
               <h2>Evaluation Thresholds</h2>
@@ -2027,7 +2447,7 @@
         </details>
         }
 
-        <details class="settings-card">
+        <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>
               <h2>Exit Settings</h2>
@@ -2063,6 +2483,26 @@
             </div>
 
             <div class="field-row">
+              <label class="field-label" for="trailingActivationNetProfit">
+                Trailing Activation Net Profit
+              </label>
+              <div class="input-with-suffix">
+                <input
+                  id="trailingActivationNetProfit"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  formControlName="trailingActivationNetProfit"
+                  class="field-input"
+                />
+                <span class="suffix">₹</span>
+              </div>
+              <small class="field-help">
+                Trailing activates only after this stock's estimated net profit reaches the threshold after charges. Set 0 to require positive net profit.
+              </small>
+            </div>
+
+            <div class="field-row">
               <label class="field-label" for="trailingStopAtrMultiplier">
                 Trailing Stop ATR Multiplier
               </label>
@@ -2074,11 +2514,32 @@
                 class="field-input"
               />
             </div>
+
+            <div class="field-row">
+              <label class="field-label" for="trailingProfitRetentionPercent">
+                Trailing Profit Retention
+              </label>
+              <div class="input-with-suffix">
+                <input
+                  id="trailingProfitRetentionPercent"
+                  type="number"
+                  step="1"
+                  min="0"
+                  max="100"
+                  formControlName="trailingProfitRetentionPercent"
+                  class="field-input"
+                />
+                <span class="suffix">%</span>
+              </div>
+              <small class="field-help">
+                Retains this percentage of the stock's peak net profit. The trailing stop ratchets upward and never loosens.
+              </small>
+            </div>
           </div>
         </details>
 
 
-        <details class="settings-card">
+        <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>
               <h2>Scanner</h2>
@@ -2089,7 +2550,7 @@
           <div class="card-body grid-2">
             <div class="field-row">
               <label class="field-label" for="buyTradingInterval"
-                >Buy Trading Interval (Seconds)</label
+                >Buy Trading Interval (Milliseconds)</label
               >
               <input
                 id="buyTradingInterval"
@@ -2182,7 +2643,7 @@
           </div>
         </details>
 
-        <details class="settings-card">
+        <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>
               <h2>Indicators</h2>
@@ -2258,7 +2719,7 @@
           </div>
         </details>
 
-        <details class="settings-card">
+        <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>
               <h2>Market Hours</h2>
@@ -2293,7 +2754,7 @@
           </div>
         </details>
 
-        <details class="settings-card">
+        <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>
               <h2>Notifications</h2>
@@ -2309,7 +2770,7 @@
           </div>
         </details>
 
-        <details class="settings-card">
+        <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>
               <h2>Charge Validation</h2>
