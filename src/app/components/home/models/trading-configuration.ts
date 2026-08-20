@@ -220,6 +220,17 @@ export interface TradingConfiguration {
 
   minimumNetProfit: number;
 
+  enableLiveTradingPerformanceGate?: boolean;
+  minimumLiveTradingPerformanceTrades?: number;
+  minimumLiveTradingWinRate?: number;
+  minimumLiveTradingProfitFactor?: number;
+  minimumLiveTradingNetProfit?: number;
+  minimumLiveTradingRiskReward?: number;
+  minimumLiveTradingConfidence?: number;
+  minimumRecentLiveTradingTrades?: number;
+  requirePositiveRecentLiveTradingNetProfit?: boolean;
+  requireBestStrategyMatchForLiveTrading?: boolean;
+
   autoSquareOff: boolean;
 
   paperTradingBalance: number;
@@ -367,7 +378,9 @@ export interface EvaluationSettings {
 export interface ExitSettings {
   atrExitMultiplier: number;
   minimumProfitPercent: number;
+  trailingActivationNetProfit?: number;
   trailingStopAtrMultiplier: number;
+  trailingProfitRetentionPercent?: number;
 }
 
 // ValidationSettings is defined later with extended fields.

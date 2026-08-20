@@ -333,6 +333,17 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
 
     minimumNetProfit: [5, Validators.required],
 
+    enableLiveTradingPerformanceGate: [false],
+    minimumLiveTradingPerformanceTrades: [10, [Validators.min(0)]],
+    minimumLiveTradingWinRate: [55, [Validators.min(0), Validators.max(100)]],
+    minimumLiveTradingProfitFactor: [1.2, [Validators.min(0)]],
+    minimumLiveTradingNetProfit: [0, [Validators.min(0)]],
+    minimumLiveTradingRiskReward: [1.5, [Validators.min(0)]],
+    minimumLiveTradingConfidence: [60, [Validators.min(0), Validators.max(100)]],
+    minimumRecentLiveTradingTrades: [5, [Validators.min(0)]],
+    requirePositiveRecentLiveTradingNetProfit: [true],
+    requireBestStrategyMatchForLiveTrading: [true],
+
     autoSquareOff: [true],
 
     paperTradingBalance: [100000, Validators.required],
@@ -717,8 +728,16 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
         0.25,
         [Validators.required, Validators.min(0), Validators.max(100)],
       ],
+      trailingActivationNetProfit: [
+        0,
+        [Validators.required, Validators.min(0)],
+      ],
       trailingStopAtrMultiplier: [
         0.6,
+        [Validators.required, Validators.min(0), Validators.max(100)],
+      ],
+      trailingProfitRetentionPercent: [
+        70,
         [Validators.required, Validators.min(0), Validators.max(100)],
       ],
     }),
@@ -925,6 +944,27 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
         minimumRoiPercent: configuration.minimumRoiPercent,
 
         minimumNetProfit: configuration.minimumNetProfit,
+
+        enableLiveTradingPerformanceGate:
+          configuration.enableLiveTradingPerformanceGate ?? false,
+        minimumLiveTradingPerformanceTrades:
+          configuration.minimumLiveTradingPerformanceTrades ?? 10,
+        minimumLiveTradingWinRate:
+          configuration.minimumLiveTradingWinRate ?? 55,
+        minimumLiveTradingProfitFactor:
+          configuration.minimumLiveTradingProfitFactor ?? 1.2,
+        minimumLiveTradingNetProfit:
+          configuration.minimumLiveTradingNetProfit ?? 0,
+        minimumLiveTradingRiskReward:
+          configuration.minimumLiveTradingRiskReward ?? 1.5,
+        minimumLiveTradingConfidence:
+          configuration.minimumLiveTradingConfidence ?? 60,
+        minimumRecentLiveTradingTrades:
+          configuration.minimumRecentLiveTradingTrades ?? 5,
+        requirePositiveRecentLiveTradingNetProfit:
+          configuration.requirePositiveRecentLiveTradingNetProfit ?? true,
+        requireBestStrategyMatchForLiveTrading:
+          configuration.requireBestStrategyMatchForLiveTrading ?? true,
 
         autoSquareOff: configuration.autoSquareOff,
 
@@ -1271,8 +1311,12 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
           atrExitMultiplier: configuration.exit?.atrExitMultiplier ?? 0.4,
           minimumProfitPercent:
             configuration.exit?.minimumProfitPercent ?? 0.25,
+          trailingActivationNetProfit:
+            configuration.exit?.trailingActivationNetProfit ?? 0,
           trailingStopAtrMultiplier:
             configuration.exit?.trailingStopAtrMultiplier ?? 0.6,
+          trailingProfitRetentionPercent:
+            configuration.exit?.trailingProfitRetentionPercent ?? 70,
         },
         confidence: {
           maximumGainBonus: configuration.confidence?.maximumGainBonus ?? 15,
@@ -1890,6 +1934,32 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
 
       minimumNetProfit: Number(value.minimumNetProfit ?? 5),
 
+      enableLiveTradingPerformanceGate:
+        value.enableLiveTradingPerformanceGate ?? false,
+      minimumLiveTradingPerformanceTrades: Number(
+        value.minimumLiveTradingPerformanceTrades ?? 10,
+      ),
+      minimumLiveTradingWinRate: Number(value.minimumLiveTradingWinRate ?? 55),
+      minimumLiveTradingProfitFactor: Number(
+        value.minimumLiveTradingProfitFactor ?? 1.2,
+      ),
+      minimumLiveTradingNetProfit: Number(
+        value.minimumLiveTradingNetProfit ?? 0,
+      ),
+      minimumLiveTradingRiskReward: Number(
+        value.minimumLiveTradingRiskReward ?? 1.5,
+      ),
+      minimumLiveTradingConfidence: Number(
+        value.minimumLiveTradingConfidence ?? 60,
+      ),
+      minimumRecentLiveTradingTrades: Number(
+        value.minimumRecentLiveTradingTrades ?? 5,
+      ),
+      requirePositiveRecentLiveTradingNetProfit:
+        value.requirePositiveRecentLiveTradingNetProfit ?? true,
+      requireBestStrategyMatchForLiveTrading:
+        value.requireBestStrategyMatchForLiveTrading ?? true,
+
       autoSquareOff: value.autoSquareOff ?? false,
 
       paperTradingBalance: Number(value.paperTradingBalance ?? 100000),
@@ -2207,8 +2277,14 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
       exit: {
         atrExitMultiplier: Number(value.exit?.atrExitMultiplier ?? 0.4),
         minimumProfitPercent: Number(value.exit?.minimumProfitPercent ?? 0.25),
+        trailingActivationNetProfit: Number(
+          value.exit?.trailingActivationNetProfit ?? 0,
+        ),
         trailingStopAtrMultiplier: Number(
           value.exit?.trailingStopAtrMultiplier ?? 0.6,
+        ),
+        trailingProfitRetentionPercent: Number(
+          value.exit?.trailingProfitRetentionPercent ?? 70,
         ),
       },
       confidence: {
