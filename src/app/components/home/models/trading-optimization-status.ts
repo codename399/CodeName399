@@ -3,6 +3,7 @@ export interface TradingOptimizationStatus {
   mode: 'CountBased' | 'TimeBased' | 0 | 1;
   timeBasedCandidateMinutes: number;
   maximumCandidatesPerDay?: number;
+  candidatesEvaluatedToday?: number;
   marketOpen?: boolean;
   running?: boolean;
   runtimeActive?: boolean;
