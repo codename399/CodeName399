@@ -476,11 +476,15 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   // ======================================================
 
   private async subscribeToGainers(): Promise<void> {
-    await this.#market.startConnection();
-
+    // Subscribe BEFORE starting SignalR. MarketHub sends the current watchlist
+    // from OnConnectedAsync; subscribing afterwards can miss that one-shot
+    // snapshot and leave the dashboard empty until the next market update.
+    this.subscription?.unsubscribe();
     this.subscription = this.#market.gainers$.subscribe((data: Gainer[]) => {
       this.gainers.set(data);
     });
+
+    await this.#market.startConnection();
   }
 
   // ======================================================

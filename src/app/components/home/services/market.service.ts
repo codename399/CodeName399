@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
-import { BehaviorSubject, Subject } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import { API_CONSTANTS } from '../../../../injectors/common-injector';
 import { TradingOptimizationStatus } from '../models/trading-optimization-status';
 
@@ -13,7 +13,9 @@ export class MarketService {
   private hub?: signalR.HubConnection;
   private isStarting = false;
 
-  private gainersSubject = new Subject<any[]>();
+  // Keep the latest watchlist snapshot so a component that subscribes after
+  // the SignalR connection is already established still receives the current data.
+  private gainersSubject = new BehaviorSubject<any[]>([]);
   gainers$ = this.gainersSubject.asObservable();
 
   private optimizationStatusUpdatedSubject = new BehaviorSubject<TradingOptimizationStatus | null>(null);

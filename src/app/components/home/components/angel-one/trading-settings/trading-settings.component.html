@@ -201,7 +201,7 @@
           </div>
           <div>
             <span class="optimization-label">Configurations Tested</span>
-            <strong>{{ day.candidates?.length ?? 0 }}</strong>
+            <strong>{{ optimizationStatus?.candidatesEvaluatedToday ?? day.candidates?.length ?? 0 }} / {{ optimizationStatus?.maximumCandidatesPerDay ?? '—' }}</strong>
           </div>
           <div>
             <span class="optimization-label">Best Configuration</span>
