@@ -347,6 +347,15 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
     minimumRecentLiveTradingTrades: [5, [Validators.min(0)]],
     requirePositiveRecentLiveTradingNetProfit: [true],
     requireBestStrategyMatchForLiveTrading: [true],
+    requireRecentPerformanceToRetainLiveTradingEligibility: [true],
+    minimumRecentLiveTradingWinRateToRetainEligibility: [
+      40,
+      [Validators.min(0), Validators.max(100)],
+    ],
+    minimumRecentLiveTradingProfitFactorToRetainEligibility: [
+      0.9,
+      [Validators.min(0)],
+    ],
 
     autoSquareOff: [true],
 
@@ -983,6 +992,12 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
           configuration.requirePositiveRecentLiveTradingNetProfit ?? true,
         requireBestStrategyMatchForLiveTrading:
           configuration.requireBestStrategyMatchForLiveTrading ?? true,
+        requireRecentPerformanceToRetainLiveTradingEligibility:
+          configuration.requireRecentPerformanceToRetainLiveTradingEligibility ?? true,
+        minimumRecentLiveTradingWinRateToRetainEligibility:
+          configuration.minimumRecentLiveTradingWinRateToRetainEligibility ?? 40,
+        minimumRecentLiveTradingProfitFactorToRetainEligibility:
+          configuration.minimumRecentLiveTradingProfitFactorToRetainEligibility ?? 0.9,
 
         autoSquareOff: configuration.autoSquareOff,
 
@@ -1977,6 +1992,14 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
         value.requirePositiveRecentLiveTradingNetProfit ?? true,
       requireBestStrategyMatchForLiveTrading:
         value.requireBestStrategyMatchForLiveTrading ?? true,
+      requireRecentPerformanceToRetainLiveTradingEligibility:
+        value.requireRecentPerformanceToRetainLiveTradingEligibility ?? true,
+      minimumRecentLiveTradingWinRateToRetainEligibility: Number(
+        value.minimumRecentLiveTradingWinRateToRetainEligibility ?? 40,
+      ),
+      minimumRecentLiveTradingProfitFactorToRetainEligibility: Number(
+        value.minimumRecentLiveTradingProfitFactorToRetainEligibility ?? 0.9,
+      ),
 
       autoSquareOff: value.autoSquareOff ?? false,
 
