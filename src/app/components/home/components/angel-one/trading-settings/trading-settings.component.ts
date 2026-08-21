@@ -1874,6 +1874,22 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
         autoPromoteBestConfiguration:
           value.optimization?.autoPromoteBestConfiguration ?? true,
 
+        signalGenerationWeight: Number(
+          value.optimization?.signalGenerationWeight ?? 0.2,
+        ),
+        virtualConfirmationWeight: Number(
+          value.optimization?.virtualConfirmationWeight ?? 0.3,
+        ),
+        profitabilityWeight: Number(
+          value.optimization?.profitabilityWeight ?? 0.5,
+        ),
+        targetEvaluationSignalRatePercent: Number(
+          value.optimization?.targetEvaluationSignalRatePercent ?? 3,
+        ),
+        targetVirtualConfirmationRatePercent: Number(
+          value.optimization?.targetVirtualConfirmationRatePercent ?? 35,
+        ),
+
         pollIntervalSeconds: Number(value.optimization?.pollIntervalSeconds ?? 5),
         minimumCandidateMinutes: Number(
           value.optimization?.minimumCandidateMinutes ?? 5,
