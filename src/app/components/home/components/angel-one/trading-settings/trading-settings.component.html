@@ -451,6 +451,44 @@
                 </div>
               </div>
               <div class="field-row">
+                <label class="field-label" for="signalGenerationWeight">Signal Generation Weight</label>
+                <div class="input-with-suffix">
+                  <input id="signalGenerationWeight" type="number" formControlName="signalGenerationWeight" class="field-input" min="0" max="1" step="0.05" />
+                  <span class="suffix">score</span>
+                </div>
+                <small class="field-help">How strongly optimization rewards generating useful evaluation signals.</small>
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="virtualConfirmationWeight">Virtual Confirmation Weight</label>
+                <div class="input-with-suffix">
+                  <input id="virtualConfirmationWeight" type="number" formControlName="virtualConfirmationWeight" class="field-input" min="0" max="1" step="0.05" />
+                  <span class="suffix">score</span>
+                </div>
+                <small class="field-help">How strongly optimization rewards confirmed virtual trades.</small>
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="profitabilityWeight">Profitability Weight</label>
+                <div class="input-with-suffix">
+                  <input id="profitabilityWeight" type="number" formControlName="profitabilityWeight" class="field-input" min="0" max="1" step="0.05" />
+                  <span class="suffix">score</span>
+                </div>
+                <small class="field-help">How strongly optimization rewards profitable virtual/paper outcomes.</small>
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="targetEvaluationSignalRatePercent">Target Evaluation Signal Rate</label>
+                <div class="input-with-suffix">
+                  <input id="targetEvaluationSignalRatePercent" type="number" formControlName="targetEvaluationSignalRatePercent" class="field-input" min="0" max="100" step="0.1" />
+                  <span class="suffix">%</span>
+                </div>
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="targetVirtualConfirmationRatePercent">Target Virtual Confirmation Rate</label>
+                <div class="input-with-suffix">
+                  <input id="targetVirtualConfirmationRatePercent" type="number" formControlName="targetVirtualConfirmationRatePercent" class="field-input" min="0" max="100" step="0.1" />
+                  <span class="suffix">%</span>
+                </div>
+              </div>
+              <div class="field-row">
                 <label class="field-label" for="dailyEmailDelayMinutes">Daily Email Delay</label>
                 <div class="input-with-suffix">
                   <input id="dailyEmailDelayMinutes" type="number" formControlName="dailyEmailDelayMinutes" class="field-input" min="0" />

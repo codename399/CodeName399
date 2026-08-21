@@ -161,6 +161,13 @@ export interface OptimizationSettings {
   minimumProfitFactor: number;
   maximumDrawdownPercent: number;
 
+  // Multi-objective optimizer controls.
+  signalGenerationWeight: number;
+  virtualConfirmationWeight: number;
+  profitabilityWeight: number;
+  targetEvaluationSignalRatePercent: number;
+  targetVirtualConfirmationRatePercent: number;
+
   dailyEmailDelayMinutes: number;
   validationHistoryFile: string;
   reportDirectory: string;

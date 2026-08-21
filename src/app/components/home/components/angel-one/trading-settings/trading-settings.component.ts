@@ -715,6 +715,28 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
       minimumProfitFactor: [1.2, [Validators.required, Validators.min(0)]],
       maximumDrawdownPercent: [10, [Validators.required, Validators.min(0)]],
 
+      // Multi-objective optimizer controls.
+      signalGenerationWeight: [
+        0.20,
+        [Validators.required, Validators.min(0), Validators.max(1)],
+      ],
+      virtualConfirmationWeight: [
+        0.30,
+        [Validators.required, Validators.min(0), Validators.max(1)],
+      ],
+      profitabilityWeight: [
+        0.50,
+        [Validators.required, Validators.min(0), Validators.max(1)],
+      ],
+      targetEvaluationSignalRatePercent: [
+        3,
+        [Validators.required, Validators.min(0), Validators.max(100)],
+      ],
+      targetVirtualConfirmationRatePercent: [
+        35,
+        [Validators.required, Validators.min(0), Validators.max(100)],
+      ],
+
       dailyEmailDelayMinutes: [5, [Validators.required, Validators.min(0)]],
       validationHistoryFile: [
         'OptimizationRuns/validation-configuration-history.json',
