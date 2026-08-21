@@ -231,6 +231,12 @@ export interface TradingConfiguration {
   requirePositiveRecentLiveTradingNetProfit?: boolean;
   requireBestStrategyMatchForLiveTrading?: boolean;
 
+  // Live-trading eligibility retention / intraday deterioration gate.
+  // Optional for backward compatibility with older backend configurations.
+  requireRecentPerformanceToRetainLiveTradingEligibility?: boolean;
+  minimumRecentLiveTradingWinRateToRetainEligibility?: number;
+  minimumRecentLiveTradingProfitFactorToRetainEligibility?: number;
+
   autoSquareOff: boolean;
 
   paperTradingBalance: number;

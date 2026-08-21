@@ -782,10 +782,6 @@
                 <input type="checkbox" formControlName="requirePositiveRecentLiveTradingNetProfit" />
                 <span>Require Positive Recent Net Profit</span>
               </label>
-              <label class="toggle-field">
-                <input type="checkbox" formControlName="requireRecentPerformanceToRetainLiveTradingEligibility" />
-                <span>Revoke Live Eligibility on Recent Deterioration</span>
-              </label>
             </div>
 
             <div class="grid-4 compact-profile-grid">
@@ -816,14 +812,6 @@
               <div class="field-row">
                 <label class="field-label" for="minimumRecentLiveTradingTrades">Minimum Recent Trades</label>
                 <input id="minimumRecentLiveTradingTrades" type="number" formControlName="minimumRecentLiveTradingTrades" class="field-input" min="0" />
-              </div>
-              <div class="field-row">
-                <label class="field-label" for="minimumRecentLiveTradingWinRateToRetainEligibility">Recent Win Rate to Retain Eligibility</label>
-                <div class="input-with-suffix"><input id="minimumRecentLiveTradingWinRateToRetainEligibility" type="number" formControlName="minimumRecentLiveTradingWinRateToRetainEligibility" class="field-input" min="0" max="100" step="1" /><span class="suffix">%</span></div>
-              </div>
-              <div class="field-row">
-                <label class="field-label" for="minimumRecentLiveTradingProfitFactorToRetainEligibility">Recent Profit Factor to Retain Eligibility</label>
-                <input id="minimumRecentLiveTradingProfitFactorToRetainEligibility" type="number" formControlName="minimumRecentLiveTradingProfitFactorToRetainEligibility" class="field-input" min="0" step="0.01" />
               </div>
             </div>
           </div>
