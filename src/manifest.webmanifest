@@ -1,23 +1,33 @@
 {
   "name": "CodeName399",
   "short_name": "CodeName399",
-  "description": "CodeName399 trading bot",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#111827",
-  "theme_color": "#111827",
   "icons": [
     {
-      "src": "assets/images/logo-192x192.png",
+      "src": "assets/images/pwa-icon-192-v3.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "assets/images/logo-512x512.png",
+      "src": "assets/images/pwa-icon-512-v3.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "assets/images/pwa-icon-192-maskable-v3.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "assets/images/pwa-icon-512-maskable-v3.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
-  ]
+  ],
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "display": "standalone"
 }

@@ -2,13 +2,13 @@
   <div class="mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex justify-between items-center h-16">
       <!-- Left: Logo -->
-      <div class="flex items-center space-x-2">
+      <div class="flex items-center cursor-pointer" (click)="goHome()" aria-label="CodeName399 home">
         <img
-          src="assets/images/logo.png"
+          src="assets/images/logo-icon.png"
           alt="CodeName399"
-          class="h-10 w-auto max-w-[180px] object-contain cursor-pointer"
-          (click)="goHome()"
+          class="h-11 w-11 object-contain"
         />
+        <span class="ml-2 text-xl font-bold tracking-tight text-gray-900">CodeName<span class="text-green-600">399</span></span>
       </div>
 
       <!-- Center: Navigation -->

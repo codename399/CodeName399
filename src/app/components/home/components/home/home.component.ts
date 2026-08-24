@@ -21,6 +21,7 @@ export class HomeComponent implements OnInit {
 
   user!: User;
   profilePictureUrl!: string;
+  logoUrl!: string
 
   constructor() {
     this.profilePictureUrl = this.#config.profilePictureUrl;
