@@ -423,6 +423,10 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
       .subscribe({
         next: () => {
           this.#toast.success('Configuration saved');
+          // Close the left controls panel only after the columns have been
+          // successfully saved. Keep it open if the save fails so the user
+          // can correct/retry without losing context.
+          this.showSettings.set(false);
         },
 
         error: () => {
