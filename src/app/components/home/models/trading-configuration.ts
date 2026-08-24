@@ -168,6 +168,14 @@ export interface OptimizationSettings {
   targetEvaluationSignalRatePercent: number;
   targetVirtualConfirmationRatePercent: number;
 
+  // Progressive learning controls.
+  explorationCandidateCount: number;
+  minimumLearningTrades: number;
+  minimumPatternSampleSize: number;
+  learningStrictnessStepPercent: number;
+  maximumLearningStrictnessPercent: number;
+  maximumLessonsPerCandidate: number;
+
   dailyEmailDelayMinutes: number;
   validationHistoryFile: string;
   reportDirectory: string;
@@ -237,6 +245,16 @@ export interface TradingConfiguration {
   minimumRecentLiveTradingTrades?: number;
   requirePositiveRecentLiveTradingNetProfit?: boolean;
   requireBestStrategyMatchForLiveTrading?: boolean;
+
+  // Paper-trading StockPerformance eligibility gate.
+  enablePaperTradingPerformanceGate?: boolean;
+  minimumPaperTradingPerformanceTrades?: number;
+  minimumPaperTradingWinRate?: number;
+  minimumPaperTradingProfitFactor?: number;
+  minimumPaperTradingNetProfit?: number;
+  minimumPaperTradingRiskReward?: number;
+  minimumPaperTradingConfidence?: number;
+  requireBestStrategyMatchForPaperTrading?: boolean;
 
   // Live-trading eligibility retention / intraday deterioration gate.
   // Optional for backward compatibility with older backend configurations.

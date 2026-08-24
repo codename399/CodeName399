@@ -497,6 +497,38 @@
               </div>
             </div>
 
+
+
+            <div class="optimization-learning-panel">
+              <h3>Progressive Learning</h3>
+              <p class="field-help">Starts loose, collects winners and losers, then applies small evidence-based tightening steps.</p>
+              <div class="grid-4 compact-profile-grid">
+                <div class="field-row">
+                  <label class="field-label" for="explorationCandidateCount">Exploration Candidates</label>
+                  <input id="explorationCandidateCount" type="number" formControlName="explorationCandidateCount" class="field-input" min="1" />
+                </div>
+                <div class="field-row">
+                  <label class="field-label" for="minimumLearningTrades">Minimum Learning Trades</label>
+                  <input id="minimumLearningTrades" type="number" formControlName="minimumLearningTrades" class="field-input" min="1" />
+                </div>
+                <div class="field-row">
+                  <label class="field-label" for="minimumPatternSampleSize">Minimum Pattern Sample</label>
+                  <input id="minimumPatternSampleSize" type="number" formControlName="minimumPatternSampleSize" class="field-input" min="1" />
+                </div>
+                <div class="field-row">
+                  <label class="field-label" for="learningStrictnessStepPercent">Learning Step</label>
+                  <div class="input-with-suffix"><input id="learningStrictnessStepPercent" type="number" formControlName="learningStrictnessStepPercent" class="field-input" min="0" max="100" step="0.5" /><span class="suffix">%</span></div>
+                </div>
+                <div class="field-row">
+                  <label class="field-label" for="maximumLearningStrictnessPercent">Maximum Strictness</label>
+                  <div class="input-with-suffix"><input id="maximumLearningStrictnessPercent" type="number" formControlName="maximumLearningStrictnessPercent" class="field-input" min="0" max="100" step="1" /><span class="suffix">%</span></div>
+                </div>
+                <div class="field-row">
+                  <label class="field-label" for="maximumLessonsPerCandidate">Lessons / Candidate</label>
+                  <input id="maximumLessonsPerCandidate" type="number" formControlName="maximumLessonsPerCandidate" class="field-input" min="1" />
+                </div>
+              </div>
+            </div>
             <div class="grid-2">
               <div class="field-row">
                 <label class="field-label" for="validationHistoryFile">Validation History File</label>
@@ -820,6 +852,10 @@
                 <input type="checkbox" formControlName="requirePositiveRecentLiveTradingNetProfit" />
                 <span>Require Positive Recent Net Profit</span>
               </label>
+              <label class="toggle-field">
+                <input type="checkbox" formControlName="requireRecentPerformanceToRetainLiveTradingEligibility" />
+                <span>Retain Eligibility Only With Recent Performance</span>
+              </label>
             </div>
 
             <div class="grid-4 compact-profile-grid">
@@ -851,10 +887,66 @@
                 <label class="field-label" for="minimumRecentLiveTradingTrades">Minimum Recent Trades</label>
                 <input id="minimumRecentLiveTradingTrades" type="number" formControlName="minimumRecentLiveTradingTrades" class="field-input" min="0" />
               </div>
+              <div class="field-row">
+                <label class="field-label" for="minimumRecentLiveTradingWinRateToRetainEligibility">Recent Win Rate To Retain</label>
+                <div class="input-with-suffix"><input id="minimumRecentLiveTradingWinRateToRetainEligibility" type="number" formControlName="minimumRecentLiveTradingWinRateToRetainEligibility" class="field-input" min="0" max="100" step="1" /><span class="suffix">%</span></div>
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="minimumRecentLiveTradingProfitFactorToRetainEligibility">Recent Profit Factor To Retain</label>
+                <input id="minimumRecentLiveTradingProfitFactorToRetainEligibility" type="number" formControlName="minimumRecentLiveTradingProfitFactorToRetainEligibility" class="field-input" min="0" step="0.01" />
+              </div>
             </div>
           </div>
         </details>
 
+
+
+        <details class="settings-card paper-trading-performance-card" (toggle)="onAccordionToggle($event)">
+          <summary class="card-header">
+            <div>
+              <h2>Paper Trading Performance Gate</h2>
+              <p>Controls StockPerformance-based eligibility for paper and optimizer trades. Stocks without sufficient history remain eligible so the system can learn.</p>
+            </div>
+          </summary>
+          <div class="card-body">
+            <div class="grid-2">
+              <label class="toggle-field">
+                <input type="checkbox" formControlName="enablePaperTradingPerformanceGate" />
+                <span>Enable Paper Trading Performance Gate</span>
+              </label>
+              <label class="toggle-field">
+                <input type="checkbox" formControlName="requireBestStrategyMatchForPaperTrading" />
+                <span>Require Best Strategy Match</span>
+              </label>
+            </div>
+            <div class="grid-4 compact-profile-grid">
+              <div class="field-row">
+                <label class="field-label" for="minimumPaperTradingPerformanceTrades">Minimum Performance Trades</label>
+                <input id="minimumPaperTradingPerformanceTrades" type="number" formControlName="minimumPaperTradingPerformanceTrades" class="field-input" min="0" />
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="minimumPaperTradingWinRate">Minimum Win Rate</label>
+                <div class="input-with-suffix"><input id="minimumPaperTradingWinRate" type="number" formControlName="minimumPaperTradingWinRate" class="field-input" min="0" max="100" step="1" /><span class="suffix">%</span></div>
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="minimumPaperTradingProfitFactor">Minimum Profit Factor</label>
+                <input id="minimumPaperTradingProfitFactor" type="number" formControlName="minimumPaperTradingProfitFactor" class="field-input" min="0" step="0.01" />
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="minimumPaperTradingNetProfit">Minimum Net Profit</label>
+                <div class="input-with-suffix"><input id="minimumPaperTradingNetProfit" type="number" formControlName="minimumPaperTradingNetProfit" class="field-input" min="0" step="0.01" /><span class="suffix">₹</span></div>
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="minimumPaperTradingRiskReward">Minimum Risk / Reward</label>
+                <input id="minimumPaperTradingRiskReward" type="number" formControlName="minimumPaperTradingRiskReward" class="field-input" min="0" step="0.1" />
+              </div>
+              <div class="field-row">
+                <label class="field-label" for="minimumPaperTradingConfidence">Minimum Confidence</label>
+                <div class="input-with-suffix"><input id="minimumPaperTradingConfidence" type="number" formControlName="minimumPaperTradingConfidence" class="field-input" min="0" max="100" step="1" /><span class="suffix">%</span></div>
+              </div>
+            </div>
+          </div>
+        </details>
 <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>

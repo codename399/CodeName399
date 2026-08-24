@@ -347,6 +347,18 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
     minimumRecentLiveTradingTrades: [5, [Validators.min(0)]],
     requirePositiveRecentLiveTradingNetProfit: [true],
     requireBestStrategyMatchForLiveTrading: [true],
+    requireRecentPerformanceToRetainLiveTradingEligibility: [true],
+    minimumRecentLiveTradingWinRateToRetainEligibility: [40, [Validators.min(0), Validators.max(100)]],
+    minimumRecentLiveTradingProfitFactorToRetainEligibility: [0.9, [Validators.min(0)]],
+
+    enablePaperTradingPerformanceGate: [true],
+    minimumPaperTradingPerformanceTrades: [3, [Validators.min(0)]],
+    minimumPaperTradingWinRate: [45, [Validators.min(0), Validators.max(100)]],
+    minimumPaperTradingProfitFactor: [0.8, [Validators.min(0)]],
+    minimumPaperTradingNetProfit: [0, [Validators.min(0)]],
+    minimumPaperTradingRiskReward: [1.0, [Validators.min(0)]],
+    minimumPaperTradingConfidence: [45, [Validators.min(0), Validators.max(100)]],
+    requireBestStrategyMatchForPaperTrading: [false],
 
     autoSquareOff: [true],
 
@@ -736,6 +748,12 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
         35,
         [Validators.required, Validators.min(0), Validators.max(100)],
       ],
+      explorationCandidateCount: [2, [Validators.required, Validators.min(1)]],
+      minimumLearningTrades: [10, [Validators.required, Validators.min(1)]],
+      minimumPatternSampleSize: [5, [Validators.required, Validators.min(1)]],
+      learningStrictnessStepPercent: [2, [Validators.required, Validators.min(0), Validators.max(100)]],
+      maximumLearningStrictnessPercent: [50, [Validators.required, Validators.min(0), Validators.max(100)]],
+      maximumLessonsPerCandidate: [3, [Validators.required, Validators.min(1)]],
 
       dailyEmailDelayMinutes: [5, [Validators.required, Validators.min(0)]],
       validationHistoryFile: [
@@ -1005,6 +1023,28 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
           configuration.requirePositiveRecentLiveTradingNetProfit ?? true,
         requireBestStrategyMatchForLiveTrading:
           configuration.requireBestStrategyMatchForLiveTrading ?? true,
+        requireRecentPerformanceToRetainLiveTradingEligibility:
+          configuration.requireRecentPerformanceToRetainLiveTradingEligibility ?? true,
+        minimumRecentLiveTradingWinRateToRetainEligibility:
+          configuration.minimumRecentLiveTradingWinRateToRetainEligibility ?? 40,
+        minimumRecentLiveTradingProfitFactorToRetainEligibility:
+          configuration.minimumRecentLiveTradingProfitFactorToRetainEligibility ?? 0.9,
+        enablePaperTradingPerformanceGate:
+          configuration.enablePaperTradingPerformanceGate ?? true,
+        minimumPaperTradingPerformanceTrades:
+          configuration.minimumPaperTradingPerformanceTrades ?? 3,
+        minimumPaperTradingWinRate:
+          configuration.minimumPaperTradingWinRate ?? 45,
+        minimumPaperTradingProfitFactor:
+          configuration.minimumPaperTradingProfitFactor ?? 0.8,
+        minimumPaperTradingNetProfit:
+          configuration.minimumPaperTradingNetProfit ?? 0,
+        minimumPaperTradingRiskReward:
+          configuration.minimumPaperTradingRiskReward ?? 1,
+        minimumPaperTradingConfidence:
+          configuration.minimumPaperTradingConfidence ?? 45,
+        requireBestStrategyMatchForPaperTrading:
+          configuration.requireBestStrategyMatchForPaperTrading ?? false,
 
         autoSquareOff: configuration.autoSquareOff,
 
@@ -1889,6 +1929,12 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
         targetVirtualConfirmationRatePercent: Number(
           value.optimization?.targetVirtualConfirmationRatePercent ?? 35,
         ),
+        explorationCandidateCount: Number(value.optimization?.explorationCandidateCount ?? 2),
+        minimumLearningTrades: Number(value.optimization?.minimumLearningTrades ?? 10),
+        minimumPatternSampleSize: Number(value.optimization?.minimumPatternSampleSize ?? 5),
+        learningStrictnessStepPercent: Number(value.optimization?.learningStrictnessStepPercent ?? 2),
+        maximumLearningStrictnessPercent: Number(value.optimization?.maximumLearningStrictnessPercent ?? 50),
+        maximumLessonsPerCandidate: Number(value.optimization?.maximumLessonsPerCandidate ?? 3),
 
         pollIntervalSeconds: Number(value.optimization?.pollIntervalSeconds ?? 5),
         minimumCandidateMinutes: Number(
@@ -2015,6 +2061,24 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
         value.requirePositiveRecentLiveTradingNetProfit ?? true,
       requireBestStrategyMatchForLiveTrading:
         value.requireBestStrategyMatchForLiveTrading ?? true,
+      requireRecentPerformanceToRetainLiveTradingEligibility:
+        value.requireRecentPerformanceToRetainLiveTradingEligibility ?? true,
+      minimumRecentLiveTradingWinRateToRetainEligibility: Number(
+        value.minimumRecentLiveTradingWinRateToRetainEligibility ?? 40,
+      ),
+      minimumRecentLiveTradingProfitFactorToRetainEligibility: Number(
+        value.minimumRecentLiveTradingProfitFactorToRetainEligibility ?? 0.9,
+      ),
+      enablePaperTradingPerformanceGate:
+        value.enablePaperTradingPerformanceGate ?? true,
+      minimumPaperTradingPerformanceTrades: Number(value.minimumPaperTradingPerformanceTrades ?? 3),
+      minimumPaperTradingWinRate: Number(value.minimumPaperTradingWinRate ?? 45),
+      minimumPaperTradingProfitFactor: Number(value.minimumPaperTradingProfitFactor ?? 0.8),
+      minimumPaperTradingNetProfit: Number(value.minimumPaperTradingNetProfit ?? 0),
+      minimumPaperTradingRiskReward: Number(value.minimumPaperTradingRiskReward ?? 1),
+      minimumPaperTradingConfidence: Number(value.minimumPaperTradingConfidence ?? 45),
+      requireBestStrategyMatchForPaperTrading:
+        value.requireBestStrategyMatchForPaperTrading ?? false,
 
       autoSquareOff: value.autoSquareOff ?? false,
 
