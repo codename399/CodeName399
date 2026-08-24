@@ -1,0 +1,23 @@
+{
+  "name": "CodeName399",
+  "short_name": "CodeName399",
+  "description": "CodeName399 trading bot",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#111827",
+  "icons": [
+    {
+      "src": "assets/images/logo-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/images/logo-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

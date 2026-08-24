@@ -36,7 +36,6 @@ export class HomeHeaderComponent {
 
   private _user!: User;
   profilePictureUrl!: string;
-  logoUrl!: string
   isDropdownOpen: boolean = false;
   isLogsOpen: boolean = false;
 
