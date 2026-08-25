@@ -2,7 +2,7 @@ import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
 
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { Router } from '@angular/router';
 import { Subscription, catchError, finalize, of } from 'rxjs';
@@ -513,7 +513,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
         0.998,
         [Validators.min(0), Validators.max(1)],
       ],
-      momentumMaximumDrawdown: [1, [Validators.min(0), Validators.max(1)]],
+      momentumMaximumDrawdown: [1, [Validators.required, Validators.min(0), Validators.max(100)]],
       momentumHighestPriceTolerance: [
         0.997,
         [Validators.min(0), Validators.max(1)],
@@ -522,7 +522,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
         0.998,
         [Validators.min(0), Validators.max(1)],
       ],
-      maximumPullbackGain: [1, [Validators.min(0), Validators.max(1)]],
+      maximumPullbackGain: [1, [Validators.required, Validators.min(0), Validators.max(100)]],
       minimumFinalScore: [70, [Validators.min(0), Validators.max(100)]],
       minimumBollingerBandwidth: [1, [Validators.min(0)]],
       minimumFinalRSI: [48, [Validators.min(0), Validators.max(100)]],
@@ -1640,7 +1640,17 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
       maximumPositionsPerUnderlying: profile.maximumPositionsPerUnderlying,
       maximumLotsPerTrade: profile.maximumLotsPerTrade,
       forceSquareOffBufferMinutes: this.toMinutes(profile.forceSquareOffBuffer),
-      validation: profile.validation,
+      validation: profile.validation
+        ? {
+            ...profile.validation,
+            momentumMaximumDrawdown: Number(
+              profile.validation.momentumMaximumDrawdown ?? 1,
+            ),
+            maximumPullbackGain: Number(
+              profile.validation.maximumPullbackGain ?? 1,
+            ),
+          }
+        : undefined,
       evaluation: profile.evaluation,
       futuresExpiryType: extra.expiryType,
       futuresMinimumOpenInterest: extra.minimumOpenInterest,
