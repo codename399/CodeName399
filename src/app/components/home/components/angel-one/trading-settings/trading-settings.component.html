@@ -236,6 +236,15 @@
           </summary>
 
           <div class="card-body">
+            <div class="field-row">
+              <label class="field-label" for="tradingStrictnessProfile">Evaluation &amp; Virtual Trading Strictness</label>
+              <select id="tradingStrictnessProfile" formControlName="tradingStrictnessProfile" class="field-input">
+                @for (profile of tradingStrictnessProfiles; track profile.value) {
+                  <option [ngValue]="profile.value">{{ profile.text }}</option>
+                }
+              </select>
+              <small class="field-help">Changes Evaluation, Validation and Virtual Trading inputs from maximum exploration to maximum selectivity.</small>
+            </div>
             <label class="toggle-field">
               <input type="checkbox" formControlName="enableAutoTrading" />
               <span>Enable Auto Trading</span>

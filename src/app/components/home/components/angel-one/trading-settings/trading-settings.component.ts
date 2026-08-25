@@ -15,6 +15,7 @@ import {
   OptionsTradingSettings,
   OptimizationSettings,
   OptimizationMode,
+  TradingStrictnessProfile,
 } from '../../../models/trading-configuration';
 import { TradingOptimizationStatus } from '../../../models/trading-optimization-status';
 import { TradingStrategy } from '../../../models/enum/trading-strategy';
@@ -51,6 +52,15 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
   optimizationStatusLoading = false;
   #optimizationStatusSubscription?: Subscription;
   #optimizationStatusSignalRSubscription?: Subscription;
+
+  readonly tradingStrictnessProfiles: { value: TradingStrictnessProfile; text: string }[] = [
+    { value: 'VeryLoose', text: 'Very Loose — Maximum Exploration' },
+    { value: 'Loose', text: 'Loose — Broad Trading' },
+    { value: 'Balanced', text: 'Balanced' },
+    { value: 'Moderate', text: 'Moderate — More Selective' },
+    { value: 'Strict', text: 'Strict — High Confirmation' },
+    { value: 'VeryStrict', text: 'Very Strict — Maximum Selectivity' },
+  ];
 
   readonly strategies = [
     {
@@ -177,6 +187,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
   }
 
   form = this.#fb.group({
+    tradingStrictnessProfile: ['VeryLoose' as TradingStrictnessProfile],
     enableAutoTrading: [{ value: false, disabled: false }],
 
     paperTrading: [true],
@@ -706,7 +717,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
       ],
       sendConfigurationEmail: [true],
       sendDailyEmail: [true],
-      autoPromoteBestConfiguration: [true],
+      autoPromoteBestConfiguration: [false],
 
       pollIntervalSeconds: [5, [Validators.required, Validators.min(1)]],
       minimumCandidateMinutes: [5, [Validators.required, Validators.min(0)]],
@@ -848,6 +859,13 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
       this.form.markAsDirty();
     });
 
+    this.form.controls.tradingStrictnessProfile.valueChanges.subscribe((profile) => {
+      if (profile) {
+        this.applyTradingStrictnessProfile(profile as TradingStrictnessProfile);
+        this.form.markAsDirty();
+      }
+    });
+
     this.loadConfiguration();
 
     // SignalR sends the current optimizer snapshot immediately after connection
@@ -861,8 +879,9 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
     switch (state) {
       case 'RUNNING':
         return 'Running';
+      case 'READY':
       case 'MARKET_OPEN':
-        return 'Ready / Starting';
+        return 'Ready';
       case 'WAITING_FOR_MARKET':
         return 'Waiting for Market';
       case 'LIVE_TRADE_OPEN':
@@ -932,6 +951,21 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
   // Load Configuration
   // ======================================================
 
+  private applyTradingStrictnessProfile(profile: TradingStrictnessProfile): void {
+    const presets: Record<TradingStrictnessProfile, any> = {
+      VeryLoose: { evaluation: { strongAdx: 10, mediumAdx: 8, lowChoppiness: 20, highChoppiness: 80, highRelativeVolume: 0.5, mediumRelativeVolume: 0.4, lowRelativeVolume: 0.3, excellentScore: 50, goodScore: 40, averageScore: 30 }, virtualTrading: { warmupSeconds: 0, observationSeconds: 3, maximumObservationSeconds: 10, tickWindow: 5, entryLossPercent: 1, highestPriceTolerance: 1, tradeExpirySeconds: 15, minimumObservationForTrendSeconds: 0, confidenceBonusAfterSeconds1: 0, confidenceBonusAfterSeconds2: 0, pullbackWarmupSeconds: 0 }, validation: { minimumMovementScore: 10, minimumConfidence: 20, minimumRiskReward: 0.1, minimumTrendStrength: 10, minimumTrendStability: 10, minimumRecoveryScore: 10, minimumVolatilityScore: 5, minimumNoiseScore: 5, minimumBreakoutStrength: 5, minimumRSI: 0, maximumRSI: 100, minimumVolumeMultiplier: 0, minimumPositiveTickRatio: 0, minimumAboveEntryRatio: 0, minimumHigherHighs: 0, minimumConsecutivePositiveTicks: 0, maximumConsecutiveNegativeTicks: 100, maximumDrawdownPercent: 5, minimumFinalScore: 20, minimumBollingerBandwidth: 0, minimumFinalRSI: 0, maximumFinalRSI: 100 } },
+      Loose: { evaluation: { strongAdx: 15, mediumAdx: 12, lowChoppiness: 25, highChoppiness: 75, highRelativeVolume: 0.8, mediumRelativeVolume: 0.6, lowRelativeVolume: 0.5, excellentScore: 60, goodScore: 50, averageScore: 40 }, virtualTrading: { warmupSeconds: 1, observationSeconds: 5, maximumObservationSeconds: 15, tickWindow: 8, entryLossPercent: 0.75, highestPriceTolerance: 0.75, tradeExpirySeconds: 20, minimumObservationForTrendSeconds: 3, confidenceBonusAfterSeconds1: 5, confidenceBonusAfterSeconds2: 10, pullbackWarmupSeconds: 1 } },
+      Balanced: { evaluation: { strongAdx: 30, mediumAdx: 25, lowChoppiness: 38, highChoppiness: 55, highRelativeVolume: 2, mediumRelativeVolume: 1.5, lowRelativeVolume: 1.2, excellentScore: 90, goodScore: 80, averageScore: 70 }, virtualTrading: { warmupSeconds: 8, observationSeconds: 15, maximumObservationSeconds: 45, tickWindow: 20, entryLossPercent: 0.2, highestPriceTolerance: 0.3, tradeExpirySeconds: 30, minimumObservationForTrendSeconds: 30, confidenceBonusAfterSeconds1: 20, confidenceBonusAfterSeconds2: 35, pullbackWarmupSeconds: 8 } },
+      Moderate: { evaluation: { strongAdx: 35, mediumAdx: 30, lowChoppiness: 35, highChoppiness: 50, highRelativeVolume: 2.5, mediumRelativeVolume: 2, lowRelativeVolume: 1.5, excellentScore: 92, goodScore: 85, averageScore: 75 }, virtualTrading: { warmupSeconds: 10, observationSeconds: 20, maximumObservationSeconds: 50, tickWindow: 25, entryLossPercent: 0.15, highestPriceTolerance: 0.2, tradeExpirySeconds: 40, minimumObservationForTrendSeconds: 35, confidenceBonusAfterSeconds1: 25, confidenceBonusAfterSeconds2: 45, pullbackWarmupSeconds: 10 } },
+      Strict: { evaluation: { strongAdx: 40, mediumAdx: 35, lowChoppiness: 32, highChoppiness: 45, highRelativeVolume: 3, mediumRelativeVolume: 2.5, lowRelativeVolume: 2, excellentScore: 95, goodScore: 90, averageScore: 80 }, virtualTrading: { warmupSeconds: 12, observationSeconds: 25, maximumObservationSeconds: 60, tickWindow: 30, entryLossPercent: 0.1, highestPriceTolerance: 0.15, tradeExpirySeconds: 45, minimumObservationForTrendSeconds: 40, confidenceBonusAfterSeconds1: 30, confidenceBonusAfterSeconds2: 50, pullbackWarmupSeconds: 12 } },
+      VeryStrict: { evaluation: { strongAdx: 45, mediumAdx: 40, lowChoppiness: 30, highChoppiness: 40, highRelativeVolume: 4, mediumRelativeVolume: 3, lowRelativeVolume: 2.5, excellentScore: 98, goodScore: 95, averageScore: 90 }, virtualTrading: { warmupSeconds: 15, observationSeconds: 30, maximumObservationSeconds: 75, tickWindow: 40, entryLossPercent: 0.05, highestPriceTolerance: 0.1, tradeExpirySeconds: 60, minimumObservationForTrendSeconds: 45, confidenceBonusAfterSeconds1: 40, confidenceBonusAfterSeconds2: 60, pullbackWarmupSeconds: 15 } },
+    };
+    const preset = presets[profile] ?? presets.VeryLoose;
+    this.form.controls.evaluation.patchValue(preset.evaluation, { emitEvent: false });
+    this.form.controls.virtualTrading.patchValue(preset.virtualTrading, { emitEvent: false });
+    if (preset.validation) this.form.controls.validation.patchValue(preset.validation, { emitEvent: false });
+  }
+
   private loadConfiguration(): void {
     this.loading = true;
 
@@ -972,6 +1006,8 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
         enableNotification: configuration.enableNotification,
 
         strategy: this.normalizeStrategy(configuration.strategy),
+
+        tradingStrictnessProfile: configuration.tradingStrictnessProfile ?? 'VeryLoose',
 
         riskPercentage: configuration.riskPercentage,
 
@@ -1325,7 +1361,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
             configuration.optimization?.sendConfigurationEmail ?? true,
           sendDailyEmail: configuration.optimization?.sendDailyEmail ?? true,
           autoPromoteBestConfiguration:
-            configuration.optimization?.autoPromoteBestConfiguration ?? true,
+            configuration.optimization?.autoPromoteBestConfiguration ?? false,
 
           pollIntervalSeconds: Number(
             configuration.optimization?.pollIntervalSeconds ?? 5,
@@ -1487,6 +1523,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
 
     this.patchActiveProfile(this.selectedInstrumentType);
     this.activeInstrumentType = this.selectedInstrumentType;
+    this.applyTradingStrictnessProfile((configuration.tradingStrictnessProfile ?? 'VeryLoose') as TradingStrictnessProfile);
     this.form.markAsPristine();
   }
 
@@ -1880,6 +1917,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
 
   reset(): void {
     this.loadConfiguration();
+
   }
 
   // ======================================================
@@ -1912,7 +1950,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
           value.optimization?.sendConfigurationEmail ?? true,
         sendDailyEmail: value.optimization?.sendDailyEmail ?? true,
         autoPromoteBestConfiguration:
-          value.optimization?.autoPromoteBestConfiguration ?? true,
+          value.optimization?.autoPromoteBestConfiguration ?? false,
 
         signalGenerationWeight: Number(
           value.optimization?.signalGenerationWeight ?? 0.2,
@@ -1992,6 +2030,8 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
           value.optimization?.reportDirectory ?? 'OptimizationRuns',
       },
 
+
+      tradingStrictnessProfile: (value.tradingStrictnessProfile ?? 'VeryLoose') as TradingStrictnessProfile,
 
       instrumentType: this.selectedInstrumentType,
       equity: this.profileDrafts.Equity,

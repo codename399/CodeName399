@@ -48,6 +48,21 @@ export class MarketService {
           this.gainersSubject.next(data);
         });
 
+        // Every subscribed-stock broker tick carries the complete updated Gainer
+        // snapshot. Merge it into the existing row instead of waiting for the next
+        // discovery snapshot, so all tick fields change in real time.
+        this.hub.on('StockTickUpdated', (stock: any) => {
+          if (!stock?.symbolToken) return;
+          const current = this.gainersSubject.value;
+          const index = current.findIndex(
+            x => String(x?.symbolToken ?? '') === String(stock.symbolToken),
+          );
+          if (index < 0) return;
+          const next = [...current];
+          next[index] = { ...next[index], ...stock };
+          this.gainersSubject.next(next);
+        });
+
         this.hub.on('OptimizationStatusUpdated', (status: TradingOptimizationStatus) => {
           if (status) {
             this.optimizationStatusUpdatedSubject.next(status);

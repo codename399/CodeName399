@@ -131,6 +131,8 @@ export interface OptionsTradingSettings extends InstrumentTradingSettings {
 }
 
 
+export type TradingStrictnessProfile = 'VeryLoose' | 'Loose' | 'Balanced' | 'Moderate' | 'Strict' | 'VeryStrict';
+
 export type OptimizationMode = 'CountBased' | 'TimeBased' | 0 | 1;
 
 export interface OptimizationSettings {
@@ -200,6 +202,7 @@ export interface TradingConfiguration {
   enableNotification: boolean;
 
   strategy: TradingStrategy;
+  tradingStrictnessProfile?: TradingStrictnessProfile;
 
   riskPercentage: number;
 
