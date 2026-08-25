@@ -513,7 +513,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
         0.998,
         [Validators.min(0), Validators.max(1)],
       ],
-      momentumMaximumDrawdown: [0.5, [Validators.min(0), Validators.max(1)]],
+      momentumMaximumDrawdown: [1, [Validators.min(0), Validators.max(1)]],
       momentumHighestPriceTolerance: [
         0.997,
         [Validators.min(0), Validators.max(1)],
@@ -522,7 +522,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
         0.998,
         [Validators.min(0), Validators.max(1)],
       ],
-      maximumPullbackGain: [0.75, [Validators.min(0), Validators.max(1)]],
+      maximumPullbackGain: [1, [Validators.min(0), Validators.max(1)]],
       minimumFinalScore: [70, [Validators.min(0), Validators.max(100)]],
       minimumBollingerBandwidth: [1, [Validators.min(0)]],
       minimumFinalRSI: [48, [Validators.min(0), Validators.max(100)]],
@@ -1182,13 +1182,13 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
           momentumMinimumPriceRatio:
             configuration.validation?.momentumMinimumPriceRatio ?? 0.998,
           momentumMaximumDrawdown:
-            configuration.validation?.momentumMaximumDrawdown ?? 0.5,
+            configuration.validation?.momentumMaximumDrawdown ?? 1,
           momentumHighestPriceTolerance:
             configuration.validation?.momentumHighestPriceTolerance ?? 0.997,
           pullbackMinimumPriceRatio:
             configuration.validation?.pullbackMinimumPriceRatio ?? 0.998,
           maximumPullbackGain:
-            configuration.validation?.maximumPullbackGain ?? 0.75,
+            configuration.validation?.maximumPullbackGain ?? 1,
           minimumFinalScore: configuration.validation?.minimumFinalScore ?? 70,
           minimumBollingerBandwidth:
             configuration.validation?.minimumBollingerBandwidth ?? 1,
@@ -2229,7 +2229,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
           value.validation?.momentumMinimumPriceRatio ?? 0.998,
         ),
         momentumMaximumDrawdown: Number(
-          value.validation?.momentumMaximumDrawdown ?? 0.5,
+          value.validation?.momentumMaximumDrawdown ?? 1,
         ),
         momentumHighestPriceTolerance: Number(
           value.validation?.momentumHighestPriceTolerance ?? 0.997,
@@ -2238,7 +2238,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
           value.validation?.pullbackMinimumPriceRatio ?? 0.998,
         ),
         maximumPullbackGain: Number(
-          value.validation?.maximumPullbackGain ?? 0.75,
+          value.validation?.maximumPullbackGain ?? 1,
         ),
         minimumFinalScore: Number(value.validation?.minimumFinalScore ?? 70),
         minimumBollingerBandwidth: Number(
