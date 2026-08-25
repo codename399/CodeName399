@@ -179,12 +179,18 @@
       </div>
 
       <section class="table-shell">
-        <div class="table-header">
-          <div>{{ filteredGainers().length }} symbols found</div>
-          <div>Top candidates based on current scan</div>
+        <div class="subscription-loading" *ngIf="isWaitingForSubscriptions(); else subscribedStockTable">
+          <div class="subscription-loading-text">Waiting for market data subscriptions...</div>
+          <div class="subscription-loading-hint">Stocks will appear here after their live market-data subscription is active.</div>
         </div>
-        <div class="table-scroll">
-          <table>
+
+        <ng-template #subscribedStockTable>
+          <div class="table-header">
+            <div>{{ filteredGainers().length }} symbols found</div>
+            <div>Top candidates based on current scan</div>
+          </div>
+          <div class="table-scroll">
+            <table>
             <thead>
               <tr>
                 <th *ngIf="isColumnVisible('star')">⭐</th>
@@ -505,8 +511,9 @@
                 </td>
               </tr>
             </tbody>
-          </table>
-        </div>
+            </table>
+          </div>
+        </ng-template>
       </section>
 
 

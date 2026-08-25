@@ -183,10 +183,18 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   // Computed
   // ======================================================
 
+  subscribedGainers = computed(() =>
+    this.gainers().filter((stock) => stock.isSubscribed === true),
+  );
+
+  isWaitingForSubscriptions = computed(
+    () => this.subscribedGainers().length === 0,
+  );
+
   filteredGainers = computed(() => {
     const search = this.searchText().trim().toLowerCase();
 
-    const filtered = this.gainers().filter((stock) =>
+    const filtered = this.subscribedGainers().filter((stock) =>
       stock.symbol.toLowerCase().includes(search),
     );
 
@@ -485,7 +493,12 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
     // snapshot and leave the dashboard empty until the next market update.
     this.subscription?.unsubscribe();
     this.subscription = this.#market.gainers$.subscribe((data: Gainer[]) => {
-      this.gainers.set(data);
+      // SignalR can deliver a stale SELL after the authoritative snapshot.
+      // The UI must never present SELL for an unowned equity, even if an old
+      // event arrives after the corrected API snapshot. Owned equities retain
+      // SELL because they may legitimately need an exit.
+      const normalized = data.map((stock) => this.normalizeGainerForDisplay(stock));
+      this.gainers.set(normalized);
     });
 
     await this.#market.startConnection();
@@ -613,6 +626,20 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   // ======================================================
   // Helpers
   // ======================================================
+
+  private normalizeGainerForDisplay(stock: Gainer): Gainer {
+    const instrumentType = String(stock.instrumentType ?? 'Equity')
+      .trim()
+      .toLowerCase();
+    const isEquity = instrumentType === '' || instrumentType === 'equity';
+    const signal = String(stock.signal ?? '').trim().toUpperCase();
+
+    if (isEquity && !stock.isOwned && signal === 'SELL') {
+      return { ...stock, signal: 'HOLD' };
+    }
+
+    return stock;
+  }
 
   private getGainerSortBucket(stock: Gainer): number {
     if (stock.isOwned) {
