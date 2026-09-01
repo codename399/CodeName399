@@ -40,6 +40,69 @@ export interface InstrumentTradingSettings {
   maximumMarginUtilizationPercent: number;
   forceSquareOffBuffer: string;
   evaluation: EvaluationSettings;
+  // Backend global risk/runtime settings. These are preserved even when a
+  // particular screen does not expose every advanced field.
+  enableEquityTrading?: boolean;
+  enableFuturesTrading?: boolean;
+  enableOptionsTrading?: boolean;
+  maxBrokerFailuresBeforeKillSwitch?: number;
+  brokerFailureWindowMinutes?: number;
+  futuresOptionsMarketCloseTime?: string;
+  intradayEntryCutoffTime?: string;
+  equityMisAutoSquareOffTime?: string;
+  futuresOptionsAutoSquareOffTime?: string;
+  roboAutoSquareOffTime?: string;
+  casTransitionStart?: string;
+  casOrderEntryStart?: string;
+  casMarketOnlyEnd?: string;
+  casLimitOnlyEnd?: string;
+  casRandomCloseSafetyCutoff?: string;
+  casEnd?: string;
+  casPostCloseEnd?: string;
+  casPriceBandPercent?: number;
+  marketTimeZoneId?: string;
+  tradingHolidays?: string[];
+  maximumTotalOpenRisk?: number;
+  maximumTotalUnderlyingDeltaExposure?: number;
+  emergencyMarginUtilizationPercent?: number;
+  enableTradingKillSwitchPersistence?: boolean;
+  enableGlobalRiskLimits?: boolean;
+  riskReservationSeconds?: number;
+  includeUnrealizedPnlInDailyLoss?: boolean;
+  requireClosedHigherTimeframeCandles?: boolean;
+  enableOptionChainAnalytics?: boolean;
+  enablePutCallRatio?: boolean;
+  enableOIBuildup?: boolean;
+  enablePaperMarginSimulation?: boolean;
+  paperFuturesMarginRate?: number;
+  paperOptionsCapitalRate?: number;
+  paperNakedOptionMarginRate?: number;
+  paperNakedOptionMarginSafetyMultiplier?: number;
+  quoteMaxTokensPerRequest?: number;
+  quoteRequestsPerSecond?: number;
+  maximumSlippagePercent?: number;
+  rejectDuplicateOrderIntent?: boolean;
+  enableScripConsentForCashOrders?: boolean;
+  nakedRiskMonitorIntervalSeconds?: number;
+  orderIntentRecoveryIntervalSeconds?: number;
+  orderIntentRecoveryInitialDelaySeconds?: number;
+  orderIntentUnknownOrderExpiryMinutes?: number;
+  webSocketHeartbeatSeconds?: number;
+  webSocketPongTimeoutSeconds?: number;
+  webSocketRetryInitialSeconds?: number;
+  webSocketRetryMaxSeconds?: number;
+  brokerPositionConfirmationDelaySeconds?: number;
+  squareOffRetryDelaySeconds?: number;
+  stopLossConfirmationSeconds?: number;
+  capitalAllocationBaseMultiplier?: number;
+  capitalAllocationConfidenceMultiplier?: number;
+  eliteMovementScore?: number;
+  strongMovementScore?: number;
+  eliteCapitalBonus?: number;
+  strongCapitalBonus?: number;
+  maximumObservedDrawdownPercent?: number;
+  brokerBalanceRefreshSeconds?: number;
+
   validation: ValidationSettings;
 }
 
@@ -431,6 +494,20 @@ export interface VirtualTradingSettings {
   confidenceBonusAfterSeconds1?: number;
   confidenceBonusAfterSeconds2?: number;
   pullbackWarmupSeconds?: number;
+  entryMinimumPriceRatio?: number;
+  maximumDrawdownPercent?: number;
+  highestPriceMinimumRatio?: number;
+  positiveRatioWeight?: number;
+  aboveEntryRatioWeight?: number;
+  maximumHigherHighBonus?: number;
+  maximumConsecutivePositiveBonus?: number;
+  volatilityVeryLowThreshold?: number;
+  volatilityLowThreshold?: number;
+  volatilityMediumThreshold?: number;
+  volatilityHighThreshold?: number;
+  volatilityVeryHighThreshold?: number;
+  fallbackAtrPercent?: number;
+  maximumPullbackGainPercent?: number;
 }
 
 export interface ReportingSettings {

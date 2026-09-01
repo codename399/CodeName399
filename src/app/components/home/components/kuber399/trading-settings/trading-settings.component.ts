@@ -54,6 +54,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
   loading = false;
 
   saving = false;
+  private loadedConfiguration: TradingConfiguration | null = null;
 
   optimizationStatus: TradingOptimizationStatus | null = null;
   optimizationStatusLoading = false;
@@ -230,7 +231,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
 
     strategy: [1, Validators.required],
 
-    instrumentType: ['Equity' as InstrumentType, Validators.required],
+    instrumentType: [this.#angel.selectedInstrumentType() as InstrumentType, Validators.required],
 
     exchange: ['NSE', Validators.required],
     productType: ['INTRADAY', Validators.required],
@@ -896,6 +897,62 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
       });
   }
 
+  readonly columnDefinitions = [
+    { key: 'star', label: '⭐', defaultVisible: true },
+    { key: 'symbol', label: 'Symbol', defaultVisible: true },
+    { key: 'instrumentType', label: 'Type', defaultVisible: true },
+    { key: 'exchange', label: 'Exchange', defaultVisible: false },
+    { key: 'optionContract', label: 'Option Contract', defaultVisible: false },
+    { key: 'oi', label: 'OI', defaultVisible: false },
+    { key: 'oiChange', label: 'OI Change %', defaultVisible: false },
+    { key: 'pcr', label: 'PCR', defaultVisible: false },
+    { key: 'iv', label: 'IV', defaultVisible: false },
+    { key: 'delta', label: 'Delta', defaultVisible: false },
+    { key: 'gamma', label: 'Gamma', defaultVisible: false },
+    { key: 'theta', label: 'Theta', defaultVisible: false },
+    { key: 'vega', label: 'Vega', defaultVisible: false },
+    { key: 'token', label: 'Token', defaultVisible: false },
+    { key: 'prevClose', label: 'Prev Close', defaultVisible: true },
+    { key: 'vwap', label: 'VWAP', defaultVisible: false },
+    { key: 'ema9', label: 'EMA9', defaultVisible: false },
+    { key: 'ema21', label: 'EMA21', defaultVisible: false },
+    { key: 'ema50', label: 'EMA50', defaultVisible: false },
+    { key: 'ema200', label: 'EMA200', defaultVisible: false },
+    { key: 'anchoredVWAP', label: 'Anchored VWAP', defaultVisible: false },
+    { key: 'adx', label: 'ADX', defaultVisible: false },
+    { key: 'superTrend', label: 'SuperTrend', defaultVisible: false },
+    { key: 'rsi', label: 'RSI', defaultVisible: false },
+    { key: 'volumeMultiplier', label: 'Vol×', defaultVisible: false },
+    { key: 'pullbackDistance', label: 'PB%', defaultVisible: false },
+    { key: 'distanceFromEMA', label: 'Dist EMA%', defaultVisible: false },
+    { key: 'distanceFromVWAP', label: 'Dist VWAP%', defaultVisible: false },
+    { key: 'macd', label: 'MACD', defaultVisible: false },
+    { key: 'macdSignal', label: 'MACD Sig', defaultVisible: false },
+    { key: 'macdHistogram', label: 'MACD Hist', defaultVisible: false },
+    { key: 'bollingerBandwidth', label: 'Boll Bandwidth', defaultVisible: false },
+    { key: 'score', label: 'Score', defaultVisible: true },
+    { key: 'signal', label: 'Signal', defaultVisible: true },
+    { key: 'risk', label: 'Risk', defaultVisible: true },
+    { key: 'stopLoss', label: 'SL', defaultVisible: true },
+    { key: 'targetPrice', label: 'Target', defaultVisible: true },
+    { key: 'atr', label: 'ATR', defaultVisible: false },
+    { key: 'reason', label: 'Reason', defaultVisible: true },
+    { key: 'suggestion', label: 'Suggestion', defaultVisible: true }
+  ];
+
+  visibleColumns = new Set<string>();
+
+  isColumnVisible(key: string): boolean { return this.visibleColumns.has(key); }
+
+  toggleColumn(key: string): void {
+    if (this.visibleColumns.has(key)) this.visibleColumns.delete(key);
+    else this.visibleColumns.add(key);
+  }
+
+  resetColumns(): void {
+    this.visibleColumns = new Set(this.columnDefinitions.filter(x => x.defaultVisible).map(x => x.key));
+  }
+
   // ======================================================
   // Lifecycle
   // ======================================================
@@ -922,7 +979,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
 
     this.form.controls.instrumentType.valueChanges.subscribe((value) => {
       if (value) {
-        this.onInstrumentTypeChanged(value as InstrumentType);
+        this.switchInstrumentConfiguration(value as InstrumentType);
       }
     });
 
@@ -993,9 +1050,9 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
         this.optimizationStatusLoading = false;
       });
 
-    // The SignalR connection is shared with the Angel One page. startConnection()
+    // The SignalR connection is shared with the Kuber399 trading page. startConnection()
     // is idempotent, so this is safe even when the parent already started it.
-    void this.#market.startConnection();
+    void this.#market.startConnection(this.selectedInstrumentType);
   }
 
   refreshOptimizationStatus(): void {
@@ -1007,7 +1064,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
 
     this.#optimizationStatusSubscription?.unsubscribe();
     this.#optimizationStatusSubscription = this.#angel
-      .getTradingOptimizationStatus()
+      .getTradingOptimizationStatus(this.selectedInstrumentType)
       .pipe(
         catchError(() => of(null)),
         finalize(() => {
@@ -1239,7 +1296,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
 
     this.#angel
 
-      .getTradingConfiguration()
+      .getTradingConfiguration(this.selectedInstrumentType)
 
       .pipe(
         finalize(() => {
@@ -1250,6 +1307,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (configuration) => {
           this.patchForm(configuration);
+          this.applyConfiguredColumns(configuration);
         },
 
         error: () => {
@@ -1263,9 +1321,10 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
   // ======================================================
 
   private patchForm(configuration: TradingConfiguration): void {
+    this.loadedConfiguration = configuration;
     this.form.patchValue(
       {
-        instrumentType: configuration.instrumentType ?? 'Equity',
+        instrumentType: this.#angel.selectedInstrumentType(),
 
         enableAutoTrading: configuration.enableAutoTrading,
 
@@ -1939,6 +1998,14 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
     return normalized as InstrumentTradingSettings;
   }
 
+  private applyConfiguredColumns(configuration: TradingConfiguration): void {
+    this.visibleColumns = new Set(
+      configuration.visibleColumns?.length
+        ? configuration.visibleColumns
+        : this.columnDefinitions.filter(x => x.defaultVisible).map(x => x.key)
+    );
+  }
+
   private patchActiveProfile(type: InstrumentType): void {
     const profile = this.profileDrafts[type];
     if (!profile) return;
@@ -2099,7 +2166,36 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
     );
   }
 
-  onInstrumentTypeChanged(type: InstrumentType): void {
+    private switchInstrumentConfiguration(type: InstrumentType): void {
+    if (type === this.#angel.selectedInstrumentType() && this.loadedConfiguration) {
+      return;
+    }
+
+    if (this.form.dirty && !window.confirm('Switch instrument type and discard unsaved changes?')) {
+      this.form.patchValue({ instrumentType: this.#angel.selectedInstrumentType() }, { emitEvent: false });
+      return;
+    }
+
+    this.#angel.selectInstrumentType(type);
+    this.loading = true;
+    this.optimizationStatus = null;
+
+    this.#angel.getTradingConfiguration(type).pipe(
+      finalize(() => this.loading = false)
+    ).subscribe({
+      next: configuration => {
+        this.patchForm(configuration);
+        this.applyConfiguredColumns(configuration);
+        this.form.markAsPristine();
+        void this.#market.startConnection(type);
+      },
+      error: () => {
+        this.#toastService.error(`Unable to load ${type} trading configuration.`);
+      }
+    });
+  }
+
+onInstrumentTypeChanged(type: InstrumentType): void {
     const previous = this.activeInstrumentType;
 
     if (previous !== type && this.profileDrafts[previous]) {
@@ -2461,7 +2557,9 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
     );
 
     const configuration: TradingConfiguration = {
+      ...(this.loadedConfiguration ?? {}),
       id: 'DEFAULT',
+      visibleColumns: Array.from(this.visibleColumns),
       optimization: {
         enabled: value.optimization?.enabled ?? true,
         paperTradingOnly: value.optimization?.paperTradingOnly ?? true,
@@ -2687,7 +2785,6 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
         value.maximumVirtualPullbackPercent ?? 0.5,
       ),
 
-      visibleColumns: this.#angel.configuration()?.visibleColumns ?? [],
 
       maximumChargesPerTrade: Number(value.maximumChargesPerTrade ?? 100),
       lastDailySummarySent: null,
@@ -3090,7 +3187,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
     };
 
     this.#angel
-      .saveTradingConfiguration(configuration)
+      .saveTradingConfiguration(configuration, this.selectedInstrumentType)
 
       .pipe(
         finalize(() => {

@@ -9,159 +9,27 @@
 
     <aside class="page-sidebar" [class.open]="showSettings()">
       <div class="sidebar-header">
-        <div class="sidebar-title">Dashboard Controls
-</div>
-        <button
-          class="icon-button"
-          type="button"
-          (click)="toggleSettings()"
-          title="Close controls"
-          aria-label="Close controls"
-        >
+        <div class="sidebar-title">Instrument Type</div>
+        <button class="icon-button" type="button" (click)="toggleSettings()" title="Close instrument selector" aria-label="Close instrument selector">
           <span class="material-icons">chevron_left</span>
         </button>
       </div>
-
-      <section class="summary-panel">
-        <div class="summary-stripe">
-          <div
-            class="summary-stripe-item market-status tooltip-trigger"
-            [class.market-open]="marketStatus() === 'OPEN'"
-            [class.market-closed]="marketStatus() === 'CLOSED'"
-            [class.market-ignored]="
-              marketStatus() !== 'OPEN' && marketStatus() !== 'CLOSED'
-            "
-            title="Market status"
-            tabindex="0"
-          >
-            <span>⏱️</span>
-            <div>
-              <strong>{{ marketStatus() }}</strong>
-              <small>{{ marketTimer() }}</small>
-            </div>
-          </div>
-
-          <div
-            class="summary-stripe-item tooltip-trigger"
-            title="Ignore market hours"
-            tabindex="0"
-          >
-            <span>🕒</span>
-            <strong>{{
-              configuration()?.ignoreMarketHours ? "Ignored" : "Market Hours"
-            }}</strong>
-          </div>
-
-          <div
-            class="summary-stripe-item tooltip-trigger"
-            title="Available cash"
-            tabindex="0"
-          >
-            <span>💵</span>
-            <strong>₹ {{ availableCash() | number: "1.2-2" }}</strong>
-          </div>
-
-          <div
-            class="summary-stripe-item tooltip-trigger"
-            title="Instrument type"
-            tabindex="0"
-          >
-            <span>🎯</span>
-            <strong>{{ activeInstrumentType() }}</strong>
-          </div>
-
-          <div
-            class="summary-stripe-item tooltip-trigger"
-            title="Strategy"
-            tabindex="0"
-          >
-            <span>📈</span>
-            <strong>{{ configuration()?.strategy }}</strong>
-          </div>
-
-          <div
-            class="summary-stripe-item tooltip-trigger"
-            title="Auto trading"
-            tabindex="0"
-          >
-            <span>🤖</span>
-            <strong>{{
-              configuration()?.enableAutoTrading ? "On" : "Off"
-            }}</strong>
-          </div>
-
-          <div
-            class="summary-stripe-item tooltip-trigger"
-            title="Paper trading"
-            tabindex="0"
-          >
-            <span>📝</span>
-            <strong>{{ configuration()?.paperTrading ? "On" : "Off" }}</strong>
-          </div>
-        </div>
-
-        <div class="summary-actions">
-
-          <button
-            class="refresh-button"
-            type="button"
-            (click)="refresh()"
-            title="Refresh"
-            aria-label="Refresh"
-          >
-            <span class="material-icons">refresh</span>
-          </button>
-        </div>
-      </section>
-
-
       <div class="page-actions">
-        <div class="action-buttons">
+        <div class="instrument-switcher">
           <button
-            class="pill-button accent"
+            *ngFor="let instrument of instrumentTypes"
             type="button"
-            (click)="openSettings()"
-            title="Settings"
-            aria-label="Settings"
-          >
-            Settings
-          </button>
-
-          <button
-            class="pill-button accent"
-            type="button"
-            (click)="saveConfiguration()"
-            title="Save columns"
-            aria-label="Save columns"
-          >
-            Save Columns
+            class="pill-button"
+            [class.accent]="activeInstrumentType() === instrument.value"
+            [class.selected]="activeInstrumentType() === instrument.value"
+            (click)="selectInstrumentType(instrument.value)">
+            <span class="material-icons">{{ instrument.icon }}</span>
+            {{ instrument.label }}
           </button>
         </div>
-
-        <div class="column-panel">
-          <div class="column-panel-header">
-            <span>Table Columns</span>
-            <button
-              class="text-link-button"
-              type="button"
-              (click)="resetColumns()"
-            >
-              Reset
-            </button>
-          </div>
-          <div class="column-options">
-            <label
-              class="column-option"
-              *ngFor="let column of columnDefinitions"
-            >
-              <input
-                type="checkbox"
-                [checked]="isColumnVisible(column.key)"
-                (change)="toggleColumn(column.key)"
-              />
-              <span>{{ column.label }}</span>
-            </label>
-          </div>
+        <div class="instrument-context">
+          <strong>{{ activeInstrumentType() }}</strong>
+          <span>Grid and trading settings follow this instrument.</span>
         </div>
       </div>
     </aside>

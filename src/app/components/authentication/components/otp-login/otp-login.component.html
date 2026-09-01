@@ -1,0 +1,22 @@
+<div class="auth-page">
+  <div class="auth-card">
+    <h1>OTP sign in</h1>
+    <p>Sign in without entering your password.</p>
+    <div class="channel-buttons">
+      <button type="button" [class.active]="channel === 'Email'" (click)="channel = 'Email'">Email</button>
+      <button type="button" [class.active]="channel === 'Contact'" (click)="channel = 'Contact'">Mobile</button>
+    </div>
+    <form [formGroup]="form" (ngSubmit)="requested ? verify() : requestOtp()">
+      <label>Email or mobile number</label>
+      <input formControlName="identifier" autocomplete="username" />
+      @if (requested) {
+        <label>OTP</label>
+        <input formControlName="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+      }
+      <button type="submit" [disabled]="loading || form.controls.identifier.invalid">
+        {{ loading ? 'Please wait...' : (requested ? 'Verify OTP' : 'Send OTP') }}
+      </button>
+    </form>
+    <button class="link-button" type="button" (click)="backToLogin()">Back to password login</button>
+  </div>
+</div>

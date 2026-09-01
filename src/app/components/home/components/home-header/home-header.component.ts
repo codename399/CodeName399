@@ -73,6 +73,16 @@ export class HomeHeaderComponent {
     this.#router.navigate(['/home/register', this.user.id]);
   }
 
+  openTradingSettings() {
+    this.isDropdownOpen = false;
+    this.#router.navigate(['/home/trading-settings']);
+  }
+
+  openKuber399() {
+    this.isDropdownOpen = false;
+    this.#router.navigate(['/home/kuber399']);
+  }
+
   goHome() {
     this.#router.navigate(['/home']);
   }

@@ -18,24 +18,24 @@ import { AngelOneService } from '../../services/angel-one.service';
 import { MarketService } from '../../services/market.service';
 
 import { Gainer } from '../../models/gainer';
-import { TradingConfiguration } from '../../models/trading-configuration';
+import { TradingConfiguration, InstrumentType } from '../../models/trading-configuration';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TooltipDirective } from '../../../../directives/tooltip.directive';
 
 @Component({
-  selector: 'app-angel-one',
+  selector: 'app-kuber399',
 
   standalone: true,
 
   imports: [CommonModule, TooltipDirective],
 
-  templateUrl: './angel-one.component.html',
+  templateUrl: './kuber399.component.html',
 
-  styleUrls: ['./angel-one.component.css'],
+  styleUrls: ['./kuber399.component.css'],
 })
-export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
+export class Kuber399Component implements OnInit, AfterViewInit, OnDestroy {
   readonly #angel = inject(AngelOneService);
 
   readonly #market = inject(MarketService);
@@ -175,6 +175,12 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   ];
 
   visibleColumns = signal<string[]>([]);
+  readonly allowedColumnsByInstrument: Record<InstrumentType, string[]> = {
+    Equity: ['star','symbol','instrumentType','exchange','prevClose','vwap','ema9','ema21','ema50','ema200','anchoredVWAP','adx','superTrend','superTrendBullish','rsi','volumeMultiplier','pullbackDistance','distanceFromEMA','distanceFromVWAP','macd','macdSignal','macdHistogram','bollingerBandwidth','score','signal','risk','stopLoss','targetPrice','atr','reason','suggestion','upperCircuitLimit','lowerCircuitLimit'],
+    Futures: ['star','symbol','instrumentType','exchange','token','oi','oiChange','prevClose','vwap','ema9','ema21','ema50','ema200','anchoredVWAP','adx','superTrend','superTrendBullish','rsi','volumeMultiplier','pullbackDistance','distanceFromEMA','distanceFromVWAP','macd','macdSignal','macdHistogram','bollingerBandwidth','score','signal','risk','stopLoss','targetPrice','atr','reason','suggestion','upperCircuitLimit','lowerCircuitLimit'],
+    Options: ['star','symbol','instrumentType','exchange','optionContract','oi','oiChange','pcr','iv','delta','gamma','theta','vega','token','prevClose','vwap','ema9','ema21','ema50','ema200','anchoredVWAP','adx','superTrend','superTrendBullish','rsi','volumeMultiplier','pullbackDistance','distanceFromEMA','distanceFromVWAP','macd','macdSignal','macdHistogram','bollingerBandwidth','score','signal','risk','stopLoss','targetPrice','atr','reason','suggestion','upperCircuitLimit','lowerCircuitLimit']
+  };
+
 
   private timerId: any;
   private subscription?: Subscription;
@@ -231,8 +237,24 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   );
 
   activeInstrumentType = computed(
-    () => this.configuration()?.instrumentType ?? 'Equity',
+    () => this.#angel.selectedInstrumentType(),
   );
+
+  readonly instrumentTypes: { value: InstrumentType; label: string; icon: string }[] = [
+    { value: 'Equity', label: 'Equity', icon: 'show_chart' },
+    { value: 'Futures', label: 'Futures', icon: 'trending_up' },
+    { value: 'Options', label: 'Options', icon: 'account_tree' },
+  ];
+
+  selectInstrumentType(type: InstrumentType): void {
+    if (type === this.activeInstrumentType()) return;
+    this.#angel.selectInstrumentType(type);
+    this.gainers.set([]);
+    this.visibleColumns.set([]);
+    this.loadConfiguration();
+    this.loadDashboard();
+    void this.subscribeToGainers();
+  }
 
   activeInstrumentSettings = computed(() => {
     const config = this.configuration();
@@ -355,6 +377,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   isColumnVisible(columnKey: string): boolean {
+    if (!this.allowedColumnsByInstrument[this.activeInstrumentType()]?.includes(columnKey)) return false;
     return this.visibleColumns().includes(columnKey);
   }
 
@@ -369,7 +392,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   private loadDashboard(): void {
     this.#angel
 
-      .getDashboardSummary()
+      .getDashboardSummary(this.activeInstrumentType())
 
       .subscribe({
         next: (summary) => {
@@ -393,7 +416,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   private loadConfiguration(): void {
     this.#angel
 
-      .getTradingConfiguration()
+      .getTradingConfiguration(this.activeInstrumentType())
 
       .subscribe({
         next: (configuration) => {
@@ -426,7 +449,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.#angel
 
-      .saveTradingConfiguration(payload)
+      .saveTradingConfiguration(payload, this.activeInstrumentType())
 
       .subscribe({
         next: () => {
@@ -470,7 +493,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
       visibleColumns,
     };
 
-    this.#angel.saveTradingConfiguration(payload).subscribe({
+    this.#angel.saveTradingConfiguration(payload, this.activeInstrumentType()).subscribe({
       error: (error) => {
         console.error('Unable to persist visible columns', error);
       },
@@ -501,7 +524,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
       this.gainers.set(normalized);
     });
 
-    await this.#market.startConnection();
+    await this.#market.startConnection(this.activeInstrumentType());
   }
 
   // ======================================================

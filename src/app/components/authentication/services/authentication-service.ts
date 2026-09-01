@@ -104,6 +104,48 @@ export class AuthenticationService {
       );
   }
 
+  requestOtp(identifier: string, channel: 'Email' | 'Contact' = 'Email') {
+    return this.#httpClient.post(
+      this.#apiConstants.getUrl(this.#apiConstants.otpRequest, true),
+      { identifier, channel }
+    );
+  }
+
+  verifyOtp(identifier: string, otp: string, channel: 'Email' | 'Contact' = 'Email') {
+    return this.#httpClient.post<LoginResponse>(
+      this.#apiConstants.getUrl(this.#apiConstants.otpVerify, true),
+      { identifier, otp, channel }
+    ).pipe(
+      tap((response) => {
+        if (response?.token) {
+          this.userId = response.userId;
+          this.token = response.token;
+          this.refreshToken = response.refreshToken;
+        }
+      })
+    );
+  }
+
+  requestForgotPassword(identifier: string, channel: 'Email' | 'Contact' = 'Email') {
+    return this.#httpClient.post(
+      this.#apiConstants.getUrl(this.#apiConstants.forgotPasswordRequest, true),
+      { identifier, channel }
+    );
+  }
+
+  resetForgottenPassword(identifier: string, otp: string, newPassword: string, channel: 'Email' | 'Contact' = 'Email') {
+    return this.#httpClient.post(
+      this.#apiConstants.getUrl(this.#apiConstants.forgotPasswordReset, true),
+      { identifier, otp, newPassword, channel }
+    );
+  }
+
+  startOAuth(provider: 'google' | 'microsoft') {
+    window.location.assign(
+      this.#apiConstants.getUrl(`/oauth/${provider}`, true)
+    );
+  }
+
   getClaims() {
     if (this.token) {
       const decodedToken = jwtDecode(this.token);

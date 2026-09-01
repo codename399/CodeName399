@@ -1694,3 +1694,10 @@ textarea {
   margin: 0 !important;
   box-sizing: border-box !important;
 }
+
+.column-configuration-card { margin-top: 1rem; }
+.column-options-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:.5rem 1rem; padding:1rem; }
+.column-option { display:flex; align-items:center; gap:.45rem; font-size:.875rem; cursor:pointer; }
+.instrument-switcher { display:flex; flex-direction:column; gap:.65rem; }
+.instrument-switcher .pill-button { display:flex; align-items:center; gap:.5rem; justify-content:flex-start; }
+.instrument-switcher .pill-button.selected { font-weight:700; }

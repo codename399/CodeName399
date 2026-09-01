@@ -4,5 +4,8 @@
     "toast_delay": 3000,
     "profilePictureUrl": "../../../../../assets/images/default-avatar.png",
     "pageSize": 5,
-    "loadGridImages":false
+    "loadGridImages": false,
+    "equityTradingBaseURL": "https://api.codename399.com",
+    "futuresTradingBaseURL": "https://api.codename399.com",
+    "optionsTradingBaseURL": "https://api.codename399.com"
 }

@@ -4,13 +4,14 @@ import { Router } from "@angular/router";
 import { ToastService } from "../../../../services/toast.service";
 import { AuthenticationService } from "../../services/authentication-service";
 import { InputComponent } from "../../../input/input.component";
+import { RouterModule } from '@angular/router';
 import { InputType } from "../../../../models/enums/input-type";
 
 @Component({
   selector: 'app-login-component',
   templateUrl: './login-component.html',
   styleUrl: './login-component.css',
-  imports: [ReactiveFormsModule, InputComponent],
+  imports: [ReactiveFormsModule, InputComponent, RouterModule],
 })
 export class LoginComponent {
   #authenticationService = inject(AuthenticationService);
@@ -48,6 +49,12 @@ export class LoginComponent {
       }
     });
   }
+
+  gotoForgotPassword() { this.#router.navigate(['/forgot-password']); }
+
+  loginWithOtp() { this.#router.navigate(['/otp-login']); }
+
+  loginWithOAuth(provider: 'google' | 'microsoft') { this.#authenticationService.startOAuth(provider); }
 
   gotoRegister() {
     this.#router.navigate(['/register']);

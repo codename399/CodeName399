@@ -42,6 +42,11 @@ export class ApiConstants {
   readonly changePassword =
     '/changePassword';
 
+  readonly otpRequest = '/otp/request';
+  readonly otpVerify = '/otp/verify';
+  readonly forgotPasswordRequest = '/forgot-password/request';
+  readonly forgotPasswordReset = '/forgot-password/reset';
+
   readonly logs =
     '/logs';
 
@@ -97,38 +102,15 @@ export class ApiConstants {
   readonly updateUserProjectMappings =
     '/updateUserProjectMappings';
 
-  // ---------------- Games ----------------
-
-  readonly getAllGames =
-    '/getAllGames';
-
-  readonly addGames =
-    '/addGames';
-
-  readonly updateGame =
-    '/updateGame';
-
-  readonly deleteGames =
-    '/deleteGames';
-
-  // ---------------- Debts ----------------
-
-  readonly getAllDebts =
-    '/getAllDebts';
-
-  readonly addDebts =
-    '/addDebts';
-
-  readonly updateDebt =
-    '/updateDebt';
-
-  readonly deleteDebts =
-    '/deleteDebts';
-
   // ---------------- Trading ----------------
 
-  readonly marketHub =
-    '/marketHub';
+  readonly marketHub = '/marketHub';
+
+  readonly instrumentTradingPrefixes: Record<'Equity' | 'Futures' | 'Options', string> = {
+    Equity: '',
+    Futures: '/api/futures',
+    Options: '/api/options',
+  };
 
   // ---------------- Dashboard ----------------
 

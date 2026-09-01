@@ -3184,7 +3184,7 @@ body > .sidebar-float-button {
 }
 
 
-/* The toggle is moved to document.body by AngelOneComponent. Its exact
+/* The toggle is moved to document.body by Kuber399Component. Its exact
    vertical position is applied inline from the real footer geometry. */
 :host ::ng-deep body > .sidebar-float-button {
   position: fixed !important;
@@ -3228,3 +3228,9 @@ body > .sidebar-float-button {
   font-size: 1rem;
   opacity: 0.72;
 }
+
+.instrument-switcher{display:flex;flex-direction:column;gap:.65rem}
+.instrument-switcher .pill-button{display:flex;align-items:center;gap:.5rem;justify-content:flex-start;width:100%}
+.instrument-switcher .pill-button.selected{font-weight:700}
+.instrument-context{display:flex;flex-direction:column;gap:.25rem;margin-top:1rem;padding:.75rem;border-radius:.75rem;background:#f8fafc;color:#475569}
+.instrument-context span{font-size:.8rem}

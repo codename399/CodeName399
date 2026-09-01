@@ -3,59 +3,67 @@ import * as signalR from '@microsoft/signalr';
 import { BehaviorSubject } from 'rxjs';
 import { API_CONSTANTS } from '../../../../injectors/common-injector';
 import { TradingOptimizationStatus } from '../models/trading-optimization-status';
+import { InstrumentType } from '../models/trading-configuration';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class MarketService {
   #apiConstants = inject(API_CONSTANTS);
-
   private hub?: signalR.HubConnection;
   private isStarting = false;
+  private activeInstrumentType?: InstrumentType;
 
-  // Keep the latest watchlist snapshot so a component that subscribes after
-  // the SignalR connection is already established still receives the current data.
   private gainersSubject = new BehaviorSubject<any[]>([]);
   gainers$ = this.gainersSubject.asObservable();
 
-  private optimizationStatusUpdatedSubject = new BehaviorSubject<TradingOptimizationStatus | null>(null);
-  optimizationStatusUpdated$ = this.optimizationStatusUpdatedSubject.asObservable();
+  private optimizationStatusUpdatedSubject =
+    new BehaviorSubject<TradingOptimizationStatus | null>(null);
+  optimizationStatusUpdated$ =
+    this.optimizationStatusUpdatedSubject.asObservable();
 
-  async startConnection(): Promise<void> {
-    if (this.hub?.state === signalR.HubConnectionState.Connected) {
-      return;
-    }
+  private prefix(type: InstrumentType): string {
+    return this.#apiConstants.instrumentTradingPrefixes[type] ?? '';
+  }
 
-    if (this.isStarting) {
-      return;
-    }
+  private hubUrl(type: InstrumentType): string {
+    return this.#apiConstants.getUrl(
+      `${this.prefix(type)}${this.#apiConstants.marketHub}`,
+      false
+    );
+  }
 
+  async startConnection(type: InstrumentType = 'Equity'): Promise<void> {
+    if (
+      this.hub?.state === signalR.HubConnectionState.Connected &&
+      this.activeInstrumentType === type
+    ) return;
+
+    if (this.isStarting) return;
     this.isStarting = true;
 
     try {
+      if (this.hub && this.activeInstrumentType !== type) {
+        await this.hub.stop();
+        this.hub = undefined;
+        this.gainersSubject.next([]);
+        this.optimizationStatusUpdatedSubject.next(null);
+      }
+
       if (!this.hub) {
+        this.activeInstrumentType = type;
         this.hub = new signalR.HubConnectionBuilder()
-          .withUrl(
-            this.#apiConstants.getUrl(
-              this.#apiConstants.marketHub,
-              false
-            )
-          )
+          .withUrl(this.hubUrl(type))
           .withAutomaticReconnect()
           .build();
 
         this.hub.on('GainersUpdated', (data: any[]) => {
-          this.gainersSubject.next(data);
+          this.gainersSubject.next(data ?? []);
         });
 
-        // Every subscribed-stock broker tick carries the complete updated Gainer
-        // snapshot. Merge it into the existing row instead of waiting for the next
-        // discovery snapshot, so all tick fields change in real time.
         this.hub.on('StockTickUpdated', (stock: any) => {
           if (!stock?.symbolToken) return;
           const current = this.gainersSubject.value;
           const index = current.findIndex(
-            x => String(x?.symbolToken ?? '') === String(stock.symbolToken),
+            x => String(x?.symbolToken ?? '') === String(stock.symbolToken)
           );
           if (index < 0) return;
           const next = [...current];
@@ -63,30 +71,16 @@ export class MarketService {
           this.gainersSubject.next(next);
         });
 
-        this.hub.on('OptimizationStatusUpdated', (status: TradingOptimizationStatus) => {
-          if (status) {
-            this.optimizationStatusUpdatedSubject.next(status);
-          }
-        });
-
-        this.hub.onreconnected(async () => {
-          // Recover the authoritative snapshot through SignalR after reconnect.
-          // Do not fall back to the REST status endpoint here.
-          try {
-            const status = await this.hub?.invoke<TradingOptimizationStatus>('GetOptimizationStatus');
-            if (status) {
-              this.optimizationStatusUpdatedSubject.next(status);
-            }
-          } catch (err) {
-            console.error('Failed to recover optimization status after SignalR reconnect.', err);
-          }
-        });
+        this.hub.on('OptimizationStatusUpdated',
+          (status: TradingOptimizationStatus) => {
+            if (status) this.optimizationStatusUpdatedSubject.next(status);
+          });
       }
 
       await this.hub.start();
-      console.log('SignalR Connected');
+      console.log(`SignalR Connected: ${type}`);
     } catch (err) {
-      console.error(err);
+      console.error(`SignalR connection failed for ${type}`, err);
     } finally {
       this.isStarting = false;
     }
@@ -95,6 +89,8 @@ export class MarketService {
   async stopConnection(): Promise<void> {
     if (this.hub) {
       await this.hub.stop();
+      this.hub = undefined;
+      this.activeInstrumentType = undefined;
     }
   }
 }

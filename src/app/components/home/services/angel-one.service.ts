@@ -12,6 +12,7 @@ import { DashboardSummary } from '../models/dashboard-summary';
 import { Gainer } from '../models/gainer';
 import { TradingConfiguration } from '../models/trading-configuration';
 import { TradingOptimizationStatus } from '../models/trading-optimization-status';
+import { InstrumentType } from '../models/trading-configuration';
 
 @Injectable({
   providedIn: 'root',
@@ -31,19 +32,33 @@ export class AngelOneService {
 
   configuration = signal<TradingConfiguration | null>(null);
 
+  selectedInstrumentType = signal<InstrumentType>(
+    (localStorage.getItem('codename399.instrumentType') as InstrumentType) || 'Equity'
+  );
+
+  selectInstrumentType(type: InstrumentType): void {
+    this.selectedInstrumentType.set(type);
+    localStorage.setItem('codename399.instrumentType', type);
+  }
+
+  private tradingPrefix(type: InstrumentType = this.selectedInstrumentType()): string {
+    return this.#api.instrumentTradingPrefixes[type] ?? '';
+  }
+
+  private tradingUrl(endpoint: string, type: InstrumentType = this.selectedInstrumentType()): string {
+    return this.#api.getUrl(`${this.tradingPrefix(type)}${endpoint}`, false);
+  }
+
   // ======================================================
   // Dashboard
   // ======================================================
 
-  getDashboardSummary() {
+  getDashboardSummary(type: InstrumentType = this.selectedInstrumentType()) {
+    this.selectInstrumentType(type);
     return this.#http
 
       .get<DashboardSummary>(
-        this.#api.getUrl(
-          this.#api.dashboardSummary,
-
-          true,
-        ),
+        this.tradingUrl(this.#api.dashboardSummary),
       )
 
       .pipe(
@@ -57,15 +72,12 @@ export class AngelOneService {
   // Trading Configuration
   // ======================================================
 
-  getTradingConfiguration() {
+  getTradingConfiguration(type: InstrumentType = this.selectedInstrumentType()) {
+    this.selectInstrumentType(type);
     return this.#http
 
       .get<TradingConfiguration>(
-        this.#api.getUrl(
-          this.#api.getConfiguration,
-
-          true,
-        ),
+        this.tradingUrl(this.#api.getConfiguration),
       )
 
       .pipe(
@@ -75,15 +87,12 @@ export class AngelOneService {
       );
   }
 
-  saveTradingConfiguration(configuration: TradingConfiguration) {
+  saveTradingConfiguration(configuration: TradingConfiguration, type: InstrumentType = this.selectedInstrumentType()) {
+    this.selectInstrumentType(type);
     return this.#http
 
       .put<TradingConfiguration>(
-        this.#api.getUrl(
-          this.#api.setConfiguration,
-
-          true,
-        ),
+        this.tradingUrl(this.#api.setConfiguration),
 
         configuration,
       )
@@ -95,9 +104,10 @@ export class AngelOneService {
       );
   }
 
-  getTradingOptimizationStatus() {
+  getTradingOptimizationStatus(type: InstrumentType = this.selectedInstrumentType()) {
+    this.selectInstrumentType(type);
     return this.#http.get<TradingOptimizationStatus>(
-      this.#api.getUrl('/api/trading-optimization/status', true),
+      this.tradingUrl('/api/trading-optimization/status'),
     );
   }
 
@@ -107,10 +117,6 @@ export class AngelOneService {
 
   get selectedStrategy() {
     return this.configuration()?.strategy;
-  }
-
-  get selectedInstrumentType(): string {
-    return this.configuration()?.instrumentType ?? 'Equity';
   }
 
   get activeInstrumentSettings() {
