@@ -1285,8 +1285,9 @@ textarea {
 }
 
 .settings-page.theme-dark .card-header h2,
-.settings-page.theme-dark .page-header h1,
-
+.settings-page.theme-dark .page-header h1 {
+  color: #102a43 !important;
+}
 
 @media (max-width: 768px) {
   .settings-page {

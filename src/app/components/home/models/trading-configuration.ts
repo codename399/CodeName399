@@ -151,6 +151,8 @@ export interface TradingConfiguration {
   enableNotification: boolean;
 
   strategy: TradingStrategy;
+  dynamicEvaluation?: DynamicEvaluationSettings;
+  dynamicVirtualTrading?: DynamicVirtualTradingSettings;
   tradingStrictnessProfile?: TradingStrictnessProfile;
 
   riskPercentage: number;
@@ -168,6 +170,62 @@ export interface TradingConfiguration {
   marketOpenTime: string; // "09:15:00"
 
   marketCloseTime: string; // "15:00:00"
+  futuresOptionsMarketCloseTime?: string;
+  intradayEntryCutoffTime?: string;
+  equityMisAutoSquareOffTime?: string;
+  futuresOptionsAutoSquareOffTime?: string;
+  roboAutoSquareOffTime?: string;
+  casTransitionStart?: string;
+  casOrderEntryStart?: string;
+  casMarketOnlyEnd?: string;
+  casLimitOnlyEnd?: string;
+  casRandomCloseSafetyCutoff?: string;
+  casEnd?: string;
+  casPostCloseEnd?: string;
+  casPriceBandPercent?: number;
+  maxBrokerFailuresBeforeKillSwitch?: number;
+  brokerFailureWindowMinutes?: number;
+  maximumTotalOpenRisk?: number;
+  maximumTotalUnderlyingDeltaExposure?: number;
+  maximumMarginUtilizationPercent?: number;
+  emergencyMarginUtilizationPercent?: number;
+  enableTradingKillSwitchPersistence?: boolean;
+  enableGlobalRiskLimits?: boolean;
+  riskReservationSeconds?: number;
+  includeUnrealizedPnlInDailyLoss?: boolean;
+  requireClosedHigherTimeframeCandles?: boolean;
+  enableOptionChainAnalytics?: boolean;
+  enablePutCallRatio?: boolean;
+  enableOIBuildup?: boolean;
+  enablePaperMarginSimulation?: boolean;
+  paperFuturesMarginRate?: number;
+  paperOptionsCapitalRate?: number;
+  paperNakedOptionMarginRate?: number;
+  paperNakedOptionMarginSafetyMultiplier?: number;
+  quoteMaxTokensPerRequest?: number;
+  quoteRequestsPerSecond?: number;
+  maximumSlippagePercent?: number;
+  rejectDuplicateOrderIntent?: boolean;
+  enableScripConsentForCashOrders?: boolean;
+  nakedRiskMonitorIntervalSeconds?: number;
+  orderIntentRecoveryIntervalSeconds?: number;
+  orderIntentRecoveryInitialDelaySeconds?: number;
+  orderIntentUnknownOrderExpiryMinutes?: number;
+  webSocketHeartbeatSeconds?: number;
+  webSocketPongTimeoutSeconds?: number;
+  webSocketRetryInitialSeconds?: number;
+  webSocketRetryMaxSeconds?: number;
+  brokerPositionConfirmationDelaySeconds?: number;
+  squareOffRetryDelaySeconds?: number;
+  stopLossConfirmationSeconds?: number;
+  capitalAllocationBaseMultiplier?: number;
+  capitalAllocationConfidenceMultiplier?: number;
+  eliteMovementScore?: number;
+  strongMovementScore?: number;
+  eliteCapitalBonus?: number;
+  strongCapitalBonus?: number;
+  maximumObservedDrawdownPercent?: number;
+  brokerBalanceRefreshSeconds?: number;
 
   excludedSymbols: string[];
 
@@ -180,6 +238,9 @@ export interface TradingConfiguration {
   maxCandidates: number;
 
   lastDailySummarySent: string | null; // e.g. "2026-07-09"
+  instrumentLoadedAt?: string | null;
+  marketTimeZoneId?: string;
+  tradingHolidays?: string[];
 
   maximumChargesPerTrade: number;
 
@@ -290,21 +351,27 @@ export interface EvaluationSettings {
   averageScore: number;
 
   ema9AboveEma21Score: number;
+  ema9BelowEma21Score: number;
   ema21AboveEma50Score: number;
   superTrendBullishScore: number;
+  superTrendBearishScore: number;
   priceAboveVwapScore: number;
+  priceBelowVwapScore: number;
   anchoredVwapScore: number;
 
   strongAdxScore: number;
   mediumAdxScore: number;
   plusDiAboveMinusDiScore: number;
+  minusDiAbovePlusDiScore: number;
   lowChoppinessScore: number;
 
   momentumIncreasingScore: number;
   pullbackIncreasingMomentumScore: number;
   lastCandleBullishScore: number;
+  lastCandleBearishScore: number;
   higherHighScore: number;
   higherLowScore: number;
+  lowerLowScore: number;
   ema9SlopePositiveScore: number;
   ema21SlopePositiveScore: number;
 
@@ -380,6 +447,94 @@ export interface VirtualTradingSettings {
   confidenceBonusAfterSeconds1?: number;
   confidenceBonusAfterSeconds2?: number;
   pullbackWarmupSeconds?: number;
+  entryMinimumPriceRatio?: number;
+  maximumDrawdownPercent?: number;
+  highestPriceMinimumRatio?: number;
+  positiveRatioWeight?: number;
+  aboveEntryRatioWeight?: number;
+  maximumHigherHighBonus?: number;
+  maximumConsecutivePositiveBonus?: number;
+  volatilityVeryLowThreshold?: number;
+  volatilityLowThreshold?: number;
+  volatilityMediumThreshold?: number;
+  volatilityHighThreshold?: number;
+  volatilityVeryHighThreshold?: number;
+  fallbackAtrPercent?: number;
+  maximumPullbackGainPercent?: number;
+}
+
+export interface DynamicEvaluationSettings {
+  enabled: boolean;
+  minimumCandleHistory: number;
+  profileLookbackCandles: number;
+  minimumEntryScore: number;
+  maximumEntryScore: number;
+  unknownStockRiskReward: number;
+  minimumRiskReward: number;
+  maximumRiskReward: number;
+  minimumNetProfit: number;
+  poorStockNetRewardMultiplier: number;
+  goodStockNetRewardMultiplier: number;
+  excellentStockNetRewardMultiplier: number;
+  normalStopAtrMultiplier: number;
+  recoveryStopAtrMultiplier: number;
+  maximumStopAtrMultiplier: number;
+  maximumStructuralStopAtrDistance: number;
+  targetExtensionStepAtr: number;
+  maximumTargetExtensionIterations: number;
+  strongPerformanceScore: number;
+  excellentPerformanceScore: number;
+  recoveryScoreThreshold: number;
+  minimumRiskMultiplier: number;
+  maximumRiskMultiplier: number;
+  trendWeight: number;
+  momentumWeight: number;
+  candleWeight: number;
+  volumeWeight: number;
+  priceActionWeight: number;
+  recoveryWeight: number;
+  regimeWeight: number;
+  multiTimeframeWeight: number;
+  spreadPenaltyWeight: number;
+  exhaustionPenalty: number;
+}
+
+export interface DynamicVirtualTradingSettings {
+  enabled: boolean;
+  minimumObservationTicks: number;
+  maximumObservationTicks: number;
+  minimumObservationSeconds: number;
+  maximumObservationSeconds: number;
+  minimumFavorableTickRatio: number;
+  maximumAdverseTickRatio: number;
+  recoveryTickRatioBonus: number;
+  maximumAdverseMoveAtr: number;
+  recoveryMaximumAdverseMoveAtr: number;
+  minimumTickMomentum: number;
+  minimumTrendStability: number;
+  minimumMovementScore: number;
+  maximumNoiseScoreForEntry: number;
+  minimumRecoveryScore: number;
+  minimumBreakoutStrength: number;
+  minimumPriceSlope: number;
+  minimumProfitAtrBeforeTrailing: number;
+  baseTrailingAtrMultiplier: number;
+  strongTrendTrailingAtrMultiplier: number;
+  recoveryTrailingAtrMultiplier: number;
+  weakTrendTrailingAtrMultiplier: number;
+  minimumTrailingAtrMultiplier: number;
+  maximumTrailingAtrMultiplier: number;
+  minimumExecutionConfidence: number;
+  peakProfitRetentionPercent: number;
+  recoveryPeakProfitRetentionPercent: number;
+  tickPriceMoveWeight: number;
+  tickDirectionWeight: number;
+  tickAccelerationWeight: number;
+  tickVolumeWeight: number;
+  tickSpreadWeight: number;
+  tickRecoveryWeight: number;
+  baseCapitalMultiplier: number;
+  confidenceCapitalMultiplier: number;
 }
 
 export interface ReportingSettings {
@@ -395,6 +550,7 @@ export interface ReportingSettings {
   maxDrawdownPercentThreshold: number;
   volatilityScoreThreshold: number;
   riskRewardThreshold: number;
+  enableVirtualTradeTickEmails?: boolean;
 }
 
 export interface ConfidenceSettings {
