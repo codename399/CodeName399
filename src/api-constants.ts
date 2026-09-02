@@ -97,34 +97,6 @@ export class ApiConstants {
   readonly updateUserProjectMappings =
     '/updateUserProjectMappings';
 
-  // ---------------- Games ----------------
-
-  readonly getAllGames =
-    '/getAllGames';
-
-  readonly addGames =
-    '/addGames';
-
-  readonly updateGame =
-    '/updateGame';
-
-  readonly deleteGames =
-    '/deleteGames';
-
-  // ---------------- Debts ----------------
-
-  readonly getAllDebts =
-    '/getAllDebts';
-
-  readonly addDebts =
-    '/addDebts';
-
-  readonly updateDebt =
-    '/updateDebt';
-
-  readonly deleteDebts =
-    '/deleteDebts';
-
   // ---------------- Trading ----------------
 
   readonly marketHub =

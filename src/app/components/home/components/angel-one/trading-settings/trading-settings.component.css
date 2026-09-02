@@ -780,251 +780,6 @@ button[mat-flat-button]:hover {
   }
 }
 
-/* Autonomous paper-trading optimizer status */
-.optimization-status-card {
-  width: 100%;
-  padding: 18px 22px;
-  border: 1px solid rgba(37, 99, 235, 0.18);
-  border-radius: 16px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
-}
-
-.optimization-status-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.optimization-status-header h2 {
-  margin: 0 0 4px;
-  color: #102a43;
-  font-size: 18px;
-  font-weight: 800;
-}
-
-.optimization-status-header p {
-  margin: 0;
-  color: #64748b;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.optimization-status-badge {
-  flex: 0 0 auto;
-  padding: 7px 12px;
-  border-radius: 999px;
-  background: #e2e8f0;
-  color: #475569;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.optimization-status-badge.is-running {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.optimization-status-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 16px;
-}
-
-.optimization-status-grid > div {
-  padding: 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #fff;
-}
-
-.optimization-label {
-  display: block;
-  margin-bottom: 5px;
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.optimization-status-grid strong {
-  color: #0f172a;
-  font-size: 15px;
-}
-
-.optimization-activity,
-.optimization-idle {
-  margin-top: 12px;
-  color: #475569;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-@media (max-width: 768px) {
-  .optimization-status-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 480px) {
-  .optimization-status-card {
-    padding: 16px;
-  }
-
-  .optimization-status-header {
-    flex-direction: column;
-  }
-
-  .optimization-status-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Autonomous optimization configuration */
-.optimization-settings-card {
-  border-left: 3px solid #2563eb;
-}
-
-.optimization-settings-card .card-body {
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-}
-
-.optimization-settings-card .toggle-field {
-  min-height: 52px;
-}
-
-.optimization-settings-card .field-row .field-label {
-  min-height: 2.5em;
-  display: flex;
-  align-items: flex-end;
-}
-
-@media (max-width: 768px) {
-  .optimization-settings-card .field-row .field-label {
-    min-height: auto;
-  }
-}
-
-/* ==========================================================================
-   OPTIMIZER RUNTIME STATUS — CLEAR LIGHT/DARK PRESENTATION
-   ========================================================================== */
-.optimization-status-card{
-  position:relative;
-  width:100%;
-  box-sizing:border-box;
-  padding:20px;
-  border:1px solid #dbe4ee;
-  border-left:4px solid #2563eb;
-  border-radius:16px;
-  background:#ffffff;
-  box-shadow:0 8px 24px rgba(15,23,42,.06);
-}
-
-.optimization-kicker{
-  display:block;
-  margin-bottom:4px;
-  color:#2563eb;
-  font-size:10px;
-  font-weight:900;
-  letter-spacing:.10em;
-}
-
-.optimization-status-title h2{
-  margin:0 0 4px;
-  color:#102a43;
-}
-.optimization-runtime-badges{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-}
-.optimization-config-badge{
-  padding:7px 11px;
-  border-radius:999px;
-  background:#f1f5f9;
-  color:#64748b;
-  font-size:11px;
-  font-weight:800;
-}
-.optimization-config-badge.is-enabled{
-  background:#e0f2fe;
-  color:#075985;
-}
-.optimization-status-badge.is-waiting{
-  background:#fff7ed;
-  color:#9a3412;
-}
-.optimization-current-banner{
-  display:grid;
-  grid-template-columns:1.2fr .8fr 1.8fr;
-  gap:10px;
-  margin-top:16px;
-  padding:12px;
-  border:1px solid #dbeafe;
-  border-radius:12px;
-  background:#f8fbff;
-}
-.optimization-current-banner > div{
-  min-width:0;
-}
-.optimization-current-banner span{
-  display:block;
-  margin-bottom:4px;
-  color:#64748b;
-  font-size:10px;
-  font-weight:800;
-  text-transform:uppercase;
-}
-.optimization-current-banner strong{
-  display:block;
-  overflow:hidden;
-  color:#172536;
-  font-size:13px;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-.optimization-profit{color:#15803d !important}
-.optimization-loss{color:#b91c1c !important}
-.optimization-activity-grid{
-  display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:8px;
-  margin-top:12px;
-}
-.optimization-activity-grid span{
-  padding:9px 11px;
-  border:1px solid #e2e8f0;
-  border-radius:9px;
-  background:#f8fafc;
-  color:#64748b;
-  font-size:11px;
-}
-.optimization-activity-grid strong{
-  margin-left:4px;
-  color:#172536;
-}
-.optimization-idle{
-  display:grid !important;
-  grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:10px;
-}
-.optimization-idle > div{
-  padding:11px;
-  border:1px solid #e2e8f0;
-  border-radius:10px;
-  background:#f8fafc;
-}
-.optimization-no-runtime{
-  display:block !important;
-  padding:13px !important;
-  background:#f8fafc !important;
-}
-
 /* Reserve room for the sticky action bar so it can never sit underneath the
    application footer. */
 .settings-page{
@@ -1054,107 +809,20 @@ button[mat-flat-button]:hover {
     bottom:72px !important;
     padding:14px !important;
   }
-  .optimization-current-banner{
-    grid-template-columns:1fr;
-  }
-  .optimization-activity-grid{
-    grid-template-columns:repeat(2,minmax(0,1fr));
-  }
-  .optimization-idle{
-    grid-template-columns:1fr 1fr !important;
-  }
+
+
+
 }
 @media (max-width:480px){
-  .optimization-status-card{
-    padding:16px;
-  }
-  .optimization-runtime-badges{
-    width:100%;
-    justify-content:flex-start;
-  }
-  .optimization-activity-grid{
-    grid-template-columns:1fr 1fr;
-  }
-  .optimization-idle{
-    grid-template-columns:1fr !important;
-  }
+
+
+
+
   .settings-page{
     padding-bottom:250px !important;
   }
   .settings-footer{
     bottom:64px !important;
-  }
-}
-
-/* Dark theme overrides for the optimizer card and action bar. */
-.settings-page.theme-dark .optimization-status-card{
-  background:#0d1926 !important;
-  border-color:#1c3147 !important;
-  color:#e7eef6 !important;
-}
-.settings-page.theme-dark .optimization-status-title h2,
-.settings-page.theme-dark .optimization-current-banner strong,
-.settings-page.theme-dark .optimization-status-grid strong{
-  color:#e7eef6 !important;
-}
-.settings-page.theme-dark .optimization-status-title p,
-.settings-page.theme-dark .optimization-label,
-.settings-page.theme-dark .optimization-activity,
-.settings-page.theme-dark .optimization-idle{
-  color:#9fb2c4 !important;
-}
-.settings-page.theme-dark .optimization-current-banner,
-.settings-page.theme-dark .optimization-status-grid > div,
-.settings-page.theme-dark .optimization-activity-grid span,
-.settings-page.theme-dark .optimization-idle > div,
-.settings-page.theme-dark .optimization-no-runtime{
-  background:#0e1d2d !important;
-  border-color:#1c3147 !important;
-}
-.settings-page.theme-dark .optimization-current-banner strong,
-.settings-page.theme-dark .optimization-activity-grid strong{
-  color:#dbe8f3 !important;
-}
-.settings-page.theme-dark .settings-footer{
-  background:#0d1926 !important;
-  border-color:#1c3147 !important;
-  color:#e7eef6 !important;
-}
-
-.optimization-runtime-actions{
-  display:flex;
-  align-items:center;
-  justify-content:flex-end;
-  margin-left:auto;
-}
-.optimization-refresh-button{
-  min-height:34px;
-  padding:7px 12px;
-  border:1px solid #cbd5e1;
-  border-radius:9px;
-  background:#fff;
-  color:#334155;
-  font-size:11px;
-  font-weight:800;
-  cursor:pointer;
-}
-.optimization-refresh-button:hover:not(:disabled){
-  background:#f8fafc;
-}
-.optimization-refresh-button:disabled{
-  opacity:.6;
-  cursor:wait;
-}
-.settings-page.theme-dark .optimization-refresh-button{
-  border-color:#29435b;
-  background:#0e1d2d;
-  color:#dbe8f3;
-}
-@media (max-width:768px){
-  .optimization-runtime-actions{
-    width:100%;
-    justify-content:flex-start;
-    margin:4px 0 0;
   }
 }
 
@@ -1236,46 +904,15 @@ button[mat-flat-button]:hover {
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
 }
 
-.optimization-status-card {
-  border: 1px solid #bfdbfe;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
-  box-shadow: 0 4px 18px rgba(37, 99, 235, 0.07);
-}
 
-.optimization-status-header {
-  padding: 16px 18px;
-  border-bottom: 1px solid #dbeafe;
-}
 
-.optimization-kicker {
-  color: var(--settings-blue);
-  font-size: 0.68rem;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-}
 
-.optimization-status-title h2 {
-  margin: 4px 0;
-  font-size: 18px;
-  color: var(--settings-text);
-}
 
-.optimization-status-title p {
-  max-width: 900px;
-  margin: 0;
-  color: var(--settings-muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
 
-.optimization-runtime-actions button,
-.optimization-status-badge,
-.optimization-config-badge {
-  border-radius: 7px;
-  font-size: 0.72rem;
-  font-weight: 800;
-}
+
+
+
+
 
 .settings-grid {
   gap: 10px;
@@ -1584,11 +1221,7 @@ textarea {
   background: #f8fafc;
 }
 
-.optimization-status-card {
-  padding: 14px;
-  border-radius: 8px;
-  box-shadow: 0 3px 12px rgba(15, 23, 42, .05);
-}
+
 
 /* IMPORTANT: settings action bar is normal-flow content, never floating. */
 .settings-page {
@@ -1645,11 +1278,7 @@ textarea {
 .settings-page.theme-dark .card-body,
 .settings-page.theme-dark .settings-footer,
 .settings-page.theme-dark .page-header,
-.settings-page.theme-dark .optimization-status-card {
-  background: #ffffff !important;
-  color: #172033 !important;
-  border-color: #d7e0ea !important;
-}
+
 
 .settings-page.theme-dark .card-header {
   background: #f8fafc !important;
@@ -1657,9 +1286,7 @@ textarea {
 
 .settings-page.theme-dark .card-header h2,
 .settings-page.theme-dark .page-header h1,
-.settings-page.theme-dark .optimization-status-title h2 {
-  color: #172033 !important;
-}
+
 
 @media (max-width: 768px) {
   .settings-page {

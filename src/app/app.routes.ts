@@ -1,16 +1,13 @@
 import { Routes } from '@angular/router';
+import { Constants } from '../constants';
 import { AuthGuard } from '../route-guards/auth-guard';
 import { NoAuthGuard } from '../route-guards/no-auth-guard';
 import { RegisterResolver } from './components/authentication/resolvers/register-resolver';
 import { DashboardResolver } from './components/home/resolvers/dashboard-resolver';
 import { ProjectResolver } from './components/home/resolvers/project-resolver';
 import { RoleResolver } from './components/home/resolvers/role-resolver';
-import { UserResolver } from './components/home/resolvers/user-resolver';
 import { UserProjectMappingResolver } from './components/home/resolvers/user-project-mapping-resolver';
-import { GameStashResolver } from './components/home/resolvers/game-stash-resolver';
-import { ProjectAuthGuard } from '../route-guards/project-auth-guard';
-import { Constants } from '../constants';
-import { DebtManagerResolver } from './components/home/resolvers/debt-manager-resolver';
+import { UserResolver } from './components/home/resolvers/user-resolver';
 
 export const routes: Routes = [
   {
@@ -119,30 +116,6 @@ export const routes: Routes = [
         canActivate: [AuthGuard],
         resolve: {
           usersandprojects: UserProjectMappingResolver,
-        },
-      },
-      {
-        path: 'game-stash',
-        loadComponent: () =>
-          import(
-            '../app/components/home/components/game-stash/game-stash.component'
-          ).then((c) => c.GameStashComponent),
-        canActivate: [ProjectAuthGuard],
-        data: { projectName: Constants.gameStash },
-        resolve: {
-          pagedResponse: GameStashResolver,
-        },
-      },
-      {
-        path: 'debt-manager',
-        loadComponent: () =>
-          import(
-            '../app/components/home/components/debt-manager/debt-manager.component'
-          ).then((c) => c.DebtManagerComponent),
-        canActivate: [ProjectAuthGuard],
-        data: { projectName: Constants.debtManager },
-        resolve: {
-          pagedResponse: DebtManagerResolver,
         },
       },
       {

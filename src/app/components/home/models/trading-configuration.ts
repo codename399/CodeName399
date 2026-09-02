@@ -133,58 +133,7 @@ export interface OptionsTradingSettings extends InstrumentTradingSettings {
 
 export type TradingStrictnessProfile = 'VeryLoose' | 'Loose' | 'Balanced' | 'Moderate' | 'Strict' | 'VeryStrict';
 
-export type OptimizationMode = 'CountBased' | 'TimeBased' | 0 | 1;
-
-export interface OptimizationSettings {
-  enabled: boolean;
-  mode: OptimizationMode;
-  timeBasedCandidateMinutes: number;
-  paperTradingOnly: boolean;
-  sendConfigurationEmail: boolean;
-  sendDailyEmail: boolean;
-  autoPromoteBestConfiguration: boolean;
-
-  pollIntervalSeconds: number;
-  minimumCandidateMinutes: number;
-  noSignalTimeoutMinutes: number;
-  noVirtualConfirmationTimeoutMinutes: number;
-  noPaperTradeTimeoutMinutes: number;
-  maxVirtualTradeDurationMinutes: number;
-  maxPaperTradeDurationMinutes: number;
-  forceCloseTimedOutPaperTrades: boolean;
-  maximumCandidateMinutes: number;
-
-  maximumCandidatesPerDay: number;
-  minimumCompletedTradesForAcceptance: number;
-  preferredCompletedTrades: number;
-  minimumVirtualCandidatesForAnalysis: number;
-
-  minimumNetProfit: number;
-  minimumProfitFactor: number;
-  maximumDrawdownPercent: number;
-
-  // Multi-objective optimizer controls.
-  signalGenerationWeight: number;
-  virtualConfirmationWeight: number;
-  profitabilityWeight: number;
-  targetEvaluationSignalRatePercent: number;
-  targetVirtualConfirmationRatePercent: number;
-
-  // Progressive learning controls.
-  explorationCandidateCount: number;
-  minimumLearningTrades: number;
-  minimumPatternSampleSize: number;
-  learningStrictnessStepPercent: number;
-  maximumLearningStrictnessPercent: number;
-  maximumLessonsPerCandidate: number;
-
-  dailyEmailDelayMinutes: number;
-  validationHistoryFile: string;
-  reportDirectory: string;
-}
-
 export interface TradingConfiguration {
-  optimization: OptimizationSettings;
   id: string;
 
   instrumentType?: InstrumentType;
