@@ -6,6 +6,7 @@ import {
   OnInit,
   Renderer2,
   ViewChild,
+  ChangeDetectionStrategy,
   computed,
   inject,
   signal,
@@ -34,6 +35,7 @@ import { TooltipDirective } from '../../../../directives/tooltip.directive';
   templateUrl: './angel-one.component.html',
 
   styleUrls: ['./angel-one.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly #angel = inject(AngelOneService);
@@ -175,6 +177,8 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   ];
 
   visibleColumns = signal<string[]>([]);
+
+  readonly visibleColumnSet = computed(() => new Set(this.visibleColumns()));
 
   private timerId: any;
   private subscription?: Subscription;
@@ -355,8 +359,14 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   isColumnVisible(columnKey: string): boolean {
-    return this.visibleColumns().includes(columnKey);
+    return this.visibleColumnSet().has(columnKey);
   }
+
+  trackByStock = (_index: number, stock: Gainer): string =>
+    String(stock.symbolToken ?? stock.symbol ?? _index);
+
+  trackByColumn = (_index: number, column: { key: string }): string =>
+    column.key;
 
   openSettings(): void {
     this.#router.navigate(['/home/trading-settings']);

@@ -152,7 +152,7 @@
           <div class="column-options">
             <label
               class="column-option"
-              *ngFor="let column of columnDefinitions"
+              *ngFor="let column of columnDefinitions; trackBy: trackByColumn"
             >
               <input
                 type="checkbox"
@@ -193,8 +193,8 @@
             <table>
             <thead>
               <tr>
-                <th *ngIf="isColumnVisible('star')">⭐</th>
-                <th *ngIf="isColumnVisible('symbol')">
+                <th *ngIf="visibleColumnSet().has('star')">⭐</th>
+                <th *ngIf="visibleColumnSet().has('symbol')">
                   Symbol
                   <span
                     class="cursor-pointer"
@@ -203,51 +203,51 @@
                     >ℹ️</span
                   >
                 </th>
-                <th *ngIf="isColumnVisible('stopLoss')">SL</th>
-                <th *ngIf="isColumnVisible('targetPrice')">Target</th>
-                <th *ngIf="isColumnVisible('token')">Token</th>
-                <th *ngIf="isColumnVisible('instrumentType')">Type</th>
-                <th *ngIf="isColumnVisible('exchange')">Exchange</th>
-                <th *ngIf="isColumnVisible('optionContract')">Option Contract</th>
-                <th *ngIf="isColumnVisible('oi')">OI</th>
-                <th *ngIf="isColumnVisible('oiChange')">OI Change %</th>
-                <th *ngIf="isColumnVisible('pcr')">PCR</th>
-                <th *ngIf="isColumnVisible('iv')">IV</th>
-                <th *ngIf="isColumnVisible('delta')">Delta</th>
-                <th *ngIf="isColumnVisible('gamma')">Gamma</th>
-                <th *ngIf="isColumnVisible('theta')">Theta</th>
-                <th *ngIf="isColumnVisible('vega')">Vega</th>
-                <th *ngIf="isColumnVisible('prevClose')">Prev Close</th>
-                <th *ngIf="isColumnVisible('vwap')">VWAP</th>
-                <th *ngIf="isColumnVisible('ema9')">EMA9</th>
-                <th *ngIf="isColumnVisible('ema21')">EMA21</th>
-                <th *ngIf="isColumnVisible('ema50')">EMA50</th>
-                <th *ngIf="isColumnVisible('ema200')">EMA200</th>
-                <th *ngIf="isColumnVisible('anchoredVWAP')">Anchored VWAP</th>
-                <th *ngIf="isColumnVisible('adx')">ADX</th>
-                <th *ngIf="isColumnVisible('superTrend')">SuperTrend</th>
-                <th *ngIf="isColumnVisible('superTrendBullish')">ST Bullish</th>
-                <th *ngIf="isColumnVisible('rsi')">RSI</th>
-                <th *ngIf="isColumnVisible('volumeMultiplier')">Vol×</th>
-                <th *ngIf="isColumnVisible('pullbackDistance')">PB%</th>
-                <th *ngIf="isColumnVisible('distanceFromEMA')">Dist EMA%</th>
-                <th *ngIf="isColumnVisible('distanceFromVWAP')">Dist VWAP%</th>
-                <th *ngIf="isColumnVisible('macd')">MACD</th>
-                <th *ngIf="isColumnVisible('macdSignal')">MACD Sig</th>
-                <th *ngIf="isColumnVisible('macdHistogram')">MACD Hist</th>
-                <th *ngIf="isColumnVisible('bollingerBandwidth')">
+                <th *ngIf="visibleColumnSet().has('stopLoss')">SL</th>
+                <th *ngIf="visibleColumnSet().has('targetPrice')">Target</th>
+                <th *ngIf="visibleColumnSet().has('token')">Token</th>
+                <th *ngIf="visibleColumnSet().has('instrumentType')">Type</th>
+                <th *ngIf="visibleColumnSet().has('exchange')">Exchange</th>
+                <th *ngIf="visibleColumnSet().has('optionContract')">Option Contract</th>
+                <th *ngIf="visibleColumnSet().has('oi')">OI</th>
+                <th *ngIf="visibleColumnSet().has('oiChange')">OI Change %</th>
+                <th *ngIf="visibleColumnSet().has('pcr')">PCR</th>
+                <th *ngIf="visibleColumnSet().has('iv')">IV</th>
+                <th *ngIf="visibleColumnSet().has('delta')">Delta</th>
+                <th *ngIf="visibleColumnSet().has('gamma')">Gamma</th>
+                <th *ngIf="visibleColumnSet().has('theta')">Theta</th>
+                <th *ngIf="visibleColumnSet().has('vega')">Vega</th>
+                <th *ngIf="visibleColumnSet().has('prevClose')">Prev Close</th>
+                <th *ngIf="visibleColumnSet().has('vwap')">VWAP</th>
+                <th *ngIf="visibleColumnSet().has('ema9')">EMA9</th>
+                <th *ngIf="visibleColumnSet().has('ema21')">EMA21</th>
+                <th *ngIf="visibleColumnSet().has('ema50')">EMA50</th>
+                <th *ngIf="visibleColumnSet().has('ema200')">EMA200</th>
+                <th *ngIf="visibleColumnSet().has('anchoredVWAP')">Anchored VWAP</th>
+                <th *ngIf="visibleColumnSet().has('adx')">ADX</th>
+                <th *ngIf="visibleColumnSet().has('superTrend')">SuperTrend</th>
+                <th *ngIf="visibleColumnSet().has('superTrendBullish')">ST Bullish</th>
+                <th *ngIf="visibleColumnSet().has('rsi')">RSI</th>
+                <th *ngIf="visibleColumnSet().has('volumeMultiplier')">Vol×</th>
+                <th *ngIf="visibleColumnSet().has('pullbackDistance')">PB%</th>
+                <th *ngIf="visibleColumnSet().has('distanceFromEMA')">Dist EMA%</th>
+                <th *ngIf="visibleColumnSet().has('distanceFromVWAP')">Dist VWAP%</th>
+                <th *ngIf="visibleColumnSet().has('macd')">MACD</th>
+                <th *ngIf="visibleColumnSet().has('macdSignal')">MACD Sig</th>
+                <th *ngIf="visibleColumnSet().has('macdHistogram')">MACD Hist</th>
+                <th *ngIf="visibleColumnSet().has('bollingerBandwidth')">
                   Boll Bandwidth
                 </th>
-                <th *ngIf="isColumnVisible('score')">Score</th>
-                <th *ngIf="isColumnVisible('signal')">Signal</th>
-                <th *ngIf="isColumnVisible('risk')">Risk</th>
-                <th *ngIf="isColumnVisible('atr')">ATR</th>
-                <th *ngIf="isColumnVisible('reason')">Reason</th>
-                <th *ngIf="isColumnVisible('suggestion')">Suggestion</th>
-                <th *ngIf="isColumnVisible('upperCircuitLimit')">
+                <th *ngIf="visibleColumnSet().has('score')">Score</th>
+                <th *ngIf="visibleColumnSet().has('signal')">Signal</th>
+                <th *ngIf="visibleColumnSet().has('risk')">Risk</th>
+                <th *ngIf="visibleColumnSet().has('atr')">ATR</th>
+                <th *ngIf="visibleColumnSet().has('reason')">Reason</th>
+                <th *ngIf="visibleColumnSet().has('suggestion')">Suggestion</th>
+                <th *ngIf="visibleColumnSet().has('upperCircuitLimit')">
                   Upper Circuit Limit
                 </th>
-                <th *ngIf="isColumnVisible('lowerCircuitLimit')">
+                <th *ngIf="visibleColumnSet().has('lowerCircuitLimit')">
                   Lower Circuit Limit
                 </th>
               </tr>
@@ -255,7 +255,7 @@
 
             <tbody>
               <tr
-                *ngFor="let stock of filteredGainers()"
+                *ngFor="let stock of filteredGainers(); trackBy: trackByStock"
                 [class.owned-row]="stock.isOwned"
                 [ngClass]="{
                   'signal-row-buy': stock.signal === 'BUY',
@@ -264,11 +264,11 @@
                   'signal-row-setup': stock.signal === 'SETUP',
                 }"
               >
-                <td class="center-cell" *ngIf="isColumnVisible('star')">
+                <td class="center-cell" *ngIf="visibleColumnSet().has('star')">
                   <span *ngIf="stock.isOwned">★</span>
                 </td>
 
-                <td class="symbol" *ngIf="isColumnVisible('symbol')">
+                <td class="symbol" *ngIf="visibleColumnSet().has('symbol')">
                   <div class="symbol-content">
                     <div class="symbol-name">
                       <span
@@ -321,27 +321,27 @@
                   </div>
                 </td>
 
-                <td *ngIf="isColumnVisible('stopLoss')">
+                <td *ngIf="visibleColumnSet().has('stopLoss')">
                   ₹{{ stock.stopLoss | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('targetPrice')">
+                <td *ngIf="visibleColumnSet().has('targetPrice')">
                   ₹{{ stock.targetPrice | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('token')">
+                <td *ngIf="visibleColumnSet().has('token')">
                   {{ stock.symbolToken || "-" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('instrumentType')">
+                <td *ngIf="visibleColumnSet().has('instrumentType')">
                   {{ stock.instrumentType || "Equity" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('exchange')">
+                <td *ngIf="visibleColumnSet().has('exchange')">
                   {{ stock.exchange || stock.quote.exchange || "-" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('optionContract')">
+                <td *ngIf="visibleColumnSet().has('optionContract')">
                   <div class="fno-contract-cell">
                     <strong *ngIf="stock.optionType">{{ stock.optionType }}</strong>
                     <span *ngIf="stock.strike">K {{ stock.strike | number: "1.0-2" }}</span>
@@ -350,115 +350,115 @@
                   </div>
                 </td>
 
-                <td *ngIf="isColumnVisible('oi')">
+                <td *ngIf="visibleColumnSet().has('oi')">
                   {{ (stock.openInterest ?? stock.quote.openInterest ?? 0) | number: "1.0-0" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('oiChange')">
+                <td *ngIf="visibleColumnSet().has('oiChange')">
                   {{ (stock.oiChangePercent ?? stock.quote.oiChangePercent ?? 0) | number: "1.2-2" }}%
                 </td>
 
-                <td *ngIf="isColumnVisible('pcr')">
+                <td *ngIf="visibleColumnSet().has('pcr')">
                   {{ (stock.putCallRatio ?? stock.pcr ?? stock.quote.putCallRatio ?? 0) | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('iv')">
+                <td *ngIf="visibleColumnSet().has('iv')">
                   {{ (stock.impliedVolatility ?? stock.quote.impliedVolatility ?? 0) | number: "1.2-2" }}%
                 </td>
 
-                <td *ngIf="isColumnVisible('delta')">
+                <td *ngIf="visibleColumnSet().has('delta')">
                   {{ (stock.delta ?? stock.quote.delta ?? 0) | number: "1.3-3" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('gamma')">
+                <td *ngIf="visibleColumnSet().has('gamma')">
                   {{ (stock.gamma ?? stock.quote.gamma ?? 0) | number: "1.4-4" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('theta')">
+                <td *ngIf="visibleColumnSet().has('theta')">
                   {{ (stock.theta ?? stock.quote.theta ?? 0) | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('vega')">
+                <td *ngIf="visibleColumnSet().has('vega')">
                   {{ (stock.vega ?? stock.quote.vega ?? 0) | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('prevClose')">
+                <td *ngIf="visibleColumnSet().has('prevClose')">
                   ₹{{ stock.previousClose | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('vwap')">
+                <td *ngIf="visibleColumnSet().has('vwap')">
                   {{ stock.vwap | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('ema9')">
+                <td *ngIf="visibleColumnSet().has('ema9')">
                   {{ stock.emA9 | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('ema21')">
+                <td *ngIf="visibleColumnSet().has('ema21')">
                   {{ stock.emA21 | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('ema50')">
+                <td *ngIf="visibleColumnSet().has('ema50')">
                   {{ stock.emA50 | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('ema200')">
+                <td *ngIf="visibleColumnSet().has('ema200')">
                   {{ stock.emA200 | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('anchoredVWAP')">
+                <td *ngIf="visibleColumnSet().has('anchoredVWAP')">
                   {{ stock.anchoredVWAP | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('adx')">
+                <td *ngIf="visibleColumnSet().has('adx')">
                   {{ stock.adx | number: "1.1-1" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('superTrend')">
+                <td *ngIf="visibleColumnSet().has('superTrend')">
                   {{ stock.superTrend | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('superTrendBullish')">
+                <td *ngIf="visibleColumnSet().has('superTrendBullish')">
                   {{ stock.superTrendBullish ? "Yes" : "No" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('rsi')">
+                <td *ngIf="visibleColumnSet().has('rsi')">
                   {{ stock.rsi | number: "1.0-0" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('volumeMultiplier')">
+                <td *ngIf="visibleColumnSet().has('volumeMultiplier')">
                   {{ stock.volumeMultiplier | number: "1.1-1" }}×
                 </td>
 
-                <td *ngIf="isColumnVisible('pullbackDistance')">
+                <td *ngIf="visibleColumnSet().has('pullbackDistance')">
                   {{ stock.pullbackDistance | number: "1.1-1" }}%
                 </td>
 
-                <td *ngIf="isColumnVisible('distanceFromEMA')">
+                <td *ngIf="visibleColumnSet().has('distanceFromEMA')">
                   {{ stock.distanceFromEMA | number: "1.1-1" }}%
                 </td>
 
-                <td *ngIf="isColumnVisible('distanceFromVWAP')">
+                <td *ngIf="visibleColumnSet().has('distanceFromVWAP')">
                   {{ stock.distanceFromVWAP | number: "1.1-1" }}%
                 </td>
 
-                <td *ngIf="isColumnVisible('macd')">
+                <td *ngIf="visibleColumnSet().has('macd')">
                   {{ stock.macd | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('macdSignal')">
+                <td *ngIf="visibleColumnSet().has('macdSignal')">
                   {{ stock.macdSignal | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('macdHistogram')">
+                <td *ngIf="visibleColumnSet().has('macdHistogram')">
                   {{ stock.macdHistogram | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('bollingerBandwidth')">
+                <td *ngIf="visibleColumnSet().has('bollingerBandwidth')">
                   {{ stock.bollingerBandwidth | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('score')">
+                <td *ngIf="visibleColumnSet().has('score')">
                   <div
                     class="score-badge"
                     [class.excellent]="stock.score >= 80"
@@ -469,7 +469,7 @@
                   </div>
                 </td>
 
-                <td *ngIf="isColumnVisible('signal')">
+                <td *ngIf="visibleColumnSet().has('signal')">
                   <div
                     class="signal-pill"
                     [ngClass]="{
@@ -486,27 +486,27 @@
                   </div>
                 </td>
 
-                <td *ngIf="isColumnVisible('risk')">
+                <td *ngIf="visibleColumnSet().has('risk')">
                   {{ stock.risk }}
                 </td>
 
-                <td *ngIf="isColumnVisible('atr')">
+                <td *ngIf="visibleColumnSet().has('atr')">
                   ₹{{ stock.atr | number: "1.2-2" }}
                 </td>
 
-                <td class="reason" *ngIf="isColumnVisible('reason')">
+                <td class="reason" *ngIf="visibleColumnSet().has('reason')">
                   {{ stock.reason }}
                 </td>
 
-                <td class="reason" *ngIf="isColumnVisible('suggestion')">
+                <td class="reason" *ngIf="visibleColumnSet().has('suggestion')">
                   {{ stock.suggestion }}
                 </td>
 
-                <td *ngIf="isColumnVisible('upperCircuitLimit')">
+                <td *ngIf="visibleColumnSet().has('upperCircuitLimit')">
                   ₹{{ stock.upperCircuitLimit | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="isColumnVisible('lowerCircuitLimit')">
+                <td *ngIf="visibleColumnSet().has('lowerCircuitLimit')">
                   ₹{{ stock.lowerCircuitLimit | number: "1.2-2" }}
                 </td>
               </tr>

@@ -17,6 +17,12 @@ export class MarketService {
   private gainersSubject = new BehaviorSubject<any[]>([]);
   gainers$ = this.gainersSubject.asObservable();
 
+  // Tick bursts can contain hundreds/thousands of messages per second.
+  // Coalesce them into one UI update per animation frame instead of running
+  // Angular change detection and sorting once for every broker tick.
+  private readonly pendingTicks = new Map<string, any>();
+  private readonly stockIndex = new Map<string, number>();
+  private tickFlushScheduled = false;
 
   async startConnection(): Promise<void> {
     if (this.hub?.state === signalR.HubConnectionState.Connected) {
@@ -35,31 +41,26 @@ export class MarketService {
           .withUrl(
             this.#apiConstants.getUrl(
               this.#apiConstants.marketHub,
-              false
-            )
+              false,
+            ),
           )
           .withAutomaticReconnect()
           .build();
 
         this.hub.on('GainersUpdated', (data: any[]) => {
-          this.gainersSubject.next(data);
+          this.pendingTicks.clear();
+          this.rebuildStockIndex(data);
+          this.gainersSubject.next(data ?? []);
         });
 
-        // Every subscribed-stock broker tick carries the complete updated Gainer
-        // snapshot. Merge it into the existing row instead of waiting for the next
-        // discovery snapshot, so all tick fields change in real time.
         this.hub.on('StockTickUpdated', (stock: any) => {
-          if (!stock?.symbolToken) return;
-          const current = this.gainersSubject.value;
-          const index = current.findIndex(
-            x => String(x?.symbolToken ?? '') === String(stock.symbolToken),
-          );
-          if (index < 0) return;
-          const next = [...current];
-          next[index] = { ...next[index], ...stock };
-          this.gainersSubject.next(next);
-        });
+          const token = String(stock?.symbolToken ?? '');
+          if (!token) return;
 
+          // Keep only the newest tick for each stock until the next paint.
+          this.pendingTicks.set(token, stock);
+          this.scheduleTickFlush();
+        });
       }
 
       await this.hub.start();
@@ -74,6 +75,60 @@ export class MarketService {
   async stopConnection(): Promise<void> {
     if (this.hub) {
       await this.hub.stop();
+    }
+  }
+
+  private rebuildStockIndex(data: any[]): void {
+    this.stockIndex.clear();
+    for (let index = 0; index < (data?.length ?? 0); index++) {
+      const token = String(data[index]?.symbolToken ?? '');
+      if (token) {
+        this.stockIndex.set(token, index);
+      }
+    }
+  }
+
+  private scheduleTickFlush(): void {
+    if (this.tickFlushScheduled) return;
+    this.tickFlushScheduled = true;
+
+    const flush = () => {
+      this.tickFlushScheduled = false;
+      this.flushPendingTicks();
+    };
+
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(flush);
+    } else {
+      setTimeout(flush, 16);
+    }
+  }
+
+  private flushPendingTicks(): void {
+    if (this.pendingTicks.size === 0) return;
+
+    const current = this.gainersSubject.value;
+    if (current.length === 0) {
+      this.pendingTicks.clear();
+      return;
+    }
+
+    const next = [...current];
+    let changed = false;
+
+    for (const [token, stock] of this.pendingTicks) {
+      const index = this.stockIndex.get(token);
+      if (index === undefined) continue;
+
+      const previous = next[index];
+      next[index] = { ...previous, ...stock };
+      changed = true;
+    }
+
+    this.pendingTicks.clear();
+
+    if (changed) {
+      this.gainersSubject.next(next);
     }
   }
 }
