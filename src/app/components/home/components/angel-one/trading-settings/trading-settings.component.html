@@ -1701,6 +1701,30 @@
 
 
         <details class="settings-card" (toggle)="onAccordionToggle($event)">
+          <summary class="card-header"><div><h2>Dynamic Evaluation — Additional Controls</h2><p>Quote-only, adaptive-subscription, statistical-confidence and regime controls.</p></div></summary>
+          <div class="card-body">
+            <div class="grid-4 compact-profile-grid" formGroupName="dynamicEvaluation">
+              <div class="field-row"><label class="field-label" for="minimumQuoteOnlyEntryScore">Minimum Quote-Only Entry Score</label><div class="input-with-suffix"><input id="minimumQuoteOnlyEntryScore" type="number" formControlName="minimumQuoteOnlyEntryScore" class="field-input" step="0.01" /><span class="suffix">%</span></div></div>
+              <div class="field-row"><label class="field-label" for="minimumQuoteOnlySubscriptionScore">Minimum Quote-Only Subscription Score</label><div class="input-with-suffix"><input id="minimumQuoteOnlySubscriptionScore" type="number" formControlName="minimumQuoteOnlySubscriptionScore" class="field-input" step="0.01" /><span class="suffix">%</span></div></div>
+              <div class="field-row"><label class="field-label" for="maximumQuoteOnlyRiskPenalty">Maximum Quote-Only Risk Penalty</label><div class="input-with-suffix"><input id="maximumQuoteOnlyRiskPenalty" type="number" formControlName="maximumQuoteOnlyRiskPenalty" class="field-input" step="0.01" /></div></div>
+              <div class="field-row"><label class="field-label" for="maximumAdaptiveSubscriptions">Maximum Adaptive Subscriptions</label><div class="input-with-suffix"><input id="maximumAdaptiveSubscriptions" type="number" formControlName="maximumAdaptiveSubscriptions" class="field-input" step="0.01" /></div></div>
+              <div class="field-row"><label class="field-label" for="historicalWarmupCandidates">Historical Warmup Candidates</label><div class="input-with-suffix"><input id="historicalWarmupCandidates" type="number" formControlName="historicalWarmupCandidates" class="field-input" step="0.01" /></div></div>
+              <div class="field-row"><label class="field-label" for="strongTrendThreshold">Strong Trend Threshold</label><div class="input-with-suffix"><input id="strongTrendThreshold" type="number" formControlName="strongTrendThreshold" class="field-input" step="0.01" /><span class="suffix">%</span></div></div>
+              <div class="field-row"><label class="field-label" for="developingThreshold">Developing Threshold</label><div class="input-with-suffix"><input id="developingThreshold" type="number" formControlName="developingThreshold" class="field-input" step="0.01" /><span class="suffix">%</span></div></div>
+              <div class="field-row"><label class="field-label" for="minimumExpectedNetValue">Minimum Expected Net Value</label><div class="input-with-suffix"><input id="minimumExpectedNetValue" type="number" formControlName="minimumExpectedNetValue" class="field-input" step="0.01" /></div></div>
+              <div class="field-row"><label class="field-label" for="minimumEdgeScore">Minimum Edge Score</label><div class="input-with-suffix"><input id="minimumEdgeScore" type="number" formControlName="minimumEdgeScore" class="field-input" step="0.01" /></div></div>
+              <div class="field-row"><label class="field-label" for="minimumStatisticalConfidence">Minimum Statistical Confidence</label><div class="input-with-suffix"><input id="minimumStatisticalConfidence" type="number" formControlName="minimumStatisticalConfidence" class="field-input" step="0.01" /><span class="suffix">%</span></div></div>
+              <div class="field-row"><label class="field-label" for="noTradePenaltyThreshold">No-Trade Penalty Threshold</label><div class="input-with-suffix"><input id="noTradePenaltyThreshold" type="number" formControlName="noTradePenaltyThreshold" class="field-input" step="0.01" /><span class="suffix">%</span></div></div>
+              <div class="field-row"><label class="field-label" for="maximumRiskWhenStatisticallyUncertain">Maximum Risk When Statistically Uncertain</label><div class="input-with-suffix"><input id="maximumRiskWhenStatisticallyUncertain" type="number" formControlName="maximumRiskWhenStatisticallyUncertain" class="field-input" step="0.01" /></div></div>
+              <div class="field-row"><label class="field-label" for="recentPerformanceWeight">Recent Performance Weight</label><div class="input-with-suffix"><input id="recentPerformanceWeight" type="number" formControlName="recentPerformanceWeight" class="field-input" step="0.01" /></div></div>
+              <div class="field-row"><label class="field-label" for="historicalPerformanceWeight">Historical Performance Weight</label><div class="input-with-suffix"><input id="historicalPerformanceWeight" type="number" formControlName="historicalPerformanceWeight" class="field-input" step="0.01" /></div></div>
+              <div class="field-row"><label class="field-label" for="marketRegimeWeight">Market Regime Weight</label><div class="input-with-suffix"><input id="marketRegimeWeight" type="number" formControlName="marketRegimeWeight" class="field-input" step="0.01" /></div></div>
+              <div class="field-row"><label class="field-label" for="relativeStrengthWeight">Relative Strength Weight</label><div class="input-with-suffix"><input id="relativeStrengthWeight" type="number" formControlName="relativeStrengthWeight" class="field-input" step="0.01" /></div></div>
+            </div>
+          </div>
+        </details>
+
+        <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>
               <h2>Validation Thresholds</h2>
@@ -2525,6 +2549,10 @@
               <input id="volumeMultiplierThreshold" type="number" formControlName="volumeMultiplierThreshold" class="field-input" step="0.01" />
               </div>
             </div>
+              <div class="field-row">
+                <label class="field-label" for="minimumVirtualTradeTicksForEmail">Minimum Virtual Trade Ticks For Email</label>
+                <div class="input-with-suffix"><input id="minimumVirtualTradeTicksForEmail" type="number" formControlName="minimumVirtualTradeTicksForEmail" class="field-input" min="1" step="1" /><span class="suffix">ticks</span></div>
+              </div>
 </div></div>
         </details>
 
@@ -2655,7 +2683,6 @@
             </div>
           </div>
         </details>
-        }
 
         <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
@@ -2797,6 +2824,20 @@
         </details>
 
 
+
+        <details class="settings-card" (toggle)="onAccordionToggle($event)">
+          <summary class="card-header"><div><h2>OpenAI Validation</h2><p>Optional one-time AI validation before a positive virtual candidate proceeds to paper/live execution.</p></div></summary>
+          <div class="card-body">
+            <div class="grid-4 compact-profile-grid" formGroupName="openAiValidation">
+              <label class="toggle-field"><input type="checkbox" formControlName="enabled" /><span>Enable OpenAI Validation</span></label>
+              <label class="toggle-field"><input type="checkbox" formControlName="proceedOnValidationFailure" /><span>Proceed if Validation Fails</span></label>
+              <div class="field-row"><label class="field-label" for="openAiModel">Model</label><input id="openAiModel" type="text" formControlName="model" class="field-input" /></div>
+              <div class="field-row"><label class="field-label" for="openAiApiKey">API Key</label><input id="openAiApiKey" type="password" autocomplete="off" formControlName="apiKey" class="field-input" placeholder="Optional; environment variable is preferred" /></div>
+              <div class="field-row"><label class="field-label" for="openAiMaxOutputTokens">Max Output Tokens</label><input id="openAiMaxOutputTokens" type="number" formControlName="maxOutputTokens" class="field-input" /></div>
+              <div class="field-row"><label class="field-label" for="openAiTimeoutSeconds">Timeout</label><div class="input-with-suffix"><input id="openAiTimeoutSeconds" type="number" formControlName="timeoutSeconds" class="field-input" /><span class="suffix">sec</span></div></div>
+            </div>
+          </div>
+        </details>
 
         <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header"><div><h2>Dynamic Trading Configuration</h2><p>Runtime-adaptive evaluation and virtual-trading controls.</p></div></summary>
@@ -3230,325 +3271,345 @@
 
 
         <details class="settings-card" (toggle)="onAccordionToggle($event)">
-          <summary class="card-header"><div><h2>Advanced Trade &amp; Runtime Settings</h2><p>Global risk limits, market timing, execution recovery, margin simulation and runtime safety.</p></div></summary>
-          <div class="card-body">
-            <div class="grid-4 compact-profile-grid">
-              <div class="field-row">
-              <label class="field-label" for="maxBrokerFailuresBeforeKillSwitch">Max Broker Failures Before Kill Switch</label>
-              <div class="input-with-suffix">
-              <input id="maxBrokerFailuresBeforeKillSwitch" type="number" formControlName="maxBrokerFailuresBeforeKillSwitch" class="field-input" step="0.01" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="brokerFailureWindowMinutes">Broker Failure Window Minutes</label>
-              <div class="input-with-suffix">
-              <input id="brokerFailureWindowMinutes" type="number" formControlName="brokerFailureWindowMinutes" class="field-input" step="0.01" />
-              <span class="suffix">min</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="maximumTotalOpenRisk">Maximum Total Open Risk</label>
-              <div class="input-with-suffix">
-              <input id="maximumTotalOpenRisk" type="number" formControlName="maximumTotalOpenRisk" class="field-input" step="0.01" />
-              <span class="suffix">₹</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="maximumTotalUnderlyingDeltaExposure">Maximum Total Underlying Delta Exposure</label>
-              <div class="input-with-suffix">
-              <input id="maximumTotalUnderlyingDeltaExposure" type="number" formControlName="maximumTotalUnderlyingDeltaExposure" class="field-input" step="0.01" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="globalMaximumMarginUtilizationPercent">Global Maximum Margin Utilization Percent</label>
-              <div class="input-with-suffix">
-              <input id="globalMaximumMarginUtilizationPercent" type="number" formControlName="globalMaximumMarginUtilizationPercent" class="field-input" step="0.01" />
-              <span class="suffix">%</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="emergencyMarginUtilizationPercent">Emergency Margin Utilization Percent</label>
-              <div class="input-with-suffix">
-              <input id="emergencyMarginUtilizationPercent" type="number" formControlName="emergencyMarginUtilizationPercent" class="field-input" step="0.01" />
-              <span class="suffix">%</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="riskReservationSeconds">Risk Reservation Seconds</label>
-              <div class="input-with-suffix">
-              <input id="riskReservationSeconds" type="number" formControlName="riskReservationSeconds" class="field-input" step="0.01" />
-              <span class="suffix">sec</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="maximumSlippagePercent">Maximum Slippage Percent</label>
-              <div class="input-with-suffix">
-              <input id="maximumSlippagePercent" type="number" formControlName="maximumSlippagePercent" class="field-input" step="0.01" />
-              <span class="suffix">%</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="quoteMaxTokensPerRequest">Quote Max Tokens Per Request</label>
-              <div class="input-with-suffix">
-              <input id="quoteMaxTokensPerRequest" type="number" formControlName="quoteMaxTokensPerRequest" class="field-input" step="0.01" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="quoteRequestsPerSecond">Quote Requests Per Second</label>
-              <div class="input-with-suffix">
-              <input id="quoteRequestsPerSecond" type="number" formControlName="quoteRequestsPerSecond" class="field-input" step="0.01" />
-              <span class="suffix">/sec</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="nakedRiskMonitorIntervalSeconds">Naked Risk Monitor Interval Seconds</label>
-              <div class="input-with-suffix">
-              <input id="nakedRiskMonitorIntervalSeconds" type="number" formControlName="nakedRiskMonitorIntervalSeconds" class="field-input" step="0.01" />
-              <span class="suffix">sec</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="orderIntentRecoveryIntervalSeconds">Order Intent Recovery Interval Seconds</label>
-              <div class="input-with-suffix">
-              <input id="orderIntentRecoveryIntervalSeconds" type="number" formControlName="orderIntentRecoveryIntervalSeconds" class="field-input" step="0.01" />
-              <span class="suffix">sec</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="orderIntentRecoveryInitialDelaySeconds">Order Intent Recovery Initial Delay Seconds</label>
-              <div class="input-with-suffix">
-              <input id="orderIntentRecoveryInitialDelaySeconds" type="number" formControlName="orderIntentRecoveryInitialDelaySeconds" class="field-input" step="0.01" />
-              <span class="suffix">sec</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="orderIntentUnknownOrderExpiryMinutes">Order Intent Unknown Order Expiry Minutes</label>
-              <div class="input-with-suffix">
-              <input id="orderIntentUnknownOrderExpiryMinutes" type="number" formControlName="orderIntentUnknownOrderExpiryMinutes" class="field-input" step="0.01" />
-              <span class="suffix">min</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="webSocketHeartbeatSeconds">WebSocket Heartbeat Seconds</label>
-              <div class="input-with-suffix">
-              <input id="webSocketHeartbeatSeconds" type="number" formControlName="webSocketHeartbeatSeconds" class="field-input" step="0.01" />
-              <span class="suffix">sec</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="webSocketPongTimeoutSeconds">WebSocket Pong Timeout Seconds</label>
-              <div class="input-with-suffix">
-              <input id="webSocketPongTimeoutSeconds" type="number" formControlName="webSocketPongTimeoutSeconds" class="field-input" step="0.01" />
-              <span class="suffix">sec</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="webSocketRetryInitialSeconds">WebSocket Retry Initial Seconds</label>
-              <div class="input-with-suffix">
-              <input id="webSocketRetryInitialSeconds" type="number" formControlName="webSocketRetryInitialSeconds" class="field-input" step="0.01" />
-              <span class="suffix">sec</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="webSocketRetryMaxSeconds">WebSocket Retry Max Seconds</label>
-              <div class="input-with-suffix">
-              <input id="webSocketRetryMaxSeconds" type="number" formControlName="webSocketRetryMaxSeconds" class="field-input" step="0.01" />
-              <span class="suffix">sec</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="brokerPositionConfirmationDelaySeconds">Broker Position Confirmation Delay Seconds</label>
-              <div class="input-with-suffix">
-              <input id="brokerPositionConfirmationDelaySeconds" type="number" formControlName="brokerPositionConfirmationDelaySeconds" class="field-input" step="0.01" />
-              <span class="suffix">sec</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="squareOffRetryDelaySeconds">Square Off Retry Delay Seconds</label>
-              <div class="input-with-suffix">
-              <input id="squareOffRetryDelaySeconds" type="number" formControlName="squareOffRetryDelaySeconds" class="field-input" step="0.01" />
-              <span class="suffix">sec</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="stopLossConfirmationSeconds">Stop Loss Confirmation Seconds</label>
-              <div class="input-with-suffix">
-              <input id="stopLossConfirmationSeconds" type="number" formControlName="stopLossConfirmationSeconds" class="field-input" step="0.01" />
-              <span class="suffix">sec</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="paperFuturesMarginRate">Paper Futures Margin Rate</label>
-              <div class="input-with-suffix">
-              <input id="paperFuturesMarginRate" type="number" formControlName="paperFuturesMarginRate" class="field-input" step="0.01" />
-              <span class="suffix">%</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="paperOptionsCapitalRate">Paper Options Capital Rate</label>
-              <div class="input-with-suffix">
-              <input id="paperOptionsCapitalRate" type="number" formControlName="paperOptionsCapitalRate" class="field-input" step="0.01" />
-              <span class="suffix">%</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="paperNakedOptionMarginRate">Paper Naked Option Margin Rate</label>
-              <div class="input-with-suffix">
-              <input id="paperNakedOptionMarginRate" type="number" formControlName="paperNakedOptionMarginRate" class="field-input" step="0.01" />
-              <span class="suffix">%</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="paperNakedOptionMarginSafetyMultiplier">Paper Naked Option Margin Safety Multiplier</label>
-              <div class="input-with-suffix">
-              <input id="paperNakedOptionMarginSafetyMultiplier" type="number" formControlName="paperNakedOptionMarginSafetyMultiplier" class="field-input" step="0.01" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="capitalAllocationBaseMultiplier">Capital Allocation Base Multiplier</label>
-              <div class="input-with-suffix">
-              <input id="capitalAllocationBaseMultiplier" type="number" formControlName="capitalAllocationBaseMultiplier" class="field-input" step="0.01" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="capitalAllocationConfidenceMultiplier">Capital Allocation Confidence Multiplier</label>
-              <div class="input-with-suffix">
-              <input id="capitalAllocationConfidenceMultiplier" type="number" formControlName="capitalAllocationConfidenceMultiplier" class="field-input" step="0.01" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="eliteMovementScore">Elite Movement Score</label>
-              <div class="input-with-suffix">
-              <input id="eliteMovementScore" type="number" formControlName="eliteMovementScore" class="field-input" step="0.01" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="strongMovementScore">Strong Movement Score</label>
-              <div class="input-with-suffix">
-              <input id="strongMovementScore" type="number" formControlName="strongMovementScore" class="field-input" step="0.01" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="eliteCapitalBonus">Elite Capital Bonus</label>
-              <div class="input-with-suffix">
-              <input id="eliteCapitalBonus" type="number" formControlName="eliteCapitalBonus" class="field-input" step="0.01" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="strongCapitalBonus">Strong Capital Bonus</label>
-              <div class="input-with-suffix">
-              <input id="strongCapitalBonus" type="number" formControlName="strongCapitalBonus" class="field-input" step="0.01" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="maximumObservedDrawdownPercent">Maximum Observed Drawdown Percent</label>
-              <div class="input-with-suffix">
-              <input id="maximumObservedDrawdownPercent" type="number" formControlName="maximumObservedDrawdownPercent" class="field-input" step="0.01" />
-              <span class="suffix">%</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="brokerBalanceRefreshSeconds">Broker Balance Refresh Seconds</label>
-              <div class="input-with-suffix">
-              <input id="brokerBalanceRefreshSeconds" type="number" formControlName="brokerBalanceRefreshSeconds" class="field-input" step="0.01" />
-              <span class="suffix">sec</span>
-              </div>
-            </div>
-<label class="toggle-field"><input type="checkbox" formControlName="enableTradingKillSwitchPersistence" /><span>Enable Trading Kill Switch Persistence</span></label>
-<label class="toggle-field"><input type="checkbox" formControlName="enableGlobalRiskLimits" /><span>Enable Global Risk Limits</span></label>
-<label class="toggle-field"><input type="checkbox" formControlName="includeUnrealizedPnlInDailyLoss" /><span>Include Unrealized Pnl In Daily Loss</span></label>
-<label class="toggle-field"><input type="checkbox" formControlName="requireClosedHigherTimeframeCandles" /><span>Require Closed Higher Timeframe Candles</span></label>
-<label class="toggle-field"><input type="checkbox" formControlName="enableOptionChainAnalytics" /><span>Enable Option Chain Analytics</span></label>
-<label class="toggle-field"><input type="checkbox" formControlName="enablePutCallRatio" /><span>Enable Put Call Ratio</span></label>
-<label class="toggle-field"><input type="checkbox" formControlName="enableOIBuildup" /><span>Enable OIBuildup</span></label>
-<label class="toggle-field"><input type="checkbox" formControlName="enablePaperMarginSimulation" /><span>Enable Paper Margin Simulation</span></label>
-<label class="toggle-field"><input type="checkbox" formControlName="rejectDuplicateOrderIntent" /><span>Reject Duplicate Order Intent</span></label>
-<label class="toggle-field"><input type="checkbox" formControlName="enableScripConsentForCashOrders" /><span>Enable Scrip Consent For Cash Orders</span></label>
-            </div>
-            <h3>Market Timing</h3>
-            <div class="grid-4 compact-profile-grid">
-              <div class="field-row">
-              <label class="field-label" for="futuresOptionsMarketCloseTime">Futures Options Market Close Time</label>
-              <div class="input-with-suffix">
-              <input id="futuresOptionsMarketCloseTime" type="time" formControlName="futuresOptionsMarketCloseTime" class="field-input" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="intradayEntryCutoffTime">Intraday Entry Cutoff Time</label>
-              <div class="input-with-suffix">
-              <input id="intradayEntryCutoffTime" type="time" formControlName="intradayEntryCutoffTime" class="field-input" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="equityMisAutoSquareOffTime">Equity Mis Auto Square Off Time</label>
-              <div class="input-with-suffix">
-              <input id="equityMisAutoSquareOffTime" type="time" formControlName="equityMisAutoSquareOffTime" class="field-input" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="futuresOptionsAutoSquareOffTime">Futures Options Auto Square Off Time</label>
-              <div class="input-with-suffix">
-              <input id="futuresOptionsAutoSquareOffTime" type="time" formControlName="futuresOptionsAutoSquareOffTime" class="field-input" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="roboAutoSquareOffTime">Robo Auto Square Off Time</label>
-              <div class="input-with-suffix">
-              <input id="roboAutoSquareOffTime" type="time" formControlName="roboAutoSquareOffTime" class="field-input" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="casTransitionStart">Cas Transition Start</label>
-              <div class="input-with-suffix">
-              <input id="casTransitionStart" type="time" formControlName="casTransitionStart" class="field-input" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="casOrderEntryStart">Cas Order Entry Start</label>
-              <div class="input-with-suffix">
-              <input id="casOrderEntryStart" type="time" formControlName="casOrderEntryStart" class="field-input" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="casMarketOnlyEnd">Cas Market Only End</label>
-              <div class="input-with-suffix">
-              <input id="casMarketOnlyEnd" type="time" formControlName="casMarketOnlyEnd" class="field-input" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="casLimitOnlyEnd">Cas Limit Only End</label>
-              <div class="input-with-suffix">
-              <input id="casLimitOnlyEnd" type="time" formControlName="casLimitOnlyEnd" class="field-input" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="casRandomCloseSafetyCutoff">Cas Random Close Safety Cutoff</label>
-              <div class="input-with-suffix">
-              <input id="casRandomCloseSafetyCutoff" type="time" formControlName="casRandomCloseSafetyCutoff" class="field-input" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="casEnd">Cas End</label>
-              <div class="input-with-suffix">
-              <input id="casEnd" type="time" formControlName="casEnd" class="field-input" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="casPostCloseEnd">Cas Post Close End</label>
-              <div class="input-with-suffix">
-              <input id="casPostCloseEnd" type="time" formControlName="casPostCloseEnd" class="field-input" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="casPriceBandPercent">Cas Price Band Percent</label>
-              <div class="input-with-suffix">
-              <input id="casPriceBandPercent" type="number" formControlName="casPriceBandPercent" class="field-input" step="0.01" />
-              <span class="suffix">%</span>
-              </div>
-            </div>
-            </div>
-          </div>
-        </details>
+  <summary class="card-header"><div><h2>Advanced Trade &amp; Runtime Settings</h2><p>Global risk limits, market timing, execution recovery, margin simulation and runtime safety.</p></div></summary>
+  <div class="card-body">
+    <div class="grid-4 compact-profile-grid">
+      <div class="field-row">
+        <label class="field-label" for="maxBrokerFailuresBeforeKillSwitch">Max Broker Failures Before Kill Switch</label>
+        <div class="input-with-suffix">
+          <input id="maxBrokerFailuresBeforeKillSwitch" type="number" formControlName="maxBrokerFailuresBeforeKillSwitch" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="brokerFailureWindowMinutes">Broker Failure Window</label>
+        <div class="input-with-suffix">
+          <input id="brokerFailureWindowMinutes" type="number" formControlName="brokerFailureWindowMinutes" class="field-input" step="0.01" />
+          <span class="suffix">min</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="futuresOptionsMarketCloseTime">Futures / Options Market Close</label>
+        <div class="input-with-suffix">
+          <input id="futuresOptionsMarketCloseTime" type="time" formControlName="futuresOptionsMarketCloseTime" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="intradayEntryCutoffTime">Intraday Entry Cutoff</label>
+        <div class="input-with-suffix">
+          <input id="intradayEntryCutoffTime" type="time" formControlName="intradayEntryCutoffTime" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="equityMisAutoSquareOffTime">Equity Auto Square-Off</label>
+        <div class="input-with-suffix">
+          <input id="equityMisAutoSquareOffTime" type="time" formControlName="equityMisAutoSquareOffTime" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="futuresOptionsAutoSquareOffTime">Futures / Options Auto Square-Off</label>
+        <div class="input-with-suffix">
+          <input id="futuresOptionsAutoSquareOffTime" type="time" formControlName="futuresOptionsAutoSquareOffTime" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="roboAutoSquareOffTime">Robo Auto Square-Off</label>
+        <div class="input-with-suffix">
+          <input id="roboAutoSquareOffTime" type="time" formControlName="roboAutoSquareOffTime" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="casTransitionStart">CAS Transition Start</label>
+        <div class="input-with-suffix">
+          <input id="casTransitionStart" type="time" formControlName="casTransitionStart" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="casOrderEntryStart">CAS Order Entry Start</label>
+        <div class="input-with-suffix">
+          <input id="casOrderEntryStart" type="time" formControlName="casOrderEntryStart" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="casMarketOnlyEnd">CAS Market-Only End</label>
+        <div class="input-with-suffix">
+          <input id="casMarketOnlyEnd" type="time" formControlName="casMarketOnlyEnd" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="casLimitOnlyEnd">CAS Limit-Only End</label>
+        <div class="input-with-suffix">
+          <input id="casLimitOnlyEnd" type="time" formControlName="casLimitOnlyEnd" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="casRandomCloseSafetyCutoff">CAS Random Close Safety Cutoff</label>
+        <div class="input-with-suffix">
+          <input id="casRandomCloseSafetyCutoff" type="time" formControlName="casRandomCloseSafetyCutoff" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="casEnd">CAS End</label>
+        <div class="input-with-suffix">
+          <input id="casEnd" type="time" formControlName="casEnd" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="casPostCloseEnd">CAS Post-Close End</label>
+        <div class="input-with-suffix">
+          <input id="casPostCloseEnd" type="time" formControlName="casPostCloseEnd" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="casPriceBandPercent">CAS Price Band</label>
+        <div class="input-with-suffix">
+          <input id="casPriceBandPercent" type="time" formControlName="casPriceBandPercent" class="field-input" step="0.01" />
+          <span class="suffix">%</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="maximumTotalOpenRisk">Maximum Total Open Risk</label>
+        <div class="input-with-suffix">
+          <input id="maximumTotalOpenRisk" type="number" formControlName="maximumTotalOpenRisk" class="field-input" step="0.01" />
+          <span class="suffix">₹</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="maximumTotalUnderlyingDeltaExposure">Maximum Total Underlying Delta Exposure</label>
+        <div class="input-with-suffix">
+          <input id="maximumTotalUnderlyingDeltaExposure" type="number" formControlName="maximumTotalUnderlyingDeltaExposure" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="globalMaximumMarginUtilizationPercent">Global Maximum Margin Utilization</label>
+        <div class="input-with-suffix">
+          <input id="globalMaximumMarginUtilizationPercent" type="number" formControlName="globalMaximumMarginUtilizationPercent" class="field-input" step="0.01" />
+          <span class="suffix">%</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="emergencyMarginUtilizationPercent">Emergency Margin Utilization</label>
+        <div class="input-with-suffix">
+          <input id="emergencyMarginUtilizationPercent" type="number" formControlName="emergencyMarginUtilizationPercent" class="field-input" step="0.01" />
+          <span class="suffix">%</span>
+        </div>
+      </div>
+      <label class="toggle-field"><input type="checkbox" formControlName="enableTradingKillSwitchPersistence" /><span>Persist Trading Kill Switch</span></label>
+      <label class="toggle-field"><input type="checkbox" formControlName="enableGlobalRiskLimits" /><span>Enable Global Risk Limits</span></label>
+      <div class="field-row">
+        <label class="field-label" for="riskReservationSeconds">Risk Reservation Window</label>
+        <div class="input-with-suffix">
+          <input id="riskReservationSeconds" type="number" formControlName="riskReservationSeconds" class="field-input" step="0.01" />
+          <span class="suffix">sec</span>
+        </div>
+      </div>
+      <label class="toggle-field"><input type="checkbox" formControlName="includeUnrealizedPnlInDailyLoss" /><span>Include Unrealized P/L in Daily Loss</span></label>
+      <label class="toggle-field"><input type="checkbox" formControlName="requireClosedHigherTimeframeCandles" /><span>Require Closed Higher-Timeframe Candles</span></label>
+      <label class="toggle-field"><input type="checkbox" formControlName="enableOptionChainAnalytics" /><span>Enable Option Chain Analytics</span></label>
+      <label class="toggle-field"><input type="checkbox" formControlName="enablePutCallRatio" /><span>Enable Put / Call Ratio</span></label>
+      <label class="toggle-field"><input type="checkbox" formControlName="enableOIBuildup" /><span>Enable OI Build-Up</span></label>
+      <label class="toggle-field"><input type="checkbox" formControlName="enablePaperMarginSimulation" /><span>Enable Paper Margin Simulation</span></label>
+      <div class="field-row">
+        <label class="field-label" for="paperFuturesMarginRate">Paper Futures Margin Rate</label>
+        <div class="input-with-suffix">
+          <input id="paperFuturesMarginRate" type="number" formControlName="paperFuturesMarginRate" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="paperOptionsCapitalRate">Paper Options Capital Rate</label>
+        <div class="input-with-suffix">
+          <input id="paperOptionsCapitalRate" type="number" formControlName="paperOptionsCapitalRate" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="paperNakedOptionMarginRate">Paper Naked Option Margin Rate</label>
+        <div class="input-with-suffix">
+          <input id="paperNakedOptionMarginRate" type="number" formControlName="paperNakedOptionMarginRate" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="paperNakedOptionMarginSafetyMultiplier">Paper Naked Option Margin Safety Multiplier</label>
+        <div class="input-with-suffix">
+          <input id="paperNakedOptionMarginSafetyMultiplier" type="number" formControlName="paperNakedOptionMarginSafetyMultiplier" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="quoteMaxTokensPerRequest">Quote Max Tokens / Request</label>
+        <div class="input-with-suffix">
+          <input id="quoteMaxTokensPerRequest" type="number" formControlName="quoteMaxTokensPerRequest" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="quoteRequestsPerSecond">Quote Requests / Second</label>
+        <div class="input-with-suffix">
+          <input id="quoteRequestsPerSecond" type="number" formControlName="quoteRequestsPerSecond" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="maximumSlippagePercent">Maximum Slippage</label>
+        <div class="input-with-suffix">
+          <input id="maximumSlippagePercent" type="number" formControlName="maximumSlippagePercent" class="field-input" step="0.01" />
+          <span class="suffix">%</span>
+        </div>
+      </div>
+      <label class="toggle-field"><input type="checkbox" formControlName="rejectDuplicateOrderIntent" /><span>Reject Duplicate Order Intent</span></label>
+      <label class="toggle-field"><input type="checkbox" formControlName="enableScripConsentForCashOrders" /><span>Enable Cash-Order Scrip Consent</span></label>
+      <div class="field-row">
+        <label class="field-label" for="nakedRiskMonitorIntervalSeconds">Naked Risk Monitor Interval</label>
+        <div class="input-with-suffix">
+          <input id="nakedRiskMonitorIntervalSeconds" type="number" formControlName="nakedRiskMonitorIntervalSeconds" class="field-input" step="0.01" />
+          <span class="suffix">sec</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="orderIntentRecoveryIntervalSeconds">Order Intent Recovery Interval</label>
+        <div class="input-with-suffix">
+          <input id="orderIntentRecoveryIntervalSeconds" type="number" formControlName="orderIntentRecoveryIntervalSeconds" class="field-input" step="0.01" />
+          <span class="suffix">sec</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="orderIntentRecoveryInitialDelaySeconds">Order Intent Recovery Initial Delay</label>
+        <div class="input-with-suffix">
+          <input id="orderIntentRecoveryInitialDelaySeconds" type="number" formControlName="orderIntentRecoveryInitialDelaySeconds" class="field-input" step="0.01" />
+          <span class="suffix">sec</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="orderIntentUnknownOrderExpiryMinutes">Unknown Order Intent Expiry</label>
+        <div class="input-with-suffix">
+          <input id="orderIntentUnknownOrderExpiryMinutes" type="number" formControlName="orderIntentUnknownOrderExpiryMinutes" class="field-input" step="0.01" />
+          <span class="suffix">min</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="webSocketHeartbeatSeconds">WebSocket Heartbeat</label>
+        <div class="input-with-suffix">
+          <input id="webSocketHeartbeatSeconds" type="number" formControlName="webSocketHeartbeatSeconds" class="field-input" step="0.01" />
+          <span class="suffix">sec</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="webSocketPongTimeoutSeconds">WebSocket Pong Timeout</label>
+        <div class="input-with-suffix">
+          <input id="webSocketPongTimeoutSeconds" type="number" formControlName="webSocketPongTimeoutSeconds" class="field-input" step="0.01" />
+          <span class="suffix">sec</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="webSocketRetryInitialSeconds">WebSocket Retry Initial Delay</label>
+        <div class="input-with-suffix">
+          <input id="webSocketRetryInitialSeconds" type="number" formControlName="webSocketRetryInitialSeconds" class="field-input" step="0.01" />
+          <span class="suffix">sec</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="webSocketRetryMaxSeconds">WebSocket Retry Maximum Delay</label>
+        <div class="input-with-suffix">
+          <input id="webSocketRetryMaxSeconds" type="number" formControlName="webSocketRetryMaxSeconds" class="field-input" step="0.01" />
+          <span class="suffix">sec</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="brokerPositionConfirmationDelaySeconds">Broker Position Confirmation Delay</label>
+        <div class="input-with-suffix">
+          <input id="brokerPositionConfirmationDelaySeconds" type="number" formControlName="brokerPositionConfirmationDelaySeconds" class="field-input" step="0.01" />
+          <span class="suffix">sec</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="squareOffRetryDelaySeconds">Square-Off Retry Delay</label>
+        <div class="input-with-suffix">
+          <input id="squareOffRetryDelaySeconds" type="number" formControlName="squareOffRetryDelaySeconds" class="field-input" step="0.01" />
+          <span class="suffix">sec</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="stopLossConfirmationSeconds">Stop-Loss Confirmation</label>
+        <div class="input-with-suffix">
+          <input id="stopLossConfirmationSeconds" type="number" formControlName="stopLossConfirmationSeconds" class="field-input" step="0.01" />
+          <span class="suffix">sec</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="capitalAllocationBaseMultiplier">Capital Allocation Base Multiplier</label>
+        <div class="input-with-suffix">
+          <input id="capitalAllocationBaseMultiplier" type="number" formControlName="capitalAllocationBaseMultiplier" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="capitalAllocationConfidenceMultiplier">Capital Allocation Confidence Multiplier</label>
+        <div class="input-with-suffix">
+          <input id="capitalAllocationConfidenceMultiplier" type="number" formControlName="capitalAllocationConfidenceMultiplier" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="eliteMovementScore">Elite Movement Score</label>
+        <div class="input-with-suffix">
+          <input id="eliteMovementScore" type="number" formControlName="eliteMovementScore" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="strongMovementScore">Strong Movement Score</label>
+        <div class="input-with-suffix">
+          <input id="strongMovementScore" type="number" formControlName="strongMovementScore" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="eliteCapitalBonus">Elite Capital Bonus</label>
+        <div class="input-with-suffix">
+          <input id="eliteCapitalBonus" type="number" formControlName="eliteCapitalBonus" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="strongCapitalBonus">Strong Capital Bonus</label>
+        <div class="input-with-suffix">
+          <input id="strongCapitalBonus" type="number" formControlName="strongCapitalBonus" class="field-input" step="0.01" />
+          
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="maximumObservedDrawdownPercent">Maximum Observed Drawdown</label>
+        <div class="input-with-suffix">
+          <input id="maximumObservedDrawdownPercent" type="number" formControlName="maximumObservedDrawdownPercent" class="field-input" step="0.01" />
+          <span class="suffix">%</span>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="field-label" for="brokerBalanceRefreshSeconds">Broker Balance Refresh Interval</label>
+        <div class="input-with-suffix">
+          <input id="brokerBalanceRefreshSeconds" type="number" formControlName="brokerBalanceRefreshSeconds" class="field-input" step="0.01" />
+          <span class="suffix">sec</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</details>
+
 
         <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">

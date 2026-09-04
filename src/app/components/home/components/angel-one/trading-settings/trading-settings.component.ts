@@ -518,12 +518,29 @@ export class TradingSettingsComponent implements OnInit {
     maximumObservedDrawdownPercent: [0.25],
     brokerBalanceRefreshSeconds: [30],
     globalMaximumMarginUtilizationPercent: [70, [Validators.min(0), Validators.max(100)]],
+    minimumVirtualTradeTicksForEmail: [10, [Validators.min(1)]],
+
+    openAiValidation: this.#fb.group({
+      enabled: [false],
+      apiKey: [''],
+      model: ['gpt-5.6-luna'],
+      maxOutputTokens: [32],
+      timeoutSeconds: [8],
+      proceedOnValidationFailure: [true],
+    }),
 
     dynamicEvaluation: this.#fb.group({
       enabled: [true],
       minimumCandleHistory: [30],
       profileLookbackCandles: [20],
       minimumEntryScore: [42],
+      minimumQuoteOnlyEntryScore: [32],
+      minimumQuoteOnlySubscriptionScore: [28],
+      maximumQuoteOnlyRiskPenalty: [8],
+      maximumAdaptiveSubscriptions: [150],
+      historicalWarmupCandidates: [100],
+      strongTrendThreshold: [68],
+      developingThreshold: [28],
       maximumEntryScore: [100],
       unknownStockRiskReward: [1.5],
       minimumRiskReward: [1.25],
@@ -553,6 +570,15 @@ export class TradingSettingsComponent implements OnInit {
       multiTimeframeWeight: [8],
       spreadPenaltyWeight: [8],
       exhaustionPenalty: [12],
+      minimumExpectedNetValue: [0],
+      minimumEdgeScore: [45],
+      minimumStatisticalConfidence: [20],
+      noTradePenaltyThreshold: [65],
+      maximumRiskWhenStatisticallyUncertain: [0.65],
+      recentPerformanceWeight: [0.35],
+      historicalPerformanceWeight: [0.65],
+      marketRegimeWeight: [0.10],
+      relativeStrengthWeight: [0.10],
     }),
 
     dynamicVirtualTrading: this.#fb.group({
@@ -1437,11 +1463,29 @@ export class TradingSettingsComponent implements OnInit {
 
         enableBollinger: configuration.enableBollinger,
 
+        minimumVirtualTradeTicksForEmail: configuration.reporting?.minimumVirtualTradeTicksForEmail ?? 10,
+
+        openAiValidation: {
+          enabled: configuration.openAiValidation?.enabled ?? false,
+          apiKey: configuration.openAiValidation?.apiKey ?? '',
+          model: configuration.openAiValidation?.model ?? 'gpt-5.6-luna',
+          maxOutputTokens: configuration.openAiValidation?.maxOutputTokens ?? 32,
+          timeoutSeconds: configuration.openAiValidation?.timeoutSeconds ?? 8,
+          proceedOnValidationFailure: configuration.openAiValidation?.proceedOnValidationFailure ?? true,
+        },
+
         dynamicEvaluation: {
           enabled: configuration.dynamicEvaluation?.enabled ?? true,
           minimumCandleHistory: configuration.dynamicEvaluation?.minimumCandleHistory ?? 30,
           profileLookbackCandles: configuration.dynamicEvaluation?.profileLookbackCandles ?? 20,
           minimumEntryScore: configuration.dynamicEvaluation?.minimumEntryScore ?? 42,
+          minimumQuoteOnlyEntryScore: configuration.dynamicEvaluation?.minimumQuoteOnlyEntryScore ?? 32,
+          minimumQuoteOnlySubscriptionScore: configuration.dynamicEvaluation?.minimumQuoteOnlySubscriptionScore ?? 28,
+          maximumQuoteOnlyRiskPenalty: configuration.dynamicEvaluation?.maximumQuoteOnlyRiskPenalty ?? 8,
+          maximumAdaptiveSubscriptions: configuration.dynamicEvaluation?.maximumAdaptiveSubscriptions ?? 150,
+          historicalWarmupCandidates: configuration.dynamicEvaluation?.historicalWarmupCandidates ?? 100,
+          strongTrendThreshold: configuration.dynamicEvaluation?.strongTrendThreshold ?? 68,
+          developingThreshold: configuration.dynamicEvaluation?.developingThreshold ?? 28,
           maximumEntryScore: configuration.dynamicEvaluation?.maximumEntryScore ?? 100,
           unknownStockRiskReward: configuration.dynamicEvaluation?.unknownStockRiskReward ?? 1.5,
           minimumRiskReward: configuration.dynamicEvaluation?.minimumRiskReward ?? 1.25,
@@ -1471,6 +1515,15 @@ export class TradingSettingsComponent implements OnInit {
           multiTimeframeWeight: configuration.dynamicEvaluation?.multiTimeframeWeight ?? 8,
           spreadPenaltyWeight: configuration.dynamicEvaluation?.spreadPenaltyWeight ?? 8,
           exhaustionPenalty: configuration.dynamicEvaluation?.exhaustionPenalty ?? 12,
+          minimumExpectedNetValue: configuration.dynamicEvaluation?.minimumExpectedNetValue ?? 0,
+          minimumEdgeScore: configuration.dynamicEvaluation?.minimumEdgeScore ?? 45,
+          minimumStatisticalConfidence: configuration.dynamicEvaluation?.minimumStatisticalConfidence ?? 20,
+          noTradePenaltyThreshold: configuration.dynamicEvaluation?.noTradePenaltyThreshold ?? 65,
+          maximumRiskWhenStatisticallyUncertain: configuration.dynamicEvaluation?.maximumRiskWhenStatisticallyUncertain ?? 0.65,
+          recentPerformanceWeight: configuration.dynamicEvaluation?.recentPerformanceWeight ?? 0.35,
+          historicalPerformanceWeight: configuration.dynamicEvaluation?.historicalPerformanceWeight ?? 0.65,
+          marketRegimeWeight: configuration.dynamicEvaluation?.marketRegimeWeight ?? 0.10,
+          relativeStrengthWeight: configuration.dynamicEvaluation?.relativeStrengthWeight ?? 0.10,
         },
 
         dynamicVirtualTrading: {
@@ -2510,6 +2563,15 @@ export class TradingSettingsComponent implements OnInit {
 
       strategy: value.strategy!,
 
+      openAiValidation: {
+        enabled: !!value.openAiValidation?.enabled,
+        apiKey: value.openAiValidation?.apiKey ?? '',
+        model: value.openAiValidation?.model ?? 'gpt-5.6-luna',
+        maxOutputTokens: Number(value.openAiValidation?.maxOutputTokens ?? 32),
+        timeoutSeconds: Number(value.openAiValidation?.timeoutSeconds ?? 8),
+        proceedOnValidationFailure: value.openAiValidation?.proceedOnValidationFailure ?? true,
+      },
+
       riskPercentage: Number(value.riskPercentage),
 
       maxCapitalPerTrade: Number(value.maxCapitalPerTrade),
@@ -2699,6 +2761,13 @@ export class TradingSettingsComponent implements OnInit {
         minimumCandleHistory: Number(value.dynamicEvaluation?.minimumCandleHistory ?? 30),
         profileLookbackCandles: Number(value.dynamicEvaluation?.profileLookbackCandles ?? 20),
         minimumEntryScore: Number(value.dynamicEvaluation?.minimumEntryScore ?? 42),
+        minimumQuoteOnlyEntryScore: Number(value.dynamicEvaluation?.minimumQuoteOnlyEntryScore ?? 32),
+        minimumQuoteOnlySubscriptionScore: Number(value.dynamicEvaluation?.minimumQuoteOnlySubscriptionScore ?? 28),
+        maximumQuoteOnlyRiskPenalty: Number(value.dynamicEvaluation?.maximumQuoteOnlyRiskPenalty ?? 8),
+        maximumAdaptiveSubscriptions: Number(value.dynamicEvaluation?.maximumAdaptiveSubscriptions ?? 150),
+        historicalWarmupCandidates: Number(value.dynamicEvaluation?.historicalWarmupCandidates ?? 100),
+        strongTrendThreshold: Number(value.dynamicEvaluation?.strongTrendThreshold ?? 68),
+        developingThreshold: Number(value.dynamicEvaluation?.developingThreshold ?? 28),
         maximumEntryScore: Number(value.dynamicEvaluation?.maximumEntryScore ?? 100),
         unknownStockRiskReward: Number(value.dynamicEvaluation?.unknownStockRiskReward ?? 1.5),
         minimumRiskReward: Number(value.dynamicEvaluation?.minimumRiskReward ?? 1.25),
@@ -2728,6 +2797,15 @@ export class TradingSettingsComponent implements OnInit {
         multiTimeframeWeight: Number(value.dynamicEvaluation?.multiTimeframeWeight ?? 8),
         spreadPenaltyWeight: Number(value.dynamicEvaluation?.spreadPenaltyWeight ?? 8),
         exhaustionPenalty: Number(value.dynamicEvaluation?.exhaustionPenalty ?? 12),
+        minimumExpectedNetValue: Number(value.dynamicEvaluation?.minimumExpectedNetValue ?? 0),
+        minimumEdgeScore: Number(value.dynamicEvaluation?.minimumEdgeScore ?? 45),
+        minimumStatisticalConfidence: Number(value.dynamicEvaluation?.minimumStatisticalConfidence ?? 20),
+        noTradePenaltyThreshold: Number(value.dynamicEvaluation?.noTradePenaltyThreshold ?? 65),
+        maximumRiskWhenStatisticallyUncertain: Number(value.dynamicEvaluation?.maximumRiskWhenStatisticallyUncertain ?? 0.65),
+        recentPerformanceWeight: Number(value.dynamicEvaluation?.recentPerformanceWeight ?? 0.35),
+        historicalPerformanceWeight: Number(value.dynamicEvaluation?.historicalPerformanceWeight ?? 0.65),
+        marketRegimeWeight: Number(value.dynamicEvaluation?.marketRegimeWeight ?? 0.10),
+        relativeStrengthWeight: Number(value.dynamicEvaluation?.relativeStrengthWeight ?? 0.10),
       },
       dynamicVirtualTrading: {
         enabled: (value.dynamicVirtualTrading?.enabled ?? true),
@@ -3164,6 +3242,7 @@ export class TradingSettingsComponent implements OnInit {
         ),
         riskRewardThreshold: Number(value.reporting?.riskRewardThreshold ?? 2),
         enableVirtualTradeTickEmails: value.reporting?.enableVirtualTradeTickEmails ?? true,
+        minimumVirtualTradeTicksForEmail: Number(value.minimumVirtualTradeTicksForEmail ?? 10),
       },
     };
 
@@ -3211,10 +3290,16 @@ export class TradingSettingsComponent implements OnInit {
 
       // UI-only field is not part of the configuration model.
       excludedSymbolsText: undefined,
+      reporting: {
+        ...value.reporting,
+        minimumVirtualTradeTicksForEmail: Number(value.minimumVirtualTradeTicksForEmail ?? 10),
+      },
+      openAiValidation: value.openAiValidation,
     };
 
-    // Remove the UI-only property from the exported JSON.
+    // Remove UI-only properties from the exported JSON.
     delete (configuration as any).excludedSymbolsText;
+    delete (configuration as any).minimumVirtualTradeTicksForEmail;
 
     const json = JSON.stringify(configuration, null, 2);
 

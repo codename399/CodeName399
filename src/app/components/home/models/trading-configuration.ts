@@ -131,6 +131,15 @@ export interface OptionsTradingSettings extends InstrumentTradingSettings {
 }
 
 
+export interface OpenAiValidationSettings {
+  enabled: boolean;
+  apiKey?: string;
+  model: string;
+  maxOutputTokens: number;
+  timeoutSeconds: number;
+  proceedOnValidationFailure: boolean;
+}
+
 export type TradingStrictnessProfile = 'VeryLoose' | 'Loose' | 'Balanced' | 'Moderate' | 'Strict' | 'VeryStrict';
 
 export interface TradingConfiguration {
@@ -153,6 +162,7 @@ export interface TradingConfiguration {
   strategy: TradingStrategy;
   dynamicEvaluation?: DynamicEvaluationSettings;
   dynamicVirtualTrading?: DynamicVirtualTradingSettings;
+  openAiValidation?: OpenAiValidationSettings;
   tradingStrictnessProfile?: TradingStrictnessProfile;
 
   riskPercentage: number;
@@ -468,6 +478,13 @@ export interface DynamicEvaluationSettings {
   minimumCandleHistory: number;
   profileLookbackCandles: number;
   minimumEntryScore: number;
+  minimumQuoteOnlyEntryScore?: number;
+  minimumQuoteOnlySubscriptionScore?: number;
+  maximumQuoteOnlyRiskPenalty?: number;
+  maximumAdaptiveSubscriptions?: number;
+  historicalWarmupCandidates?: number;
+  strongTrendThreshold?: number;
+  developingThreshold?: number;
   maximumEntryScore: number;
   unknownStockRiskReward: number;
   minimumRiskReward: number;
@@ -497,6 +514,15 @@ export interface DynamicEvaluationSettings {
   multiTimeframeWeight: number;
   spreadPenaltyWeight: number;
   exhaustionPenalty: number;
+  minimumExpectedNetValue?: number;
+  minimumEdgeScore?: number;
+  minimumStatisticalConfidence?: number;
+  noTradePenaltyThreshold?: number;
+  maximumRiskWhenStatisticallyUncertain?: number;
+  recentPerformanceWeight?: number;
+  historicalPerformanceWeight?: number;
+  marketRegimeWeight?: number;
+  relativeStrengthWeight?: number;
 }
 
 export interface DynamicVirtualTradingSettings {
@@ -551,6 +577,7 @@ export interface ReportingSettings {
   volatilityScoreThreshold: number;
   riskRewardThreshold: number;
   enableVirtualTradeTickEmails?: boolean;
+  minimumVirtualTradeTicksForEmail?: number;
 }
 
 export interface ConfidenceSettings {

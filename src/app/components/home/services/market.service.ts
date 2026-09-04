@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { API_CONSTANTS } from '../../../../injectors/common-injector';
 
 @Injectable({
@@ -16,6 +16,12 @@ export class MarketService {
   // the SignalR connection is already established still receives the current data.
   private gainersSubject = new BehaviorSubject<any[]>([]);
   gainers$ = this.gainersSubject.asObservable();
+
+  // Every broker tick is exposed individually. The grid uses the coalesced
+  // gainers$ stream below, but consumers that need replay/charting/trading
+  // analytics can subscribe to ticks$ without losing intermediate ticks.
+  private readonly tickSubject = new Subject<any>();
+  ticks$ = this.tickSubject.asObservable();
 
   // Tick bursts can contain hundreds/thousands of messages per second.
   // Coalesce them into one UI update per animation frame instead of running
@@ -56,6 +62,10 @@ export class MarketService {
         this.hub.on('StockTickUpdated', (stock: any) => {
           const token = String(stock?.symbolToken ?? '');
           if (!token) return;
+
+          // Preserve EVERY tick for downstream processing first. The grid
+          // intentionally coalesces only its visual updates.
+          this.tickSubject.next(stock);
 
           // Keep only the newest tick for each stock until the next paint.
           this.pendingTicks.set(token, stock);
