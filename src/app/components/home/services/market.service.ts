@@ -17,11 +17,11 @@ export class MarketService {
   private gainersSubject = new BehaviorSubject<any[]>([]);
   gainers$ = this.gainersSubject.asObservable();
 
-  // Every broker tick is exposed individually. The grid uses the coalesced
-  // gainers$ stream below, but consumers that need replay/charting/trading
-  // analytics can subscribe to ticks$ without losing intermediate ticks.
+  // Every broker tick is emitted individually. The gainers$ stream remains
+  // frame-coalesced for efficient grid rendering, while ticks$ never drops
+  // intermediate ticks so UI consumers can process/replay the full feed.
   private readonly tickSubject = new Subject<any>();
-  ticks$ = this.tickSubject.asObservable();
+  readonly ticks$ = this.tickSubject.asObservable();
 
   // Tick bursts can contain hundreds/thousands of messages per second.
   // Coalesce them into one UI update per animation frame instead of running
@@ -63,8 +63,8 @@ export class MarketService {
           const token = String(stock?.symbolToken ?? '');
           if (!token) return;
 
-          // Preserve EVERY tick for downstream processing first. The grid
-          // intentionally coalesces only its visual updates.
+          // Never coalesce the event stream itself: emit every received tick
+          // before applying the separate visual-grid coalescing strategy.
           this.tickSubject.next(stock);
 
           // Keep only the newest tick for each stock until the next paint.
