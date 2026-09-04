@@ -900,6 +900,7 @@ export class TradingSettingsComponent implements OnInit {
       volatilityScoreThreshold: [60, [Validators.min(0), Validators.max(100)]],
       riskRewardThreshold: [2, [Validators.min(0)]],
       enableVirtualTradeTickEmails: [true],
+      minimumVirtualTradeTicksForEmail: [10, [Validators.min(1)]],
     }),
 
     exit: this.#fb.group({
@@ -1834,6 +1835,8 @@ export class TradingSettingsComponent implements OnInit {
             configuration.reporting?.riskRewardThreshold ?? 2,
           enableVirtualTradeTickEmails:
             configuration.reporting?.enableVirtualTradeTickEmails ?? true,
+          minimumVirtualTradeTicksForEmail:
+            configuration.reporting?.minimumVirtualTradeTicksForEmail ?? 10,
         },
       },
       {
@@ -3164,6 +3167,9 @@ export class TradingSettingsComponent implements OnInit {
         ),
         riskRewardThreshold: Number(value.reporting?.riskRewardThreshold ?? 2),
         enableVirtualTradeTickEmails: value.reporting?.enableVirtualTradeTickEmails ?? true,
+        minimumVirtualTradeTicksForEmail: Number(
+          value.reporting?.minimumVirtualTradeTicksForEmail ?? 10,
+        ),
       },
     };
 

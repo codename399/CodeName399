@@ -551,6 +551,7 @@ export interface ReportingSettings {
   volatilityScoreThreshold: number;
   riskRewardThreshold: number;
   enableVirtualTradeTickEmails?: boolean;
+  minimumVirtualTradeTicksForEmail?: number;
 }
 
 export interface ConfidenceSettings {

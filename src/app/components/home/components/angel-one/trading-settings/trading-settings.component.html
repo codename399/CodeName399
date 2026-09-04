@@ -2411,121 +2411,74 @@
           <summary class="card-header">
             <div>
               <h2>Reporting Settings</h2>
-              <p>Thresholds used for reporting signals</p>
+              <p>Thresholds and controls used for reporting signals and virtual-trade tick emails</p>
             </div>
           </summary>
 
           <div class="card-body grid-2" formGroupName="reporting">
             <div class="field-row">
-              <label class="field-label" for="strongBuyConfidence"
-                >Strong Buy Confidence</label
-              >
-              <input
-                id="strongBuyConfidence"
-                type="number"
-                formControlName="strongBuyConfidence"
-                class="field-input"
-              />
+              <label class="field-label" for="strongBuyConfidence">Strong Buy Confidence</label>
+              <input id="strongBuyConfidence" type="number" formControlName="strongBuyConfidence" class="field-input" min="0" max="100" step="0.01" />
             </div>
-
             <div class="field-row">
-              <label class="field-label" for="buyConfidence"
-                >Buy Confidence</label
-              >
-              <input
-                id="buyConfidence"
-                type="number"
-                formControlName="buyConfidence"
-                class="field-input"
-              />
+              <label class="field-label" for="buyConfidence">Buy Confidence</label>
+              <input id="buyConfidence" type="number" formControlName="buyConfidence" class="field-input" min="0" max="100" step="0.01" />
             </div>
-
             <div class="field-row">
-              <label class="field-label" for="watchConfidence"
-                >Watch Confidence</label
-              >
-              <input
-                id="watchConfidence"
-                type="number"
-                formControlName="watchConfidence"
-                class="field-input"
-              />
+              <label class="field-label" for="watchConfidence">Watch Confidence</label>
+              <input id="watchConfidence" type="number" formControlName="watchConfidence" class="field-input" min="0" max="100" step="0.01" />
             </div>
-
             <div class="field-row">
-              <label class="field-label" for="movementScoreThreshold"
-                >Movement Score Threshold</label
-              >
-              <input
-                id="movementScoreThreshold"
-                type="number"
-                formControlName="movementScoreThreshold"
-                class="field-input"
-              />
+              <label class="field-label" for="movementScoreThreshold">Movement Score Threshold</label>
+              <input id="movementScoreThreshold" type="number" formControlName="movementScoreThreshold" class="field-input" min="0" max="100" step="0.01" />
             </div>
-
             <div class="field-row">
-              <label class="field-label" for="riskRewardThreshold"
-                >Risk Reward Threshold</label
-              >
-              <input
-                id="riskRewardThreshold"
-                type="number"
-                step="0.01"
-                formControlName="riskRewardThreshold"
-                class="field-input"
-              />
-            </div>
-            <label class="toggle-field"><input type="checkbox" formControlName="enableVirtualTradeTickEmails" /><span>Enable Virtual Trade Tick Emails</span></label>
-          </div>
-        </details>
-
-        <details class="settings-card" (toggle)="onAccordionToggle($event)">
-          <summary class="card-header">
-            <div>
-              <h2>Additional Reporting Controls</h2>
-              <p>Additional thresholds used by reporting and signal analysis</p>
-            </div>
-          </summary>
-          <div class="card-body">
-            <div class="grid-4 compact-profile-grid" formGroupName="reporting">
-              <div class="field-row">
-              <label class="field-label" for="higherHighCountThreshold">Higher High Count Threshold</label>
-              <div class="input-with-suffix">
-              <input id="higherHighCountThreshold" type="number" formControlName="higherHighCountThreshold" class="field-input" step="0.01" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="maxDrawdownPercentThreshold">Max Drawdown Percent Threshold</label>
-              <div class="input-with-suffix">
-              <input id="maxDrawdownPercentThreshold" type="number" formControlName="maxDrawdownPercentThreshold" class="field-input" step="0.01" />
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="trendStabilityThreshold">Trend Stability Threshold</label>
-              <div class="input-with-suffix">
-              <input id="trendStabilityThreshold" type="number" formControlName="trendStabilityThreshold" class="field-input" step="0.01" />
-              </div>
-            </div>
-              <div class="field-row">
               <label class="field-label" for="trendStrengthThreshold">Trend Strength Threshold</label>
-              <div class="input-with-suffix">
-              <input id="trendStrengthThreshold" type="number" formControlName="trendStrengthThreshold" class="field-input" step="0.01" />
-              </div>
+              <input id="trendStrengthThreshold" type="number" formControlName="trendStrengthThreshold" class="field-input" min="0" max="100" step="0.01" />
             </div>
-              <div class="field-row">
-              <label class="field-label" for="volatilityScoreThreshold">Volatility Score Threshold</label>
-              <div class="input-with-suffix">
-              <input id="volatilityScoreThreshold" type="number" formControlName="volatilityScoreThreshold" class="field-input" step="0.01" />
-              </div>
+            <div class="field-row">
+              <label class="field-label" for="trendStabilityThreshold">Trend Stability Threshold</label>
+              <input id="trendStabilityThreshold" type="number" formControlName="trendStabilityThreshold" class="field-input" min="0" max="100" step="0.01" />
             </div>
-              <div class="field-row">
+            <div class="field-row">
+              <label class="field-label" for="recoveryScoreThreshold">Recovery Score Threshold</label>
+              <input id="recoveryScoreThreshold" type="number" formControlName="recoveryScoreThreshold" class="field-input" min="0" max="100" step="0.01" />
+            </div>
+            <div class="field-row">
+              <label class="field-label" for="higherHighCountThreshold">Higher High Count Threshold</label>
+              <input id="higherHighCountThreshold" type="number" formControlName="higherHighCountThreshold" class="field-input" min="0" step="1" />
+            </div>
+            <div class="field-row">
               <label class="field-label" for="volumeMultiplierThreshold">Volume Multiplier Threshold</label>
+              <input id="volumeMultiplierThreshold" type="number" formControlName="volumeMultiplierThreshold" class="field-input" min="0" step="0.01" />
+            </div>
+            <div class="field-row">
+              <label class="field-label" for="maxDrawdownPercentThreshold">Max Drawdown Percent Threshold</label>
+              <input id="maxDrawdownPercentThreshold" type="number" formControlName="maxDrawdownPercentThreshold" class="field-input" min="0" max="1" step="0.01" />
+            </div>
+            <div class="field-row">
+              <label class="field-label" for="volatilityScoreThreshold">Volatility Score Threshold</label>
+              <input id="volatilityScoreThreshold" type="number" formControlName="volatilityScoreThreshold" class="field-input" min="0" max="100" step="0.01" />
+            </div>
+            <div class="field-row">
+              <label class="field-label" for="riskRewardThreshold">Risk Reward Threshold</label>
+              <input id="riskRewardThreshold" type="number" formControlName="riskRewardThreshold" class="field-input" min="0" step="0.01" />
+            </div>
+            <div class="field-row">
+              <label class="field-label" for="minimumVirtualTradeTicksForEmail">Minimum Virtual Trade Ticks For Email</label>
               <div class="input-with-suffix">
-              <input id="volumeMultiplierThreshold" type="number" formControlName="volumeMultiplierThreshold" class="field-input" step="0.01" />
+                <input id="minimumVirtualTradeTicksForEmail" type="number" formControlName="minimumVirtualTradeTicksForEmail" class="field-input" min="1" step="1" />
+                <span class="input-suffix">ticks</span>
               </div>
             </div>
-</div></div>
+            <div class="field-row">
+              <label class="field-label" for="enableVirtualTradeTickEmails">Enable Virtual Trade Tick Emails</label>
+              <label class="checkbox-field">
+                <input id="enableVirtualTradeTickEmails" type="checkbox" formControlName="enableVirtualTradeTickEmails" />
+                <span>Enabled</span>
+              </label>
+            </div>
+          </div>
         </details>
 
         <details class="settings-card" (toggle)="onAccordionToggle($event)">
