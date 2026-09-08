@@ -3012,7 +3012,23 @@
               <div class="input-with-suffix">
               <input id="exhaustionPenalty" type="number" formControlName="exhaustionPenalty" class="field-input" step="0.01" />
               </div>
-            </div></div>
+            </div>
+              <div class="field-row"><label class="field-label" for="minimumQuoteOnlyEntryScore">Minimum Quote-Only Entry Score</label><input id="minimumQuoteOnlyEntryScore" type="number" formControlName="minimumQuoteOnlyEntryScore" class="field-input" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="minimumQuoteOnlySubscriptionScore">Minimum Quote-Only Subscription Score</label><input id="minimumQuoteOnlySubscriptionScore" type="number" formControlName="minimumQuoteOnlySubscriptionScore" class="field-input" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="maximumQuoteOnlyRiskPenalty">Maximum Quote-Only Risk Penalty</label><input id="maximumQuoteOnlyRiskPenalty" type="number" formControlName="maximumQuoteOnlyRiskPenalty" class="field-input" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="maximumAdaptiveSubscriptions">Maximum Adaptive Subscriptions</label><input id="maximumAdaptiveSubscriptions" type="number" formControlName="maximumAdaptiveSubscriptions" class="field-input" min="0" /></div>
+              <div class="field-row"><label class="field-label" for="historicalWarmupCandidates">Historical Warmup Candidates</label><input id="historicalWarmupCandidates" type="number" formControlName="historicalWarmupCandidates" class="field-input" min="0" /></div>
+              <div class="field-row"><label class="field-label" for="strongTrendThreshold">Strong Trend Threshold</label><input id="strongTrendThreshold" type="number" formControlName="strongTrendThreshold" class="field-input" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="developingThreshold">Developing Threshold</label><input id="developingThreshold" type="number" formControlName="developingThreshold" class="field-input" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="minimumExpectedNetValue">Minimum Expected Net Value</label><input id="minimumExpectedNetValue" type="number" formControlName="minimumExpectedNetValue" class="field-input" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="minimumEdgeScore">Minimum Edge Score</label><input id="minimumEdgeScore" type="number" formControlName="minimumEdgeScore" class="field-input" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="minimumStatisticalConfidence">Minimum Statistical Confidence</label><input id="minimumStatisticalConfidence" type="number" formControlName="minimumStatisticalConfidence" class="field-input" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="noTradePenaltyThreshold">No-Trade Penalty Threshold</label><input id="noTradePenaltyThreshold" type="number" formControlName="noTradePenaltyThreshold" class="field-input" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="maximumRiskWhenStatisticallyUncertain">Maximum Risk When Statistically Uncertain</label><input id="maximumRiskWhenStatisticallyUncertain" type="number" formControlName="maximumRiskWhenStatisticallyUncertain" class="field-input" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="recentPerformanceWeight">Recent Performance Weight</label><input id="recentPerformanceWeight" type="number" formControlName="recentPerformanceWeight" class="field-input" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="historicalPerformanceWeight">Historical Performance Weight</label><input id="historicalPerformanceWeight" type="number" formControlName="historicalPerformanceWeight" class="field-input" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="marketRegimeWeight">Market Regime Weight</label><input id="marketRegimeWeight" type="number" formControlName="marketRegimeWeight" class="field-input" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="relativeStrengthWeight">Relative Strength Weight</label><input id="relativeStrengthWeight" type="number" formControlName="relativeStrengthWeight" class="field-input" step="0.01" /></div></div>
             <h3>Dynamic Virtual Trading</h3>
             <div class="grid-4 compact-profile-grid" formGroupName="dynamicVirtualTrading"><label class="toggle-field"><input type="checkbox" formControlName="enabled" /><span>Enabled</span></label>
               <div class="field-row">
@@ -3233,6 +3249,26 @@
           </div>
         </details>
 
+
+        <details class="settings-card" (toggle)="onAccordionToggle($event)">
+          <summary class="card-header"><div><h2>Analysis Capture</h2><p>Configure server-side stock/candle replay capture and workbook generation.</p></div></summary>
+          <div class="card-body grid-4 compact-profile-grid" formGroupName="analysisCapture">
+            <label class="toggle-field"><input type="checkbox" formControlName="enabled" /><span>Enable Analysis Capture</span></label>
+            <div class="field-row"><label class="field-label" for="batchIntervalMinutes">Batch Interval</label><input id="batchIntervalMinutes" type="number" formControlName="batchIntervalMinutes" class="field-input" min="1" /></div>
+            <div class="field-row"><label class="field-label" for="captureWindowMinutes">Capture Window</label><input id="captureWindowMinutes" type="number" formControlName="captureWindowMinutes" class="field-input" min="1" /></div>
+            <div class="field-row"><label class="field-label" for="stockCount">Stock Count</label><input id="stockCount" type="number" formControlName="stockCount" class="field-input" min="1" /></div>
+            <div class="field-row"><label class="field-label" for="candleCount">Candle Count</label><input id="candleCount" type="number" formControlName="candleCount" class="field-input" min="1" /></div>
+            <div class="field-row"><label class="field-label" for="instrumentType">Instrument Type</label><select id="instrumentType" formControlName="instrumentType" class="field-input"><option value="Equity">Equity</option><option value="Futures">Futures</option><option value="Options">Options</option></select></div>
+            <div class="field-row"><label class="field-label" for="outputDirectory">Output Directory</label><input id="outputDirectory" type="text" formControlName="outputDirectory" class="field-input" /></div>
+            <div class="field-row"><label class="field-label" for="publicBaseUrl">Public Base URL</label><input id="publicBaseUrl" type="url" formControlName="publicBaseUrl" class="field-input" /></div>
+            <div class="field-row"><label class="field-label" for="downloadLinkLifetimeHours">Download Link Lifetime</label><input id="downloadLinkLifetimeHours" type="number" formControlName="downloadLinkLifetimeHours" class="field-input" min="1" /></div>
+            <div class="field-row"><label class="field-label" for="downloadSigningKey">Download Signing Key</label><input id="downloadSigningKey" type="password" formControlName="downloadSigningKey" class="field-input" autocomplete="new-password" /></div>
+            <label class="toggle-field"><input type="checkbox" formControlName="emailOnCompletion" /><span>Email On Completion</span></label>
+            <label class="toggle-field"><input type="checkbox" formControlName="includeTickData" /><span>Include Tick Data</span></label>
+            <label class="toggle-field"><input type="checkbox" formControlName="includeConfiguration" /><span>Include Configuration</span></label>
+            <label class="toggle-field"><input type="checkbox" formControlName="includeActualVirtualTradeState" /><span>Include Actual / Virtual Trade State</span></label>
+          </div>
+        </details>
 
         <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header"><div><h2>Advanced Trade &amp; Runtime Settings</h2><p>Global risk limits, market timing, execution recovery, margin simulation and runtime safety.</p></div></summary>
@@ -3552,6 +3588,15 @@
               </div>
             </div>
             </div>
+          </div>
+        </details>
+
+        <details class="settings-card" (toggle)="onAccordionToggle($event)">
+          <summary class="card-header"><div><h2>Market Calendar</h2><p>Timezone and trading holiday calendar used by the trading engine.</p></div></summary>
+          <div class="card-body grid-2">
+            <div class="field-row"><label class="field-label" for="marketTimeZoneId">Market Time Zone</label><input id="marketTimeZoneId" type="text" formControlName="marketTimeZoneId" class="field-input" /></div>
+            <div class="field-row"><label class="field-label" for="tradingHolidaysText">Trading Holidays</label><textarea id="tradingHolidaysText" formControlName="tradingHolidaysText" class="field-input" rows="3" placeholder="YYYY-MM-DD, YYYY-MM-DD"></textarea><small class="field-help">Comma- or newline-separated dates.</small></div>
+            <div class="field-row"><label class="field-label" for="visibleColumnsText">Visible Columns</label><textarea id="visibleColumnsText" formControlName="visibleColumnsText" class="field-input" rows="3" placeholder="symbol, ltp, signal"></textarea><small class="field-help">Comma- or newline-separated column keys.</small></div>
           </div>
         </details>
 

@@ -153,6 +153,7 @@ export interface TradingConfiguration {
   strategy: TradingStrategy;
   dynamicEvaluation?: DynamicEvaluationSettings;
   dynamicVirtualTrading?: DynamicVirtualTradingSettings;
+  analysisCapture?: AnalysisCaptureSettings;
   tradingStrictnessProfile?: TradingStrictnessProfile;
 
   riskPercentage: number;
@@ -463,11 +464,35 @@ export interface VirtualTradingSettings {
   maximumPullbackGainPercent?: number;
 }
 
+export interface AnalysisCaptureSettings {
+  enabled: boolean;
+  batchIntervalMinutes: number;
+  captureWindowMinutes: number;
+  stockCount: number;
+  candleCount: number;
+  instrumentType: string;
+  outputDirectory: string;
+  publicBaseUrl: string;
+  downloadLinkLifetimeHours: number;
+  downloadSigningKey: string;
+  emailOnCompletion: boolean;
+  includeTickData: boolean;
+  includeConfiguration: boolean;
+  includeActualVirtualTradeState: boolean;
+}
+
 export interface DynamicEvaluationSettings {
   enabled: boolean;
   minimumCandleHistory: number;
   profileLookbackCandles: number;
   minimumEntryScore: number;
+  minimumQuoteOnlyEntryScore: number;
+  minimumQuoteOnlySubscriptionScore: number;
+  maximumQuoteOnlyRiskPenalty: number;
+  maximumAdaptiveSubscriptions: number;
+  historicalWarmupCandidates: number;
+  strongTrendThreshold: number;
+  developingThreshold: number;
   maximumEntryScore: number;
   unknownStockRiskReward: number;
   minimumRiskReward: number;
@@ -497,6 +522,15 @@ export interface DynamicEvaluationSettings {
   multiTimeframeWeight: number;
   spreadPenaltyWeight: number;
   exhaustionPenalty: number;
+  minimumExpectedNetValue: number;
+  minimumEdgeScore: number;
+  minimumStatisticalConfidence: number;
+  noTradePenaltyThreshold: number;
+  maximumRiskWhenStatisticallyUncertain: number;
+  recentPerformanceWeight: number;
+  historicalPerformanceWeight: number;
+  marketRegimeWeight: number;
+  relativeStrengthWeight: number;
 }
 
 export interface DynamicVirtualTradingSettings {

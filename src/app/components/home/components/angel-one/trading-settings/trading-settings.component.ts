@@ -21,6 +21,7 @@ import {
   FuturesTradingSettings,
   OptionsTradingSettings,
   TradingStrictnessProfile,
+  AnalysisCaptureSettings,
 } from '../../../models/trading-configuration';
 import { TradingStrategy } from '../../../models/enum/trading-strategy';
 import { AngelOneService } from '../../../services/angel-one.service';
@@ -518,12 +519,22 @@ export class TradingSettingsComponent implements OnInit {
     maximumObservedDrawdownPercent: [0.25],
     brokerBalanceRefreshSeconds: [30],
     globalMaximumMarginUtilizationPercent: [70, [Validators.min(0), Validators.max(100)]],
+    marketTimeZoneId: ['Asia/Kolkata', Validators.required],
+    tradingHolidaysText: [''],
+    visibleColumnsText: [''],
 
     dynamicEvaluation: this.#fb.group({
       enabled: [true],
       minimumCandleHistory: [30],
       profileLookbackCandles: [20],
       minimumEntryScore: [42],
+      minimumQuoteOnlyEntryScore: [32],
+      minimumQuoteOnlySubscriptionScore: [28],
+      maximumQuoteOnlyRiskPenalty: [8],
+      maximumAdaptiveSubscriptions: [150],
+      historicalWarmupCandidates: [100],
+      strongTrendThreshold: [68],
+      developingThreshold: [28],
       maximumEntryScore: [100],
       unknownStockRiskReward: [1.5],
       minimumRiskReward: [1.25],
@@ -553,6 +564,32 @@ export class TradingSettingsComponent implements OnInit {
       multiTimeframeWeight: [8],
       spreadPenaltyWeight: [8],
       exhaustionPenalty: [12],
+      minimumExpectedNetValue: [0],
+      minimumEdgeScore: [45],
+      minimumStatisticalConfidence: [20],
+      noTradePenaltyThreshold: [65],
+      maximumRiskWhenStatisticallyUncertain: [0.65],
+      recentPerformanceWeight: [0.35],
+      historicalPerformanceWeight: [0.65],
+      marketRegimeWeight: [0.10],
+      relativeStrengthWeight: [0.10],
+    }),
+
+    analysisCapture: this.#fb.group({
+      enabled: [false],
+      batchIntervalMinutes: [30],
+      captureWindowMinutes: [30],
+      stockCount: [100],
+      candleCount: [30],
+      instrumentType: ['Equity'],
+      outputDirectory: ['Data/TradingAnalysis'],
+      publicBaseUrl: [''],
+      downloadLinkLifetimeHours: [48],
+      downloadSigningKey: [''],
+      emailOnCompletion: [true],
+      includeTickData: [true],
+      includeConfiguration: [true],
+      includeActualVirtualTradeState: [true],
     }),
 
     dynamicVirtualTrading: this.#fb.group({
@@ -1327,6 +1364,9 @@ export class TradingSettingsComponent implements OnInit {
         maximumObservedDrawdownPercent: configuration.maximumObservedDrawdownPercent ?? 0.25,
         brokerBalanceRefreshSeconds: configuration.brokerBalanceRefreshSeconds ?? 30,
         globalMaximumMarginUtilizationPercent: configuration.maximumMarginUtilizationPercent ?? 70,
+        marketTimeZoneId: configuration.marketTimeZoneId ?? 'Asia/Kolkata',
+        tradingHolidaysText: (configuration.tradingHolidays ?? []).join(', '),
+        visibleColumnsText: (configuration.visibleColumns ?? []).join(', '),
 
         excludedSymbolsText: (configuration.excludedSymbols ?? []).join(', '),
 
@@ -1443,6 +1483,13 @@ export class TradingSettingsComponent implements OnInit {
           minimumCandleHistory: configuration.dynamicEvaluation?.minimumCandleHistory ?? 30,
           profileLookbackCandles: configuration.dynamicEvaluation?.profileLookbackCandles ?? 20,
           minimumEntryScore: configuration.dynamicEvaluation?.minimumEntryScore ?? 42,
+          minimumQuoteOnlyEntryScore: configuration.dynamicEvaluation?.minimumQuoteOnlyEntryScore ?? 32,
+          minimumQuoteOnlySubscriptionScore: configuration.dynamicEvaluation?.minimumQuoteOnlySubscriptionScore ?? 28,
+          maximumQuoteOnlyRiskPenalty: configuration.dynamicEvaluation?.maximumQuoteOnlyRiskPenalty ?? 8,
+          maximumAdaptiveSubscriptions: configuration.dynamicEvaluation?.maximumAdaptiveSubscriptions ?? 150,
+          historicalWarmupCandidates: configuration.dynamicEvaluation?.historicalWarmupCandidates ?? 100,
+          strongTrendThreshold: configuration.dynamicEvaluation?.strongTrendThreshold ?? 68,
+          developingThreshold: configuration.dynamicEvaluation?.developingThreshold ?? 28,
           maximumEntryScore: configuration.dynamicEvaluation?.maximumEntryScore ?? 100,
           unknownStockRiskReward: configuration.dynamicEvaluation?.unknownStockRiskReward ?? 1.5,
           minimumRiskReward: configuration.dynamicEvaluation?.minimumRiskReward ?? 1.25,
@@ -2437,6 +2484,13 @@ export class TradingSettingsComponent implements OnInit {
     return `${String(normalizedHours).padStart(2, '0')}:${String(normalizedMinutes).padStart(2, '0')}:${String(normalizedSeconds).padStart(2, '0')}`;
   }
 
+  private parseCsvValues(value: string | null | undefined): string[] {
+    return String(value ?? '')
+      .split(/[\n,]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
   private parseExcludedSymbols(value: string | null | undefined): string[] {
     return (value ?? '')
       .split(',')
@@ -2547,6 +2601,8 @@ export class TradingSettingsComponent implements OnInit {
       maximumTotalOpenRisk: Number(value.maximumTotalOpenRisk ?? 10000),
       maximumTotalUnderlyingDeltaExposure: Number(value.maximumTotalUnderlyingDeltaExposure ?? 2000),
       maximumMarginUtilizationPercent: Number(value.globalMaximumMarginUtilizationPercent ?? 70),
+      marketTimeZoneId: String(value.marketTimeZoneId ?? 'Asia/Kolkata'),
+      tradingHolidays: this.parseCsvValues(value.tradingHolidaysText),
       emergencyMarginUtilizationPercent: Number(value.emergencyMarginUtilizationPercent ?? 85),
       enableTradingKillSwitchPersistence: (value.enableTradingKillSwitchPersistence ?? true),
       enableGlobalRiskLimits: (value.enableGlobalRiskLimits ?? true),
@@ -2675,7 +2731,7 @@ export class TradingSettingsComponent implements OnInit {
         value.maximumVirtualPullbackPercent ?? 0.5,
       ),
 
-      visibleColumns: this.#angel.configuration()?.visibleColumns ?? [],
+      visibleColumns: this.parseCsvValues(value.visibleColumnsText),
 
       maximumChargesPerTrade: Number(value.maximumChargesPerTrade ?? 100),
       lastDailySummarySent: null,
@@ -2702,6 +2758,13 @@ export class TradingSettingsComponent implements OnInit {
         minimumCandleHistory: Number(value.dynamicEvaluation?.minimumCandleHistory ?? 30),
         profileLookbackCandles: Number(value.dynamicEvaluation?.profileLookbackCandles ?? 20),
         minimumEntryScore: Number(value.dynamicEvaluation?.minimumEntryScore ?? 42),
+        minimumQuoteOnlyEntryScore: Number(value.dynamicEvaluation?.minimumQuoteOnlyEntryScore ?? 32),
+        minimumQuoteOnlySubscriptionScore: Number(value.dynamicEvaluation?.minimumQuoteOnlySubscriptionScore ?? 28),
+        maximumQuoteOnlyRiskPenalty: Number(value.dynamicEvaluation?.maximumQuoteOnlyRiskPenalty ?? 8),
+        maximumAdaptiveSubscriptions: Number(value.dynamicEvaluation?.maximumAdaptiveSubscriptions ?? 150),
+        historicalWarmupCandidates: Number(value.dynamicEvaluation?.historicalWarmupCandidates ?? 100),
+        strongTrendThreshold: Number(value.dynamicEvaluation?.strongTrendThreshold ?? 68),
+        developingThreshold: Number(value.dynamicEvaluation?.developingThreshold ?? 28),
         maximumEntryScore: Number(value.dynamicEvaluation?.maximumEntryScore ?? 100),
         unknownStockRiskReward: Number(value.dynamicEvaluation?.unknownStockRiskReward ?? 1.5),
         minimumRiskReward: Number(value.dynamicEvaluation?.minimumRiskReward ?? 1.25),
@@ -2731,6 +2794,31 @@ export class TradingSettingsComponent implements OnInit {
         multiTimeframeWeight: Number(value.dynamicEvaluation?.multiTimeframeWeight ?? 8),
         spreadPenaltyWeight: Number(value.dynamicEvaluation?.spreadPenaltyWeight ?? 8),
         exhaustionPenalty: Number(value.dynamicEvaluation?.exhaustionPenalty ?? 12),
+        minimumExpectedNetValue: Number(value.dynamicEvaluation?.minimumExpectedNetValue ?? 0),
+        minimumEdgeScore: Number(value.dynamicEvaluation?.minimumEdgeScore ?? 45),
+        minimumStatisticalConfidence: Number(value.dynamicEvaluation?.minimumStatisticalConfidence ?? 20),
+        noTradePenaltyThreshold: Number(value.dynamicEvaluation?.noTradePenaltyThreshold ?? 65),
+        maximumRiskWhenStatisticallyUncertain: Number(value.dynamicEvaluation?.maximumRiskWhenStatisticallyUncertain ?? 0.65),
+        recentPerformanceWeight: Number(value.dynamicEvaluation?.recentPerformanceWeight ?? 0.35),
+        historicalPerformanceWeight: Number(value.dynamicEvaluation?.historicalPerformanceWeight ?? 0.65),
+        marketRegimeWeight: Number(value.dynamicEvaluation?.marketRegimeWeight ?? 0.10),
+        relativeStrengthWeight: Number(value.dynamicEvaluation?.relativeStrengthWeight ?? 0.10),
+      },
+      analysisCapture: {
+        enabled: value.analysisCapture?.enabled ?? false,
+        batchIntervalMinutes: Number(value.analysisCapture?.batchIntervalMinutes ?? 30),
+        captureWindowMinutes: Number(value.analysisCapture?.captureWindowMinutes ?? 30),
+        stockCount: Number(value.analysisCapture?.stockCount ?? 100),
+        candleCount: Number(value.analysisCapture?.candleCount ?? 30),
+        instrumentType: String(value.analysisCapture?.instrumentType ?? 'Equity'),
+        outputDirectory: String(value.analysisCapture?.outputDirectory ?? 'Data/TradingAnalysis'),
+        publicBaseUrl: String(value.analysisCapture?.publicBaseUrl ?? ''),
+        downloadLinkLifetimeHours: Number(value.analysisCapture?.downloadLinkLifetimeHours ?? 48),
+        downloadSigningKey: String(value.analysisCapture?.downloadSigningKey ?? ''),
+        emailOnCompletion: value.analysisCapture?.emailOnCompletion ?? true,
+        includeTickData: value.analysisCapture?.includeTickData ?? true,
+        includeConfiguration: value.analysisCapture?.includeConfiguration ?? true,
+        includeActualVirtualTradeState: value.analysisCapture?.includeActualVirtualTradeState ?? true,
       },
       dynamicVirtualTrading: {
         enabled: (value.dynamicVirtualTrading?.enabled ?? true),
