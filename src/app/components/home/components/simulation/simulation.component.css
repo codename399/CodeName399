@@ -18,3 +18,50 @@
 .simulation-dashboard-button{border:1px solid #27344c;border-radius:8px;padding:10px 12px;cursor:pointer;font:inherit;font-weight:700;background:#111b2c;color:#aebbd0;white-space:nowrap}.simulation-dashboard-button:hover{background:#19263d;color:#fff}
 
 .empty-state{margin-top:14px;min-height:260px;display:grid;place-content:center;text-align:center;gap:8px;padding:28px}.empty-state .empty-icon{font-size:34px;opacity:.75}.empty-state h2{margin:0;font-size:20px}.empty-state p{max-width:620px;margin:0 auto 10px;color:#9aa8bd;line-height:1.5;font-size:12px}.empty-upload{display:inline-block;justify-self:center;text-align:left;max-width:340px}.empty-upload small{line-height:1.4}
+
+@media (max-width: 640px){
+	:host{overflow-x:hidden}
+	.shell{display:block;min-width:0}
+	.sidebar{padding:14px;gap:12px;border-right:0;border-bottom:1px solid #1b2434}
+	.brand small,.side-foot{display:none}
+	.upload{padding:11px 12px}
+	.stock-list{flex-direction:row;overflow-x:auto;overflow-y:hidden;padding-bottom:2px}
+	.stock-list button{flex:0 0 auto;padding:8px 10px}
+	.main{padding:16px 12px 28px}
+	.topbar{align-items:stretch;flex-direction:column;gap:12px;margin-bottom:14px}
+	.topbar h1{font-size:22px}
+	.top-actions,.buttons{display:grid;grid-template-columns:1fr;gap:8px}
+	.top-actions button,.buttons button{width:100%;min-height:42px}
+	.stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+	.stat{padding:11px}
+	.stat b{font-size:17px}
+	.tabs{display:flex;overflow-x:auto;white-space:nowrap;margin-right:-12px;padding-right:12px;scrollbar-width:none}
+	.tabs::-webkit-scrollbar{display:none}
+	.tabs button{flex:0 0 auto;padding:10px 12px}
+	.workspace,.simulation-layout{display:flex;flex-direction:column;gap:12px}
+	.panel{padding:14px}
+	.panel-head{align-items:flex-start;gap:8px}
+	.chart{min-height:190px;overflow:hidden}
+	.candle-strip{overflow-x:auto;white-space:nowrap}
+	.candle-strip button{flex:0 0 auto}
+	.toggle-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+	.indicator-grid,.decision-grid,.result-stats,.diagnostic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+	.form-grid{grid-template-columns:1fr}
+	.table-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+	table{min-width:760px}
+	.global-grid,.debugger-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+	.gate-list{grid-template-columns:1fr}
+	.regime-learning .gate{grid-template-columns:1fr;gap:5px}
+	.regime-learning .gate small{grid-column:auto}
+	.debug-row{grid-template-columns:28px 1fr;gap:8px}
+	.debug-phase,.debug-status,.debug-content{grid-column:2}
+	.parity-summary{display:grid;gap:8px}
+	.validation-box{display:grid}
+	.empty-state{padding:22px 14px}
+	.empty-state h2{font-size:18px}
+}
+
+@media (max-width: 380px){
+	.stats,.indicator-grid,.decision-grid,.result-stats,.diagnostic-grid,.global-grid,.debugger-summary{grid-template-columns:1fr}
+	.panel{padding:12px}
+}
