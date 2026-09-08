@@ -48,7 +48,20 @@
     <div class="loading">Loading Trading Configuration...</div>
   } @else {
     <form class="settings-form" [formGroup]="form">
-      <div class="settings-grid accordion-grid">
+      <div class="settings-search field-row">
+        <label class="field-label" for="settingsSearch">Search settings</label>
+        <input
+          id="settingsSearch"
+          type="search"
+          class="field-input"
+          placeholder="Search by setting name..."
+          [value]="settingsSearch"
+          (input)="filterSettings($event)"
+          autocomplete="off"
+        />
+      </div>
+
+      <div #settingsGrid class="settings-grid accordion-grid">
         <details class="settings-card" open (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>

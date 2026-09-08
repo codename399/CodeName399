@@ -106,6 +106,24 @@ button:disabled {
   gap: 18px;
 }
 
+.settings-search {
+  width: 100%;
+  padding: 16px 18px;
+  background: white;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.055);
+}
+
+.settings-search .field-input {
+  background: #f8fafc;
+}
+
+.settings-search .field-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
 /*
  * Accordion layout
  * The HTML uses:

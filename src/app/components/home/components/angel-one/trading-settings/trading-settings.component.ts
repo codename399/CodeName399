@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
 
@@ -38,6 +38,8 @@ import { AngelOneService } from '../../../services/angel-one.service';
   styleUrl: './trading-settings.component.css',
 })
 export class TradingSettingsComponent implements OnInit {
+  @ViewChild('settingsGrid') settingsGrid?: ElementRef<HTMLElement>;
+
   readonly #fb = inject(FormBuilder);
 
   readonly #angel = inject(AngelOneService);
@@ -966,6 +968,25 @@ export class TradingSettingsComponent implements OnInit {
 
   enableAutoTradingFormControl = this.form?.controls?.enableAutoTrading;
   enableAutoTradingPreviousValue = this.enableAutoTradingFormControl?.value;
+
+  settingsSearch = '';
+
+  filterSettings(event: Event): void {
+    this.settingsSearch = (event.target as HTMLInputElement).value;
+    const query = this.settingsSearch.trim().toLowerCase();
+    const cards = this.settingsGrid?.nativeElement.querySelectorAll<HTMLDetailsElement>(
+      'details.settings-card',
+    );
+
+    cards?.forEach((card) => {
+      const matches = !query || card.textContent?.toLowerCase().includes(query);
+      card.hidden = !matches;
+
+      if (query && matches) {
+        card.open = true;
+      }
+    });
+  }
 
   /** Keep the configuration page to one open accordion at a time. */
   onAccordionToggle(event: Event): void {
