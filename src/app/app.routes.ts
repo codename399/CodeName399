@@ -133,6 +133,14 @@ export const routes: Routes = [
             './components/home/components/angel-one/trading-settings/trading-settings.component'
           ).then((c) => c.TradingSettingsComponent),
         data: { projectName: Constants.angelOne }
+      },
+      {
+        path: 'simulation',
+        loadComponent: () =>
+          import(
+            './components/home/components/simulation/simulation.component'
+          ).then((c) => c.TradingSimulationComponent),
+        data: { projectName: Constants.angelOne }
       }
     ],
   },

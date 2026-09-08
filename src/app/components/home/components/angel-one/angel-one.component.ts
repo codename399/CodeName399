@@ -368,6 +368,10 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   trackByColumn = (_index: number, column: { key: string }): string =>
     column.key;
 
+  openSimulation(): void {
+    void this.#router.navigate(['/home/simulation']);
+  }
+
   openSettings(): void {
     this.#router.navigate(['/home/trading-settings']);
   }
