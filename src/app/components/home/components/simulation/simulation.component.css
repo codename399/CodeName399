@@ -15,8 +15,6 @@
 .config-proposal{border-left:3px solid #d8b4fe}.config-proposal .secondary{margin-top:10px}.config-proposal .gate strong{min-width:170px}
 
 
-.simulation-page-header { display:flex; justify-content:flex-end; align-items:center; padding:12px 16px; position:sticky; top:0; z-index:20; }
-.simulation-dashboard-button { border:1px solid rgba(255,255,255,.16); border-radius:10px; padding:9px 14px; cursor:pointer; font:inherit; background:rgba(255,255,255,.08); color:inherit; }
-.simulation-dashboard-button:hover { background:rgba(255,255,255,.14); }
+.simulation-dashboard-button{border:1px solid #27344c;border-radius:8px;padding:10px 12px;cursor:pointer;font:inherit;font-weight:700;background:#111b2c;color:#aebbd0;white-space:nowrap}.simulation-dashboard-button:hover{background:#19263d;color:#fff}
 
 .empty-state{margin-top:14px;min-height:260px;display:grid;place-content:center;text-align:center;gap:8px;padding:28px}.empty-state .empty-icon{font-size:34px;opacity:.75}.empty-state h2{margin:0;font-size:20px}.empty-state p{max-width:620px;margin:0 auto 10px;color:#9aa8bd;line-height:1.5;font-size:12px}.empty-upload{display:inline-block;justify-self:center;text-align:left;max-width:340px}.empty-upload small{line-height:1.4}
