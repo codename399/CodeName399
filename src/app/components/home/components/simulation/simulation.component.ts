@@ -130,6 +130,43 @@ export class TradingSimulationComponent {
   tickPageCount = computed(() => Math.max(1, Math.ceil(this.validTicks().length / this.tickPageSize)));
   indicators = computed(() => this.candle()?.indicators ?? {});
   decision = computed(() => this.candle()?.decision ?? {});
+  decisionDisplay = computed(() => {
+    const c = this.candle();
+    const d = c?.decision ?? {};
+    const t = c?.ticks?.[0];
+    const rp = this.simulation().replay;
+    const indicator = (name: string): unknown =>
+      this.indicatorLookup(c?.indicators, name) ?? this.indicatorLookup(t?.indicators, name);
+    const value = (...values: unknown[]): unknown =>
+      values.find(v => v !== undefined && v !== null && String(v).trim() !== '');
+    const numeric = (...values: unknown[]): number => {
+      for (const v of values) {
+        const n = Number(v);
+        if (v !== undefined && v !== null && String(v).trim() !== '' && Number.isFinite(n)) return n;
+      }
+      return 0;
+    };
+    const failures = rp?.gates?.filter(g => g.status === 'FAIL').map(g => g.name).join(' | ') || '';
+    const policyScore = rp?.appliedPolicy?.minimumScore;
+    const signal = String(value(d['signal'], indicator('Signal'), t?.decision, rp?.signal, 'HOLD') ?? 'HOLD').toUpperCase();
+    const score = numeric(d['score'], indicator('Score'));
+    const confidence = numeric(d['adaptiveConfidence'], t?.confidence, indicator('Confidence'));
+    const riskReward = numeric(d['adaptiveRiskReward'], t?.adaptiveRiskReward, indicator('AdaptiveRiskReward'));
+    const expectedValue = numeric(d['adaptiveExpectedNetValue'], t?.adaptiveExpectedNetValue, indicator('AdaptiveExpectedNetValue'));
+    const edge = numeric(d['adaptiveEdgeScore'], t?.adaptiveEdgeScore, indicator('AdaptiveEdgeScore'));
+    const reason = String(value(d['reason'], t?.decisionReason, rp?.firstBlockingGate ? `Entry blocked by ${rp.firstBlockingGate}.` : '', signal === 'BUY' ? 'Captured BUY setup replayed at this observation.' : 'No captured entry decision at this observation.') ?? 'No decision captured');
+    return {
+      signal,
+      reason,
+      score,
+      adaptiveRequiredEntryScore: numeric(d['adaptiveRequiredEntryScore'], policyScore, this.params.minimumScore),
+      adaptiveConfidence: confidence,
+      adaptiveRiskReward: riskReward,
+      adaptiveExpectedNetValue: expectedValue,
+      adaptiveEdgeScore: edge,
+      gateFailures: failures || String(d['gateFailures'] ?? ''),
+    };
+  });
   currentConfiguration = computed(() => this.stock()?.configuration ?? {});
   configurationEntries = computed(() =>
     Object.entries(this.currentConfiguration())
@@ -165,7 +202,7 @@ export class TradingSimulationComponent {
     if (loaded.length) {
       this.stocks.set(loaded.sort((a, b) => a.symbol.localeCompare(b.symbol)));
       this.selectedSymbol.set(loaded[0].symbol);
-      this.selectedCandle.set(0);
+      this.selectedCandle.set(this.firstDecisionCandleIndex(loaded[0]));
       this.replayCursor.set(0);
       this.tickPage.set(0);
       this.invalidateChartCache();
@@ -179,9 +216,20 @@ export class TradingSimulationComponent {
     this.actionBusy.set(false);
     this.busyAction.set('');
   }
+  private firstDecisionCandleIndex(stock: StockCapture): number {
+    const ready = stock.candles.findIndex(c => this.evaluationReady(c));
+    if (ready >= 0) return ready;
+    const captured = stock.candles.findIndex(c => {
+      const d = c.decision ?? {};
+      return String(d['signal'] ?? '').trim() !== '' || d['score'] !== undefined;
+    });
+    return captured >= 0 ? captured : 0;
+  }
+
   selectStock(symbol: string): void {
     this.selectedSymbol.set(symbol);
-    this.selectedCandle.set(0);
+    const selectedStock = this.stocks().find(x => x.symbol === symbol);
+    this.selectedCandle.set(selectedStock ? this.firstDecisionCandleIndex(selectedStock) : 0);
     this.playIndex.set(0);
     this.replayCursor.set(0);
     this.tickPage.set(0);
@@ -660,6 +708,19 @@ export class TradingSimulationComponent {
       .join(' | ');
     d['replaySignal'] = replay.signal;
     d['replayShouldBuy'] = replay.shouldBuy;
+    d['adaptiveRequiredEntryScore'] = replay.appliedPolicy?.minimumScore ?? this.params.minimumScore;
+    if (d['adaptiveConfidence'] === undefined && c.ticks[0]?.confidence !== undefined) d['adaptiveConfidence'] = c.ticks[0].confidence;
+    if (d['adaptiveRiskReward'] === undefined && c.ticks[0]?.adaptiveRiskReward !== undefined) d['adaptiveRiskReward'] = c.ticks[0].adaptiveRiskReward;
+    if (d['adaptiveEdgeScore'] === undefined && c.ticks[0]?.adaptiveEdgeScore !== undefined) d['adaptiveEdgeScore'] = c.ticks[0].adaptiveEdgeScore;
+    if (d['adaptiveExpectedNetValue'] === undefined && c.ticks[0]?.adaptiveExpectedNetValue !== undefined) d['adaptiveExpectedNetValue'] = c.ticks[0].adaptiveExpectedNetValue;
+    if (!d['score']) {
+      const capturedScore = this.indicatorLookup(c.indicators, 'Score');
+      if (capturedScore !== undefined) d['score'] = this.num(capturedScore);
+    }
+    if (!d['signal']) {
+      const capturedSignal = this.indicatorLookup(c.indicators, 'Signal') ?? c.ticks[0]?.decision;
+      if (capturedSignal !== undefined && String(capturedSignal).trim() !== '') d['signal'] = String(capturedSignal);
+    }
     const stop = this.num(d['stopLoss'] ?? c.ticks[0]?.stopLoss);
     const target = this.num(d['targetPrice'] ?? c.ticks[0]?.targetPrice);
     if (stop > 0) d['stopLoss'] = stop;
