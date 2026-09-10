@@ -94,7 +94,7 @@
           </div>
         </div>
         <ng-template #noChart><div class="chart-placeholder">Upload a lifecycle workbook with tick rows to render the price chart.</div></ng-template>
-        <div class="candle-strip"><button *ngFor="let c of candles(); let i=index" [class.selected]="i===selectedCandle()" (click)="selectCandle(i)">{{ istTime(c.timestamp) }}</button></div>
+        <div class="candle-strip" *ngIf="candles().length <= 300"><button *ngFor="let c of candles(); let i=index" [class.selected]="i===selectedCandle()" (click)="selectCandle(i)">{{ istTime(c.timestamp) }}</button></div><div class="candle-large-nav" *ngIf="candles().length > 300"><span>{{ selectedCandle()+1 }} / {{ candles().length }} candles</span><input type="range" min="0" [max]="candles().length-1" [value]="selectedCandle()" (input)="selectCandle(+$any($event.target).value)" aria-label="Jump to candle"></div>
       </div>
       <div class="panel indicator-panel">
         <div class="panel-head"><div><strong>Indicators</strong><small>Toggle overlays and inspect exact values</small></div></div>
@@ -148,7 +148,7 @@
 
     <section *ngIf="activeTab()==='ticks'" class="panel full">
       <div class="panel-head"><div><strong>Tick-by-tick tape</strong><small>{{ ticks().length }} ticks across the selected stock</small></div></div>
-      <div class="table-wrap"><table><thead><tr><th>#</th><th>Time</th><th>Stage</th><th>Decision</th><th>Price</th><th>Bid</th><th>Ask</th><th>Spread</th><th>Score</th><th>Confidence</th><th>Recovery</th><th>Reason</th></tr></thead><tbody><tr *ngFor="let t of ticks()"><td>{{t.n}}</td><td>{{ istTime(t.exchangeTime || t.utc) }}</td><td><span class="badge">{{t.stage || 'VIRTUAL'}}</span></td><td>{{t.decision || '—'}}</td><td class="price">₹{{t.ltp|number:'1.2-2'}}</td><td>{{t.bid|number:'1.2-2'}}</td><td>{{t.ask|number:'1.2-2'}}</td><td>{{t.spreadPct|number:'1.2-2'}}%</td><td>{{t.indicators?.['Score'] || 0}}</td><td>{{(t.confidence || 0) | number:'1.1-1'}}</td><td>{{(t.recoveryScore || 0) | number:'1.1-1'}}</td><td>{{t.decisionReason || t.exitReason || t.status || '—'}}</td></tr></tbody></table></div>
+      <div class="table-toolbar"><span>Showing {{ tickPageLabel() }}</span><div><button class="ghost" type="button" (click)="previousTickPage()" [disabled]="tickPage()===0">← Previous</button><button class="ghost" type="button" (click)="nextTickPage()" [disabled]="tickPage()>=tickPageCount()-1">Next →</button></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Time</th><th>Stage</th><th>Decision</th><th>Price</th><th>Bid</th><th>Ask</th><th>Spread</th><th>Score</th><th>Confidence</th><th>Recovery</th><th>Reason</th></tr></thead><tbody><tr *ngFor="let t of pagedTicks()"><td>{{t.n}}</td><td>{{ istTime(t.exchangeTime || t.utc) }}</td><td><span class="badge">{{t.stage || 'VIRTUAL'}}</span></td><td>{{t.decision || '—'}}</td><td class="price">₹{{t.ltp|number:'1.2-2'}}</td><td>{{t.bid|number:'1.2-2'}}</td><td>{{t.ask|number:'1.2-2'}}</td><td>{{t.spreadPct|number:'1.2-2'}}%</td><td>{{t.indicators?.['Score'] || 0}}</td><td>{{(t.confidence || 0) | number:'1.1-1'}}</td><td>{{(t.recoveryScore || 0) | number:'1.1-1'}}</td><td>{{t.decisionReason || t.exitReason || t.status || '—'}}</td></tr></tbody></table></div>
     </section>
 
     <section *ngIf="activeTab()==='decisions'" class="panel full">
@@ -174,6 +174,7 @@
           <button class="accent" [disabled]="actionBusy() || !stock()" (click)="learnGlobalFromUi()"><span *ngIf="busyAction() === 'global-learning'" class="button-spinner"></span><span>Learn GLOBAL dynamics</span></button>
           <button class="accent" [disabled]="actionBusy() || !stock()" (click)="learnRegimeFromUi()"><span *ngIf="busyAction() === 'regime-learning'" class="button-spinner"></span><span>Learn REGIME policies</span></button>
           <button class="ghost" [disabled]="actionBusy() || !stock()" (click)="runLive()"><span *ngIf="playing()" class="button-spinner"></span><span>{{playing()?'Pause':'▶ Play replay'}}</span></button>
+          <button class="secondary" [disabled]="actionBusy() || !stock()" (click)="exportSimulationForAi()">Export for AI</button>
         </div>
         <div class="action-status" *ngIf="actionStatus() || replayStatus() || actionBusy()" [class.loading]="actionBusy()">
           <span *ngIf="actionBusy()" class="busy-spinner"></span>

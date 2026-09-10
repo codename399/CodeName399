@@ -47,6 +47,12 @@ export class TradingSimulationComponent {
   replayStatus = signal('Ready');
   replaySpeedMs = signal(80);
   replayCursor = signal(0);
+  tickPage = signal(0);
+  readonly tickPageSize = 100;
+
+  private chartCacheKey = '';
+  private chartCache = new Map<string, string>();
+  private chartMetaCache: { key: string; min: number; max: number; ticks: Tick[]; labels: Array<{ x: number; text: string }>; markers: Array<{ x: number; y: number; stage: string }> } | null = null;
   simulationCompleted = signal(false);
   actionBusy = signal(false);
   busyAction = signal('');
@@ -115,6 +121,13 @@ export class TradingSimulationComponent {
   });
   candles = computed<CandleCapture[]>(() => this.stock()?.candles ?? []);
   ticks = computed(() => this.stock()?.candles.flatMap((c) => c.ticks) ?? []);
+  validTicks = computed(() => this.ticks().filter((t) => t.ltp > 0).sort((a, b) => this.time(a) - this.time(b)));
+  pagedTicks = computed(() => {
+    const all = this.validTicks();
+    const start = this.tickPage() * this.tickPageSize;
+    return all.slice(start, start + this.tickPageSize);
+  });
+  tickPageCount = computed(() => Math.max(1, Math.ceil(this.validTicks().length / this.tickPageSize)));
   indicators = computed(() => this.candle()?.indicators ?? {});
   decision = computed(() => this.candle()?.decision ?? {});
   currentConfiguration = computed(() => this.stock()?.configuration ?? {});
@@ -154,6 +167,8 @@ export class TradingSimulationComponent {
       this.selectedSymbol.set(loaded[0].symbol);
       this.selectedCandle.set(0);
       this.replayCursor.set(0);
+      this.tickPage.set(0);
+      this.invalidateChartCache();
       this.simulationCompleted.set(true);
       this.loadParametersFromConfiguration(loaded[0].configuration);
       this.runSimulation();
@@ -169,6 +184,8 @@ export class TradingSimulationComponent {
     this.selectedCandle.set(0);
     this.playIndex.set(0);
     this.replayCursor.set(0);
+    this.tickPage.set(0);
+    this.invalidateChartCache();
     const s = this.stocks().find((x) => x.symbol === symbol);
     if (s) this.loadParametersFromConfiguration(s.configuration);
     this.runSimulation();
@@ -185,7 +202,19 @@ export class TradingSimulationComponent {
   }
   toggle(name: string): void {
     this.toggles[name] = !this.toggles[name];
+    this.invalidateChartCache();
   }
+
+  previousTickPage(): void { this.tickPage.set(Math.max(0, this.tickPage() - 1)); }
+  nextTickPage(): void { this.tickPage.set(Math.min(this.tickPageCount() - 1, this.tickPage() + 1)); }
+  tickPageLabel(): string {
+    const total = this.validTicks().length;
+    if (!total) return '0 / 0';
+    const start = this.tickPage() * this.tickPageSize + 1;
+    const end = Math.min(total, start + this.tickPageSize - 1);
+    return `${start}-${end} / ${total}`;
+  }
+
   toggleReplayFromChart(): void {
     const stock = this.stock();
     if (!stock) return;
@@ -201,10 +230,7 @@ export class TradingSimulationComponent {
       this.replayStatus.set('Upload a lifecycle workbook first.');
       return;
     }
-    const ticks = stock.candles
-      .flatMap((c) => c.ticks)
-      .filter((t) => t.ltp > 0)
-      .sort((a, b) => this.time(a) - this.time(b));
+    const ticks = this.validTicks();
     if (!ticks.length) {
       this.replayStatus.set('No valid ticks are available for replay.');
       return;
@@ -225,9 +251,7 @@ export class TradingSimulationComponent {
       this.playIndex.set(i + 1);
       this.replayTick.set(tick);
       this.replayCursor.set(i);
-      const candleIndex = stock.candles.findIndex((c) =>
-        c.ticks.some((t) => t.n === tick.n && t.sequence === tick.sequence),
-      );
+      const candleIndex = this.candleIndexForTick(tick);
       if (candleIndex >= 0) this.selectedCandle.set(candleIndex);
       await new Promise((resolve) => setTimeout(resolve, this.replaySpeedMs()));
     }
@@ -256,14 +280,14 @@ export class TradingSimulationComponent {
 
   seekReplay(index: number): void {
     const stock = this.stock();
-    const ticks = stock?.candles.flatMap((c) => c.ticks).filter((t) => t.ltp > 0).sort((a, b) => this.time(a) - this.time(b)) ?? [];
+    const ticks = this.validTicks();
     if (!ticks.length) return;
     const safe = Math.max(0, Math.min(Math.round(Number(index)), ticks.length - 1));
     const tick = ticks[safe];
     this.replayCursor.set(safe);
     this.playIndex.set(safe);
     this.replayTick.set(tick);
-    const candleIndex = stock?.candles.findIndex((c) => c.ticks.some((t) => t.n === tick.n && t.sequence === tick.sequence)) ?? -1;
+    const candleIndex = this.candleIndexForTick(tick);
     if (candleIndex >= 0) {
       this.selectedCandle.set(candleIndex);
       this.refreshSelectedDiagnostics();
@@ -277,13 +301,11 @@ export class TradingSimulationComponent {
     const candle = stock.candles[index];
     if (!candle?.ticks?.length) return 0;
     const target = candle.ticks[0];
-    const ticks = stock.candles.flatMap((c) => c.ticks).filter((t) => t.ltp > 0).sort((a, b) => this.time(a) - this.time(b));
+    const ticks = this.validTicks();
     return Math.max(0, ticks.findIndex((t) => t.n === target.n && t.sequence === target.sequence));
   }
 
-  replayTicksCount(): number {
-    return this.ticks().filter((t) => t.ltp > 0).length;
-  }
+  replayTicksCount(): number { return this.validTicks().length; }
 
   readableIndicatorLabel(key: string): string {
     const labels: Record<string,string> = {
@@ -971,6 +993,81 @@ export class TradingSimulationComponent {
       rationale: `Versioned ${regimePolicies.length ? 'regime-aware' : 'global'} proposal generated from captured decision evidence. It is validated on a chronological holdout and is not automatically promoted to live trading. Use the rollback rule before any production adoption.`,
     };
     this.configurationProposal.set(proposal);
+  }
+
+  exportSimulationForAi(): void {
+    const s = this.stock();
+    if (!s) {
+      this.error.set('Upload a lifecycle workbook before exporting simulation data.');
+      return;
+    }
+
+    // AI handoff format: self-contained, chronological, machine-readable and
+    // explicit about the fact that displayed timestamps are IST. Keep the
+    // original domain field names; this export is intended to be fed directly
+    // into an AI model for analysis.
+    const payload = {
+      schemaVersion: '1.0',
+      exportType: 'trading-simulation-ai-context',
+      generatedAtIST: this.istTime(new Date().toISOString()),
+      timezone: 'Asia/Kolkata',
+      timezoneOffset: '+05:30',
+      source: {
+        symbol: s.symbol,
+        token: s.token,
+        exchange: s.exchange,
+        configurationSource: s.configurationSource ?? '',
+        configurationCapturedAt: s.configurationCapturedAt ?? '',
+      },
+      simulationSummary: this.simulation(),
+      parameters: { ...this.params },
+      indicatorToggles: { ...this.toggles },
+      configuration: s.configuration,
+      candles: s.candles.map((c, index) => ({
+        index,
+        timestamp: c.timestamp,
+        candle: c.candle,
+        indicators: c.indicators,
+        decision: c.decision,
+        virtualTrade: c.virtualTrade,
+        actualTrade: c.actualTrade,
+        loadedDecisionFields: c.loadedDecisionFields ?? [],
+        ticks: c.ticks,
+      })),
+      replayContext: {
+        selectedCandle: this.selectedCandle(),
+        replayCursor: this.replayCursor(),
+        replaySpeedMs: this.replaySpeedMs(),
+        replayStatus: this.replayStatus(),
+        replayTick: this.replayTick(),
+        replayDecision: this.simulation().replay,
+      },
+      analysis: {
+        issues: this.simulation().issues,
+        recommendations: this.simulation().recommendations,
+        reasons: this.simulation().reasons,
+        futurePath: this.simulation().futurePath,
+        futurePaths: this.simulation().futurePaths,
+        globalConfiguration: this.simulation().globalConfiguration,
+        overallRecommendation: this.simulation().recommendation,
+      },
+      aiInstructions: [
+        'Analyze the simulation chronologically using only the supplied data.',
+        'Treat timestamps as Indian Standard Time (Asia/Kolkata, UTC+05:30).',
+        'Distinguish captured decisions from replay/counterfactual decisions.',
+        'Identify missed entries, avoidable losses, premature exits, indicator failures, and adaptive-policy effects.',
+        'Explain evidence for each conclusion and avoid inventing missing data.',
+      ],
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${s.symbol}-simulation-ai-context-${this.istTime(new Date().toISOString()).replace(/[^0-9]/g, '').slice(0, 14)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    this.actionStatus.set('AI-ready simulation context exported.');
   }
 
   downloadConfigurationProposal(): void {
@@ -3342,115 +3439,122 @@ export class TradingSimulationComponent {
     );
   }
 
-  chartTimeLabels(): Array<{ x: number; text: string }> {
-    const ticks =
-      this.stock()
-        ?.candles.flatMap((c) => c.ticks)
-        .filter((t) => t.ltp > 0)
-        .sort((a, b) => this.time(a) - this.time(b)) ?? [];
-    if (!ticks.length) return [];
-
-    const width = 1100;
-    const pad = 42;
-    const count = Math.min(6, ticks.length);
-    const indexes = Array.from({ length: count }, (_, i) =>
-      count === 1 ? 0 : Math.round((i * (ticks.length - 1)) / (count - 1)),
-    );
-
-    return indexes.map((index) => {
-      const tick = ticks[index];
-      const date = this.parseTimestamp(tick.utc || tick.exchangeTime);
-      const text = Number.isNaN(date.getTime())
-        ? ''
-        : date.toLocaleTimeString('en-IN', {
-            timeZone: 'Asia/Kolkata',
-            hour: '2-digit',
-            minute: '2-digit',
-          });
-      return {
-        x: pad + index * ((width - pad * 2) / Math.max(1, ticks.length - 1)),
-        text,
-      };
-    });
+  private candleIndexForTick(tick: Tick): number {
+    const stock = this.stock();
+    if (!stock) return -1;
+    for (let i = 0; i < stock.candles.length; i++) {
+      if (stock.candles[i].ticks?.some(t => t.n === tick.n && t.sequence === tick.sequence)) return i;
+    }
+    return -1;
   }
+
+  private invalidateChartCache(): void {
+    this.chartCacheKey = '';
+    this.chartCache.clear();
+    this.chartMetaCache = null;
+  }
+
+  private chartKey(): string {
+    const s = this.selectedSymbol();
+    const toggleKey = Object.keys(this.toggles).sort().map(k => `${k}:${this.toggles[k] ? 1 : 0}`).join('|');
+    return `${s}|${this.validTicks().length}|${toggleKey}`;
+  }
+
+  private chartTicks(): Tick[] {
+    const ticks = this.validTicks();
+    // SVG performance degrades sharply when thousands of points are rendered.
+    // Keep the full dataset for analysis/replay, but downsample only the visual layer.
+    const maxPoints = 1400;
+    if (ticks.length <= maxPoints) return ticks;
+    const result: Tick[] = [];
+    const step = (ticks.length - 1) / (maxPoints - 1);
+    for (let i = 0; i < maxPoints; i++) result.push(ticks[Math.round(i * step)]);
+    return result;
+  }
+
+  private ensureChartMeta(): typeof this.chartMetaCache {
+    const key = this.chartKey();
+    if (this.chartMetaCache?.key === key) return this.chartMetaCache;
+    const ticks = this.chartTicks();
+    if (!ticks.length) {
+      this.chartMetaCache = { key, min: 0, max: 1, ticks: [], labels: [], markers: [] };
+      return this.chartMetaCache;
+    }
+    const overlayKeys = this.chartOverlayKeys();
+    const vals = ticks.map(t => t.ltp);
+    for (const k of overlayKeys) for (const t of ticks) {
+      const v = this.num(this.indicatorLookup(t.indicators, k));
+      if (v !== 0) vals.push(v);
+    }
+    const min = Math.min(...vals), max = Math.max(...vals);
+    const width = 1100, pad = 42;
+    const count = Math.min(6, ticks.length);
+    const indexes = Array.from({length: count}, (_, i) => count === 1 ? 0 : Math.round(i * (ticks.length - 1) / (count - 1)));
+    const labels = indexes.map(i => {
+      const date = this.parseTimestamp(ticks[i].utc || ticks[i].exchangeTime);
+      return { x: pad + i * ((width - pad * 2) / Math.max(1, ticks.length - 1)), text: Number.isNaN(date.getTime()) ? '' : date.toLocaleTimeString('en-IN', {timeZone:'Asia/Kolkata', hour:'2-digit', minute:'2-digit'}) };
+    });
+    const markers = ticks.map((t, i) => ({ stage: (t.stage || '').toUpperCase(), i, t }))
+      .filter(x => ['ENTRY','EXIT','REJECTED','EXPIRED'].includes(x.stage))
+      .map(x => ({ x: pad + x.i * ((width - pad * 2) / Math.max(1, ticks.length - 1)), y: this.chartY(x.t.ltp, min, max, 420), stage: x.stage }));
+    this.chartMetaCache = { key, min, max, ticks, labels, markers };
+    return this.chartMetaCache;
+  }
+
+  private chartY(value: number, min: number, max: number, height = 420): number {
+    const pad = 42, range = Math.max(0.0001, max - min);
+    return height - pad - ((value - min) / range) * (height - pad * 2);
+  }
+
+  private chartLine(key: string): string {
+    const cacheKey = `${this.chartKey()}|${key}`;
+    const cached = this.chartCache.get(cacheKey);
+    if (cached !== undefined) return cached;
+    const meta = this.ensureChartMeta();
+    const ticks = meta?.ticks ?? [];
+    if (!ticks.length) return '';
+    const width = 1100, pad = 42;
+    const x = (i: number) => pad + i * ((width - pad * 2) / Math.max(1, ticks.length - 1));
+    let result = '';
+    for (let i = 0; i < ticks.length; i++) {
+      const v = this.num(this.indicatorLookup(ticks[i].indicators, key));
+      if (!Number.isFinite(v)) continue;
+      const point = `${x(i).toFixed(1)},${this.chartY(v, meta!.min, meta!.max).toFixed(1)}`;
+      result += (result ? ' ' : '') + point;
+    }
+    this.chartCache.set(cacheKey, result);
+    return result;
+  }
+
+  chartTimeLabels(): Array<{ x: number; text: string }> { return this.ensureChartMeta()?.labels ?? []; }
 
   chartPoints(): string {
-    const ticks =
-      this.stock()
-        ?.candles.flatMap((c) => c.ticks)
-        .filter((t) => t.ltp > 0) ?? [];
-    if (!ticks.length) return '';
-    const vals = ticks
-      .map((t) => t.ltp)
-      .concat(
-        this.chartOverlayKeys().flatMap((k) =>
-          ticks
-            .map((t) => this.num(this.indicatorLookup(t.indicators, k)))
-            .filter((v) => v !== 0),
-        ),
-      );
-    const min = Math.min(...vals),
-      max = Math.max(...vals),
-      range = Math.max(0.0001, max - min),
-      width = 1100,
-      height = 420,
-      pad = 42;
-    const x = (i: number) =>
-      pad + i * ((width - pad * 2) / Math.max(1, ticks.length - 1));
-    const y = (v: number) =>
-      height - pad - ((v - min) / range) * (height - pad * 2);
-    return ticks
-      .map((t, i) => `${x(i).toFixed(1)},${y(t.ltp).toFixed(1)}`)
-      .join(' ');
+    const cacheKey = `${this.chartKey()}|PRICE`;
+    const cached = this.chartCache.get(cacheKey);
+    if (cached !== undefined) return cached;
+    const meta = this.ensureChartMeta(), ticks = meta?.ticks ?? [];
+    const width = 1100, pad = 42;
+    const result = ticks.map((t, i) => `${(pad + i * ((width - pad * 2) / Math.max(1, ticks.length - 1))).toFixed(1)},${this.chartY(t.ltp, meta!.min, meta!.max).toFixed(1)}`).join(' ');
+    this.chartCache.set(cacheKey, result);
+    return result;
   }
-  chartOverlayPoints(key: string): string {
-    return this.chartIndicatorPoints(key);
-  }
+
+  chartOverlayPoints(key: string): string { return this.chartLine(key); }
+
+
   chartXForTick(tick: Tick): number {
-    const ticks =
-      this.stock()
-        ?.candles.flatMap((c) => c.ticks)
-        .filter((t) => t.ltp > 0) ?? [];
-    const i = ticks.findIndex(
-      (t) => t.n === tick.n && t.sequence === tick.sequence,
-    );
+    const ticks = this.validTicks();
+    const i = ticks.findIndex(t => t.n === tick.n && t.sequence === tick.sequence);
     return 42 + Math.max(0, i) * ((1100 - 84) / Math.max(1, ticks.length - 1));
   }
+
   chartYForTick(tick: Tick): number {
-    const ticks =
-      this.stock()
-        ?.candles.flatMap((c) => c.ticks)
-        .filter((t) => t.ltp > 0) ?? [];
-    if (!ticks.length) return 210;
-    const vals = ticks
-      .map((t) => t.ltp)
-      .concat(
-        this.chartOverlayKeys().flatMap((k) =>
-          ticks
-            .map((t) => this.num(this.indicatorLookup(t.indicators, k)))
-            .filter((v) => v !== 0),
-        ),
-      );
-    const min = Math.min(...vals),
-      max = Math.max(...vals),
-      range = Math.max(0.0001, max - min);
-    return 420 - 42 - ((tick.ltp - min) / range) * (420 - 84);
+    const meta = this.ensureChartMeta();
+    return meta?.ticks.length ? this.chartY(tick.ltp, meta.min, meta.max) : 210;
   }
-  chartStageMarkers(): Array<{ x: number; y: number; stage: string }> {
-    const ticks =
-      this.stock()
-        ?.candles.flatMap((c) => c.ticks)
-        .filter((t) => t.ltp > 0) ?? [];
-    return ticks
-      .map((t) => ({
-        x: this.chartXForTick(t),
-        y: this.chartYForTick(t),
-        stage: (t.stage || '').toUpperCase(),
-      }))
-      .filter((m) =>
-        ['ENTRY', 'EXIT', 'REJECTED', 'EXPIRED'].includes(m.stage),
-      );
-  }
+
+  chartStageMarkers(): Array<{ x: number; y: number; stage: string }> { return this.ensureChartMeta()?.markers ?? []; }
+
   private value(v: unknown): string | number | boolean {
     if (typeof v === 'boolean') return v;
     if (typeof v === 'number') return v;
