@@ -133,7 +133,7 @@ export class TradingSimulationComponent {
   decisionDisplay = computed(() => {
     const c = this.candle();
     const d = c?.decision ?? {};
-    const t = c?.ticks?.[0];
+    const t = c?.ticks?.[c.ticks.length - 1];
     const rp = this.simulation().replay;
     const indicator = (name: string): unknown =>
       this.indicatorLookup(c?.indicators, name) ?? this.indicatorLookup(t?.indicators, name);
@@ -148,8 +148,9 @@ export class TradingSimulationComponent {
     };
     const failures = rp?.gates?.filter(g => g.status === 'FAIL').map(g => g.name).join(' | ') || '';
     const policyScore = rp?.appliedPolicy?.minimumScore;
-    const signal = String(value(d['signal'], indicator('Signal'), t?.decision, rp?.signal, 'HOLD') ?? 'HOLD').toUpperCase();
+    const signal = String(value(d['signal'], t?.decision, indicator('Signal'), rp?.signal, 'HOLD') ?? 'HOLD').toUpperCase();
     const score = numeric(d['score'], indicator('Score'));
+
     const confidence = numeric(d['adaptiveConfidence'], t?.confidence, indicator('Confidence'));
     const riskReward = numeric(d['adaptiveRiskReward'], t?.adaptiveRiskReward, indicator('AdaptiveRiskReward'));
     const expectedValue = numeric(d['adaptiveExpectedNetValue'], t?.adaptiveExpectedNetValue, indicator('AdaptiveExpectedNetValue'));
@@ -531,6 +532,9 @@ export class TradingSimulationComponent {
     }> = [];
     let lastMissedIndex = -2;
     let lastMissedGate = '';
+    const exitIssueKeys = new Set<string>();
+    let lastExitIssueIndex = -2;
+    let lastExitSuggested = 0;
 
     candles.forEach((c) => {
       const sourceTick: any = c.ticks?.[c.ticks.length - 1];
@@ -538,7 +542,6 @@ export class TradingSimulationComponent {
       const p = c.candle.close;
       const score = this.num(
         d['score'] ??
-          sourceTick?.score ??
           this.indicatorLookup(sourceTick?.indicators, 'Score') ??
           this.indicatorLookup(c.indicators, 'Score'),
       );
@@ -662,16 +665,28 @@ export class TradingSimulationComponent {
       if (technicalBuy && gainPct > this.params.minimumProfitPercent) {
         const bestExitTick = this.firstPeak(horizon, p);
         if (bestExitTick && (!exit || exit < bestExitTick.ltp)) {
-          issues.push({
-            kind: 'EXIT',
-            timestamp: c.timestamp,
-            title: `Exit opportunity after ${this.format(c.timestamp)}`,
-            detail: `Price subsequently reached ₹${bestExitTick.ltp.toFixed(2)} before the observed decline.`,
-            severity: 'medium',
-            metric: 'Exit price',
-            current: exit,
-            suggested: bestExitTick.ltp,
-          });
+          const actualEntry = this.num(actual['EntryPrice']);
+          const actualEntryTime = String(actual['EntryTime'] ?? '');
+          const key = actualEntry > 0
+            ? `${actualEntryTime}|${actualEntry.toFixed(4)}`
+            : `episode|${bestExitTick.ltp.toFixed(4)}`;
+          const repeated = exitIssueKeys.has(key) ||
+            (actualEntry <= 0 && c.index === lastExitIssueIndex + 1 && Math.abs(bestExitTick.ltp - lastExitSuggested) < 0.0001);
+          if (!repeated) {
+            exitIssueKeys.add(key);
+            lastExitIssueIndex = c.index;
+            lastExitSuggested = bestExitTick.ltp;
+            issues.push({
+              kind: 'EXIT',
+              timestamp: c.timestamp,
+              title: `Exit opportunity after ${this.format(c.timestamp)}`,
+              detail: `Price subsequently reached ₹${bestExitTick.ltp.toFixed(2)} before the observed decline.`,
+              severity: 'medium',
+              metric: 'Exit price',
+              current: exit > 0 ? exit : p,
+              suggested: bestExitTick.ltp,
+            });
+          }
         }
       }
       void futureWorst;
@@ -2514,6 +2529,37 @@ export class TradingSimulationComponent {
       this.indicatorLookup(c?.indicators, key)
     );
   }
+  displayNumber(value: unknown, digits = 1, suffix = ''): string {
+    if (value === undefined || value === null || String(value).trim() === '') return 'N/A';
+    const n = Number(value);
+    return Number.isFinite(n) ? `${n.toFixed(digits)}${suffix}` : 'N/A';
+  }
+
+  displayText(value: unknown, fallback = 'N/A'): string {
+    if (value === undefined || value === null || String(value).trim() === '') return fallback;
+    return String(value);
+  }
+
+  /** Template-safe accessors keep Angular strict template checking away from optional Tick fields. */
+  tickScore(t: any): unknown {
+    return t?.indicators?.['Score'];
+  }
+
+  candleSignal(c: any): unknown {
+    const tick = c?.ticks?.[c?.ticks?.length - 1];
+    return c?.decision?.['signal'] || tick?.decision;
+  }
+
+  candleScore(c: any): unknown {
+    const tick = c?.ticks?.[c?.ticks?.length - 1];
+    return c?.decision?.['score'] ?? tick?.indicators?.['Score'];
+  }
+
+  candleAdaptiveEdge(c: any): unknown {
+    const tick = c?.ticks?.[c?.ticks?.length - 1];
+    return c?.decision?.['adaptiveEdgeScore'] ?? tick?.adaptiveEdgeScore ?? tick?.indicators?.['AdaptiveEdgeScore'];
+  }
+
   indicatorValue(name: string): string {
     const v = this.indicatorLookup(this.indicators(), name);
     return v === undefined || v === ''
@@ -2526,7 +2572,7 @@ export class TradingSimulationComponent {
     return this.candles().filter((c) => {
       const v =
         this.indicatorLookup(c.indicators, name) ??
-        this.indicatorLookup(c.ticks?.[0]?.indicators, name);
+        this.indicatorLookup(c.ticks?.[c.ticks.length - 1]?.indicators, name);
       return v !== undefined && v !== null && String(v) !== '';
     }).length;
   }
