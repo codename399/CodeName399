@@ -45,6 +45,9 @@ export class TradingSimulationComponent {
   playIndex = signal(0);
   replayTick = signal<Tick | null>(null);
   replayStatus = signal('Ready');
+  replaySpeedMs = signal(80);
+  replayCursor = signal(0);
+  simulationCompleted = signal(false);
   actionBusy = signal(false);
   busyAction = signal('');
   actionStatus = signal('');
@@ -150,6 +153,8 @@ export class TradingSimulationComponent {
       this.stocks.set(loaded.sort((a, b) => a.symbol.localeCompare(b.symbol)));
       this.selectedSymbol.set(loaded[0].symbol);
       this.selectedCandle.set(0);
+      this.replayCursor.set(0);
+      this.simulationCompleted.set(true);
       this.loadParametersFromConfiguration(loaded[0].configuration);
       this.runSimulation();
       this.actionStatus.set(`Loaded ${loaded.length} workbook${loaded.length === 1 ? '' : 's'}.`);
@@ -163,6 +168,7 @@ export class TradingSimulationComponent {
     this.selectedSymbol.set(symbol);
     this.selectedCandle.set(0);
     this.playIndex.set(0);
+    this.replayCursor.set(0);
     const s = this.stocks().find((x) => x.symbol === symbol);
     if (s) this.loadParametersFromConfiguration(s.configuration);
     this.runSimulation();
@@ -174,6 +180,7 @@ export class TradingSimulationComponent {
       : 0;
     this.selectedCandle.set(safeIndex);
     this.playIndex.set(0);
+    this.replayCursor.set(this.tickIndexForCandle(safeIndex));
     this.refreshSelectedDiagnostics();
   }
   toggle(name: string): void {
@@ -217,11 +224,12 @@ export class TradingSimulationComponent {
       const tick = ticks[i];
       this.playIndex.set(i + 1);
       this.replayTick.set(tick);
+      this.replayCursor.set(i);
       const candleIndex = stock.candles.findIndex((c) =>
         c.ticks.some((t) => t.n === tick.n && t.sequence === tick.sequence),
       );
       if (candleIndex >= 0) this.selectedCandle.set(candleIndex);
-      await new Promise((resolve) => setTimeout(resolve, 80));
+      await new Promise((resolve) => setTimeout(resolve, this.replaySpeedMs()));
     }
     const finished = this.playIndex() >= ticks.length;
     this.playing.set(false);
@@ -230,6 +238,85 @@ export class TradingSimulationComponent {
         ? `Replay complete — ${ticks.length} ticks evaluated.`
         : `Paused at tick ${this.playIndex()} of ${ticks.length}.`,
     );
+  }
+
+  setReplaySpeed(value: number): void {
+    const speed = Number(value);
+    if (Number.isFinite(speed)) this.replaySpeedMs.set(Math.max(20, Math.min(1000, speed)));
+  }
+
+  replayPosition(): number {
+    return this.replayTicksCount() ? Math.min(this.replayCursor() + 1, this.replayTicksCount()) : 0;
+  }
+
+  replaySpeedLabel(): string {
+    const ms = this.replaySpeedMs();
+    return `${(80 / ms).toFixed(1)}×`;
+  }
+
+  seekReplay(index: number): void {
+    const stock = this.stock();
+    const ticks = stock?.candles.flatMap((c) => c.ticks).filter((t) => t.ltp > 0).sort((a, b) => this.time(a) - this.time(b)) ?? [];
+    if (!ticks.length) return;
+    const safe = Math.max(0, Math.min(Math.round(Number(index)), ticks.length - 1));
+    const tick = ticks[safe];
+    this.replayCursor.set(safe);
+    this.playIndex.set(safe);
+    this.replayTick.set(tick);
+    const candleIndex = stock?.candles.findIndex((c) => c.ticks.some((t) => t.n === tick.n && t.sequence === tick.sequence)) ?? -1;
+    if (candleIndex >= 0) {
+      this.selectedCandle.set(candleIndex);
+      this.refreshSelectedDiagnostics();
+    }
+    this.replayStatus.set(`Position ${safe + 1} of ${ticks.length} · ${this.istTime(tick.utc || tick.exchangeTime)}`);
+  }
+
+  tickIndexForCandle(index: number): number {
+    const stock = this.stock();
+    if (!stock) return 0;
+    const candle = stock.candles[index];
+    if (!candle?.ticks?.length) return 0;
+    const target = candle.ticks[0];
+    const ticks = stock.candles.flatMap((c) => c.ticks).filter((t) => t.ltp > 0).sort((a, b) => this.time(a) - this.time(b));
+    return Math.max(0, ticks.findIndex((t) => t.n === target.n && t.sequence === target.sequence));
+  }
+
+  replayTicksCount(): number {
+    return this.ticks().filter((t) => t.ltp > 0).length;
+  }
+
+  readableIndicatorLabel(key: string): string {
+    const labels: Record<string,string> = {
+      EMA9:'EMA 9', EMA21:'EMA 21', EMA50:'EMA 50', EMA200:'EMA 200', VWAP:'VWAP', AnchoredVWAP:'Anchored VWAP',
+      SuperTrend:'SuperTrend', BollingerUpper:'Bollinger Upper', BollingerMiddle:'Bollinger Middle', BollingerLower:'Bollinger Lower',
+      RSI:'RSI', MACD:'MACD', MACDSignal:'MACD Signal', MACDHistogram:'MACD Histogram', ADX:'ADX', RelativeVolume:'Relative Volume',
+      ATR:'ATR', Choppiness:'Choppiness', EMASlope9:'EMA Slope 9', EMASlope21:'EMA Slope 21', PullbackDistance:'Pullback Distance',
+      DistanceFromEMA:'Distance from EMA', DistanceFromVWAP:'Distance from VWAP', SpreadPercent:'Spread %', Score:'Score',
+      AdaptiveEdgeScore:'Adaptive Edge Score', AdaptiveRiskReward:'Adaptive Risk / Reward', AdaptiveExpectedNetValue:'Adaptive Expected Net Value'
+    };
+    return labels[key] ?? key;
+  }
+
+  selectedIndicatorEntries(): Array<{key:string; label:string; value:string}> {
+    const keys = [...this.chartOverlayKeys(), ...this.chartOscillatorKeys(), 'Score', 'Confidence', 'AdaptiveEdgeScore', 'AdaptiveRiskReward', 'AdaptiveExpectedNetValue', 'SpreadPercent'];
+    return [...new Set(keys)].map(key => {
+      const raw = this.indicatorLookup(this.indicators(), key) ?? this.indicatorLookup(this.replayTick()?.indicators, key);
+      return { key, label: this.readableIndicatorLabel(key), value: raw === undefined || raw === '' ? '—' : typeof raw === 'number' ? raw.toFixed(3) : String(raw) };
+    }).filter(x => x.value !== '—');
+  }
+
+  analysisSummary(): Array<{label:string; value:string; detail:string}> {
+    const r = this.simulation();
+    const total = r.trades + r.missed;
+    const winRate = r.trades ? (r.wins / r.trades) * 100 : 0;
+    return [
+      {label:'Net result', value:`₹${r.netProfit.toFixed(2)}`, detail:r.netProfit >= 0 ? 'Profitable under replay' : 'Loss under replay'},
+      {label:'Trade outcome', value:`${r.trades} trades`, detail:`${r.wins} wins · ${r.losses} losses · ${winRate.toFixed(1)}% win rate`},
+      {label:'Opportunities', value:`${r.missed} missed`, detail:`${total ? r.opportunityPercent.toFixed(1) : '0.0'}% opportunity miss rate`},
+      {label:'Risk quality', value:`${r.avoidableLosses} avoidable`, detail:`${r.actualLosses} actual loss(es) identified`},
+      {label:'Missed profit', value:`₹${r.missedProfit.toFixed(2)}`, detail:'Estimated opportunity left uncaptured'},
+      {label:'Best entry', value:r.bestEntry ? `₹${r.bestEntry.toFixed(2)}` : '—', detail:this.istTime(r.bestEntryTime)}
+    ];
   }
 
   private yieldToUi(): Promise<void> {
@@ -249,6 +336,7 @@ export class TradingSimulationComponent {
     setTimeout(() => {
       try {
         this.runSimulation();
+        this.simulationCompleted.set(true);
         this.activeTab.set('simulation');
         this.actionStatus.set(
           `Simulation complete — ${this.simulation().trades} accepted trade(s), ${this.simulation().missed} missed opportunity(ies).`,

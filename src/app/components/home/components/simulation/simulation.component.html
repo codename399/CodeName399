@@ -2,6 +2,7 @@
   <aside class="sidebar">
     <div class="brand"><div class="logo">RA</div><div><strong>Replay Analyst</strong><small>Trading diagnostics lab</small></div></div>
     <label class="upload"><input type="file" multiple accept=".xlsx" (change)="upload($any($event.target).files)"><span>＋ Upload Excel files</span><small>Drop a batch of stock workbooks here</small></label>
+    <div class="upload-loader" *ngIf="actionBusy() && busyAction()==='upload'" role="status" aria-live="polite"><span class="loader-ring"></span><div><strong>Reading Excel workbook…</strong><small>{{ actionStatus() || 'Parsing ticks, indicators and decisions.' }}</small></div></div>
     <div class="side-title">STOCKS <span>{{ stocks().length }}</span></div>
     <div class="stock-list">
       <button *ngFor="let s of stocks()" [class.active]="s.symbol === selectedSymbol()" (click)="selectStock(s.symbol)">
@@ -54,6 +55,13 @@
       <div class="panel chart-panel">
         <div class="panel-head"><div><strong>Price action</strong><small>Captured tick lifecycle</small></div><div class="legend">{{ istTime(candle()?.timestamp) }}</div></div>
         <div class="chart" *ngIf="stock()?.candles?.length; else noChart">
+          <div class="replay-toolbar">
+            <button type="button" class="ghost replay-button" [disabled]="!stock()" (click)="runLive()"><span>{{ playing() ? '⏸ Pause' : '▶ Play' }}</span></button>
+            <label class="speed-control"><span>Speed</span><input type="range" min="20" max="500" step="10" [value]="replaySpeedMs()" (input)="setReplaySpeed($any($event.target).value)"><b>{{ replaySpeedLabel() }}</b></label>
+            <span class="replay-position" *ngIf="replayTicksCount()">Tick {{ replayPosition() }} / {{ replayTicksCount() }}</span>
+          </div>
+          <input *ngIf="replayTicksCount()" class="timeline-scrubber" type="range" min="0" [max]="replayTicksCount()-1" step="1" [value]="replayCursor()" (input)="seekReplay($any($event.target).value)" aria-label="Jump to timestamp">
+
           <svg class="native-chart replay-tappable" [class.replay-playing]="playing()" viewBox="0 0 1100 420" preserveAspectRatio="none" role="button" tabindex="0" aria-label="Captured price replay chart. Tap to play or pause replay." title="{{ playing() ? 'Tap chart to pause replay' : 'Tap chart to play replay' }}" (click)="toggleReplayFromChart()" (keydown.enter)="toggleReplayFromChart()" (keydown.space)="toggleReplayFromChart(); $event.preventDefault()">
             <rect x="0" y="0" width="1100" height="420" class="chart-bg"></rect>
             <line x1="42" y1="42" x2="1058" y2="42" class="chart-grid"></line>
@@ -74,9 +82,13 @@
           </svg>
           <div class="chart-caption"><span>{{ replayStatus() }}</span><b class="chart-play-hint">{{ playing() ? 'Tap chart to pause' : 'Tap chart to play' }}</b><small class="timezone-label">All times IST (Asia/Kolkata)</small><b *ngIf="replayTick() as rt">Tick {{ rt.n }} · ₹{{ rt.ltp | number:'1.2-2' }} · {{ rt.stage || 'VIRTUAL' }}</b></div>
           <div class="chart-legend"><span class="price-key">Price</span><span *ngFor="let key of chartOverlayKeys()" [class]="'key-' + key">{{ key }}</span><span *ngIf="!chartOverlayKeys().length">No loaded price overlays for this workbook.</span></div>
+          <div class="indicator-readout" *ngIf="selectedIndicatorEntries().length">
+            <div class="indicator-readout-head"><strong>Indicators at selected timestamp</strong><small>{{ istTime(candle()?.timestamp) }} IST</small></div>
+            <div class="indicator-readout-grid"><div class="indicator-readout-item" *ngFor="let item of selectedIndicatorEntries()"><span>{{ item.label }}</span><b>{{ item.value }}</b></div></div>
+          </div>
           <div class="oscillator-charts" *ngIf="chartOscillatorKeys().length">
             <div class="oscillator" *ngFor="let key of chartOscillatorKeys()">
-              <div class="oscillator-head"><strong>{{ key }}</strong><span>{{ indicatorValue(key) }}</span></div>
+              <div class="oscillator-head"><strong>{{ readableIndicatorLabel(key) }}</strong><span>{{ indicatorValue(key) }}</span></div>
               <svg viewBox="0 0 1100 160" preserveAspectRatio="none" aria-hidden="true"><line x1="22" y1="22" x2="1078" y2="22" class="chart-grid"></line><line x1="22" y1="80" x2="1078" y2="80" class="chart-grid"></line><line x1="22" y1="138" x2="1078" y2="138" class="chart-grid"></line><polyline [attr.points]="chartSeriesPoints(key)" class="oscillator-line"></polyline></svg>
             </div>
           </div>
@@ -170,6 +182,11 @@
         <div class="simulation-loader" *ngIf="actionBusy()" role="status" aria-live="polite">
           <span class="loader-ring"></span><div><strong>Working…</strong><small>{{ actionStatus() || 'Processing simulation data.' }}</small></div>
         </div>
+      </div>
+      <div class="panel analysis-summary" *ngIf="simulationCompleted()">
+        <div class="panel-head"><div><strong>Overall analysis summary</strong><small>Consolidated result after the simulation completes</small></div></div>
+        <div class="summary-grid"><div class="summary-card" *ngFor="let item of analysisSummary()"><span>{{ item.label }}</span><b>{{ item.value }}</b><small>{{ item.detail }}</small></div></div>
+        <div class="summary-recommendation"><strong>Overall conclusion</strong><p>{{ simulation().recommendation }}</p></div>
       </div>
       <div class="panel result">
         <div class="panel-head"><div><strong>Diagnostic result</strong><small>Evidence from the uploaded window</small></div></div>
