@@ -518,19 +518,47 @@ export class TradingSimulationComponent {
       string,
       { count: number; gain: number; values: number[] }
     >();
+    // A workbook row is a tick-level observation, not necessarily a distinct
+    // trading opportunity. Consecutive blocked observations with the same first
+    // gate are one opportunity episode; otherwise a single move can be counted
+    // dozens of times.
+    const missedEpisodes: Array<{
+      gate: string;
+      index: number;
+      timestamp: string;
+      gainPct: number;
+      missedValue: number;
+    }> = [];
+    let lastMissedIndex = -2;
+    let lastMissedGate = '';
 
     candles.forEach((c) => {
-      const d = c.decision;
+      const sourceTick: any = c.ticks?.[c.ticks.length - 1];
+      const d: any = { ...(c.decision ?? {}) };
       const p = c.candle.close;
-      const score = this.num(d['score']);
-      const conf = this.num(d['adaptiveConfidence']);
-      const rr = this.num(d['adaptiveRiskReward']);
-      const edge = this.num(d['adaptiveEdgeScore']);
+      const score = this.num(
+        d['score'] ??
+          sourceTick?.score ??
+          this.indicatorLookup(sourceTick?.indicators, 'Score') ??
+          this.indicatorLookup(c.indicators, 'Score'),
+      );
+      const conf = this.num(
+        d['adaptiveConfidence'] ?? sourceTick?.confidence ??
+          this.indicatorLookup(sourceTick?.indicators, 'Confidence'),
+      );
+      const rr = this.num(
+        d['adaptiveRiskReward'] ?? sourceTick?.adaptiveRiskReward ??
+          this.indicatorLookup(sourceTick?.indicators, 'AdaptiveRiskReward'),
+      );
+      const edge = this.num(
+        d['adaptiveEdgeScore'] ?? sourceTick?.adaptiveEdgeScore ??
+          this.indicatorLookup(sourceTick?.indicators, 'AdaptiveEdgeScore'),
+      );
       const spread = this.num(
         this.indicatorLookup(c.indicators, 'SpreadPercent') ??
-          c.ticks[0]?.spreadPct,
+          sourceTick?.spreadPct,
       );
-      const technicalBuy = String(d['signal'] ?? '').toUpperCase() === 'BUY';
+      const technicalBuy = String(d['signal'] ?? sourceTick?.decision ?? this.indicatorLookup(sourceTick?.indicators, 'Signal') ?? '').toUpperCase() === 'BUY';
       const scorePass = score >= this.params.minimumScore,
         confPass =
           !this.params.useAdaptiveScore ||
@@ -576,21 +604,35 @@ export class TradingSimulationComponent {
         else losses++;
       }
       if (!passes && netPct > 0) {
-        missed++;
-        missedProfit += (p * netPct) / 100;
         const gate = gateList[0] ?? 'Configuration gate';
-        reasons.set(gate, (reasons.get(gate) ?? 0) + 1);
-        issues.push({
-          kind: 'MISSED_ENTRY',
-          timestamp: c.timestamp,
-          title: `Missed BUY at ${this.format(c.timestamp)}`,
-          detail: `The captured move reached +${gainPct.toFixed(2)}% after this candle, but the setup was blocked by ${gate}.`,
-          severity: gainPct >= 1 ? 'high' : 'medium',
-          metric: gate,
-          current: this.gateValue(gate, score, conf, rr, edge, spread),
-          suggested: this.gateSuggestion(gate, score, conf, rr, edge, spread),
-        });
-        this.recordRecommendation(recommendationEvidence, gate, gainPct);
+        const value = (p * netPct) / 100;
+        const sameEpisode =
+          c.index === lastMissedIndex + 1 && gate === lastMissedGate;
+        if (sameEpisode && missedEpisodes.length) {
+          const episode = missedEpisodes[missedEpisodes.length - 1];
+          // Retain the most valuable point in the episode rather than adding
+          // every tick's opportunity value repeatedly.
+          if (value > episode.missedValue) {
+            episode.missedValue = value;
+            episode.gainPct = gainPct;
+            episode.timestamp = c.timestamp;
+          }
+        } else {
+          missedEpisodes.push({
+            gate,
+            index: c.index,
+            timestamp: c.timestamp,
+            gainPct,
+            missedValue: value,
+          });
+          reasons.set(gate, (reasons.get(gate) ?? 0) + 1);
+          this.recordRecommendation(recommendationEvidence, gate, gainPct);
+        }
+        lastMissedIndex = c.index;
+        lastMissedGate = gate;
+      } else {
+        lastMissedIndex = -2;
+        lastMissedGate = '';
       }
       const actual = c.actualTrade ?? {};
       const status = String(actual['Status'] ?? '').toLowerCase();
@@ -635,6 +677,8 @@ export class TradingSimulationComponent {
       void futureWorst;
       void lossPct;
     });
+    missed = missedEpisodes.length;
+    missedProfit = missedEpisodes.reduce((sum, x) => sum + x.missedValue, 0);
     const opportunity = candles.length ? (missed / candles.length) * 100 : 0;
     const top = [...reasons.entries()]
       .sort((a, b) => b[1] - a[1])
@@ -1334,17 +1378,18 @@ export class TradingSimulationComponent {
   private classifyRegime(c: CandleCapture): RegimeConfiguration['regime'] {
     const i: any = c.indicators,
       d: any = c.decision,
-      v: any = c.virtualTrade;
+      v: any = c.virtualTrade,
+      tick: any = c.ticks?.[c.ticks.length - 1];
     const atr = this.num(i['ATR'] ?? i['atr']);
     const close = c.candle.close;
     const atrPct = close > 0 ? (atr / close) * 100 : 0;
     const trend = this.num(
-      v['trendStrength'] ?? v['TrendStrength'] ?? d['trendStrength'],
+      v['trendStrength'] ?? v['TrendStrength'] ?? tick?.trendStrength ?? d['trendStrength'],
     );
-    const stability = this.num(v['trendStability'] ?? v['TrendStability']);
-    const breakout = this.num(v['breakoutStrength'] ?? d['breakoutStrength']);
-    const recovery = this.num(v['recoveryScore'] ?? d['recoveryScore']);
-    const slope = Math.abs(this.num(v['priceSlope'] ?? d['priceSlope']));
+    const stability = this.num(v['trendStability'] ?? v['TrendStability'] ?? tick?.trendStability ?? 0);
+    const breakout = this.num(v['breakoutStrength'] ?? tick?.breakoutStrength ?? d['breakoutStrength']);
+    const recovery = this.num(v['recoveryScore'] ?? tick?.recoveryScore ?? d['recoveryScore']);
+    const slope = Math.abs(this.num(v['priceSlope'] ?? tick?.priceSlope ?? d['priceSlope']));
     if (breakout >= 70) return 'BREAKOUT';
     if (recovery >= 70) return 'RECOVERY';
     if (atrPct >= 2 || (atrPct === 0 && this.num(i['Volatility']) >= 70))
@@ -1607,14 +1652,56 @@ export class TradingSimulationComponent {
   ): ReplayDecision | undefined {
     const c = candles[index] ?? candles[0];
     if (!c) return undefined;
-    const d = c.decision,
-      v = c.virtualTrade,
-      cfg: any = stock.configuration ?? {};
-    const dynamic: any =
-      cfg['dynamicVirtualTrading'] ?? cfg['DynamicVirtualTrading'] ?? {};
-    const evalCfg: any =
-      cfg['dynamicEvaluation'] ?? cfg['DynamicEvaluation'] ?? {};
-    const short = String(d['direction'] ?? v['direction'] ?? 'LONG')
+    const sourceTick = c.ticks?.[c.ticks.length - 1];
+    const d: any = { ...(c.decision ?? {}) };
+    const v: any = { ...(c.virtualTrade ?? {}) };
+    const cfg: any = stock.configuration ?? {};
+
+    // Workbook configuration is flattened as paths such as
+    // "DynamicVirtualTrading.MinimumTrendStability". Support both the nested
+    // and flattened formats so replay uses the captured production settings.
+    const dynamic: any = {
+      ...(cfg['dynamicVirtualTrading'] as any ?? {}),
+      ...(cfg['DynamicVirtualTrading'] as any ?? {}),
+    };
+    const evalCfg: any = {
+      ...(cfg['dynamicEvaluation'] as any ?? {}),
+      ...(cfg['DynamicEvaluation'] as any ?? {}),
+    };
+    const cfgNumber = (...names: string[]): number => {
+      const value = this.configValue(cfg, ...names);
+      return this.num(value);
+    };
+
+    // Decision fields can be absent from the candle-level object while being
+    // present on the captured tick. Never manufacture a value from future data.
+    const stateNumber = (...names: string[]): number => {
+      for (const name of names) {
+        // Prefer the actual captured tick state. Candle-level lifecycle objects
+        // can contain stale/default zeroes after ENTRY -> POSITION.
+        const tv = sourceTick ? (sourceTick as any)[name] : undefined;
+        if (tv !== undefined && tv !== null && String(tv).trim() !== '') return this.num(tv);
+        const iv = this.indicatorLookup(sourceTick?.indicators, name) ??
+          this.indicatorLookup(c.indicators, name);
+        if (iv !== undefined && iv !== null && String(iv).trim() !== '') return this.num(iv);
+        const dv = d[name];
+        if (dv !== undefined && dv !== null && String(dv).trim() !== '') return this.num(dv);
+      }
+      return 0;
+    };
+    const stateString = (...names: string[]): string => {
+      for (const name of names) {
+        const dv = d[name];
+        if (dv !== undefined && dv !== null && String(dv).trim() !== '') return String(dv);
+        const tv = sourceTick ? (sourceTick as any)[name] : undefined;
+        if (tv !== undefined && tv !== null && String(tv).trim() !== '') return String(tv);
+        const iv = this.indicatorLookup(sourceTick?.indicators, name) ??
+          this.indicatorLookup(c.indicators, name);
+        if (iv !== undefined && iv !== null && String(iv).trim() !== '') return String(iv);
+      }
+      return '';
+    };
+    const short = String(d['direction'] ?? (sourceTick as any)?.direction ?? v['direction'] ?? 'LONG')
       .toUpperCase()
       .includes('SHORT');
     const n = (x: any) => this.num(x);
@@ -1632,18 +1719,31 @@ export class TradingSimulationComponent {
       source: 'replayed',
     });
     const gates: GateEvaluation[] = [];
-    const observationTicks = n(v['tickCount']);
+    const observationTicks = stateNumber('tickCount');
     const minTicks = n(
-      dynamic['minimumObservationTicks'] ?? dynamic['MinimumObservationTicks'],
+      dynamic['minimumObservationTicks'] ?? dynamic['MinimumObservationTicks'] ?? cfgNumber('minimumObservationTicks'),
     );
     const minSeconds = n(
       dynamic['minimumObservationSeconds'] ??
-        dynamic['MinimumObservationSeconds'],
+        dynamic['MinimumObservationSeconds'] ??
+        cfgNumber('minimumObservationSeconds'),
     );
-    const maxTicks = n(
-      v['maximumObservationTicks'] ?? d['adaptiveMaximumObservationTicks'],
-    );
-    const tickSpan = this.tickSpanSeconds(c.ticks);
+    // Each workbook row contains one market tick. Measuring only c.ticks
+    // therefore gives 0 seconds. Use the elapsed lifecycle time already
+    // captured at the decision tick, or calculate it from rows up to the
+    // decision index (never from future rows).
+    const tickSpan =
+      this.num((sourceTick as any)?.elapsedSeconds) ||
+      (() => {
+        const prior = candles
+          .slice(0, index + 1)
+          .flatMap(x => x.ticks)
+          .filter(x => x.ltp > 0)
+          .sort((a, b) => this.time(a) - this.time(b));
+        return prior.length > 1
+          ? Math.max(0, (this.time(prior[prior.length - 1]) - this.time(prior[0])) / 1000)
+          : 0;
+      })();
     if (minTicks > 0)
       gates.push({
         name: 'Minimum observation ticks',
@@ -1678,7 +1778,10 @@ export class TradingSimulationComponent {
         reason: 'MinimumObservationSeconds was not captured in configuration.',
         source: 'unavailable',
       });
-    const maxObsTicks = n(v['maximumObservationTicks']);
+    const maxObsTicks =
+      cfgNumber('maximumObservationTicks') ||
+      n(dynamic['maximumObservationTicks'] ?? dynamic['MaximumObservationTicks']) ||
+      n(v['maximumObservationTicks']);
     if (maxObsTicks > 0)
       gates.push({
         name: 'Maximum observation ticks',
@@ -1696,10 +1799,11 @@ export class TradingSimulationComponent {
         reason: 'Adaptive maximum observation ticks unavailable.',
         source: 'unavailable',
       });
-    const quality = n(v['tickQualityScore']);
+    const quality = stateNumber('tickQualityScore');
     const minQuality = n(
       dynamic['minimumExecutionConfidence'] ??
-        dynamic['MinimumExecutionConfidence'],
+        dynamic['MinimumExecutionConfidence'] ??
+        cfgNumber('minimumExecutionConfidence'),
     );
     if (minQuality > 0)
       gates.push({
@@ -1718,12 +1822,13 @@ export class TradingSimulationComponent {
         reason: 'MinimumExecutionConfidence unavailable.',
         source: 'unavailable',
       });
-    const noise = n(v['noiseScore']);
+    const noise = stateNumber('noiseScore');
     const maxNoise = n(
       dynamic['maximumNoiseScoreForEntry'] ??
-        dynamic['MaximumNoiseScoreForEntry'],
+        dynamic['MaximumNoiseScoreForEntry'] ??
+        cfgNumber('maximumNoiseScoreForEntry'),
     );
-    const noiseRelax = quality >= minQuality + 10;
+    const noiseRelax = minQuality > 0 && quality >= minQuality + 10;
     if (maxNoise > 0)
       gates.push({
         name: 'Noise gate',
@@ -1736,13 +1841,11 @@ export class TradingSimulationComponent {
           : 'Noise must stay below the configured entry maximum.',
         source: 'captured',
       });
-    const movement = n(v['movementScore']);
-    const policyConfidence = n(
-      d['adaptiveConfidence'] ?? v['adaptiveConfidence'],
-    );
+    const movement = stateNumber('movementScore');
+    const policyConfidence = stateNumber('adaptiveConfidence', 'confidence');
     const movementFloor = Math.max(
       20,
-      n(dynamic['minimumMovementScore'] ?? dynamic['MinimumMovementScore']) -
+      n(dynamic['minimumMovementScore'] ?? dynamic['MinimumMovementScore'] ?? cfgNumber('minimumMovementScore')) -
         (policyConfidence >= 70 ? 10 : 0),
     );
     gates.push({
@@ -1754,14 +1857,14 @@ export class TradingSimulationComponent {
       reason: 'Dynamic movement floor with high-confidence relaxation.',
       source: 'replayed',
     });
-    const stability = n(v['trendStability']);
+    const stability = stateNumber('trendStability');
     const recoveryProtected =
       String(
         d['adaptiveRecoveryProtected'] ?? v['recoveryProtected'],
       ).toLowerCase() === 'true';
     const stabilityFloor = Math.max(
       30,
-      n(dynamic['minimumTrendStability'] ?? dynamic['MinimumTrendStability']) -
+      n(dynamic['minimumTrendStability'] ?? dynamic['MinimumTrendStability'] ?? cfgNumber('minimumTrendStability')) -
         (recoveryProtected ? 10 : 0),
     );
     gates.push({
@@ -1776,14 +1879,15 @@ export class TradingSimulationComponent {
           : 'Trend stability below floor.',
       source: 'replayed',
     });
-    const breakout = n(v['breakoutStrength']),
-      recovery = n(v['recoveryScore']),
+    const breakout = stateNumber('breakoutStrength'),
+      recovery = stateNumber('recoveryScore'),
       minBreak = n(
         dynamic['minimumBreakoutStrength'] ??
-          dynamic['MinimumBreakoutStrength'],
+          dynamic['MinimumBreakoutStrength'] ??
+          cfgNumber('minimumBreakoutStrength'),
       ),
       minRec = n(
-        dynamic['minimumRecoveryScore'] ?? dynamic['MinimumRecoveryScore'],
+        dynamic['minimumRecoveryScore'] ?? dynamic['MinimumRecoveryScore'] ?? cfgNumber('minimumRecoveryScore'),
       );
     if (minBreak > 0 || minRec > 0)
       gates.push({
@@ -1800,7 +1904,7 @@ export class TradingSimulationComponent {
             : 'Either breakout or recovery threshold must pass.',
         source: 'captured',
       });
-    const slope = n(v['priceSlope']),
+    const slope = stateNumber('priceSlope'),
       minSlope = n(
         dynamic['minimumPriceSlope'] ?? dynamic['MinimumPriceSlope'],
       );
@@ -1821,10 +1925,11 @@ export class TradingSimulationComponent {
             : 'Price slope must meet the configured minimum.',
         source: 'captured',
       });
-    const noTrade = n(d['adaptiveNoTradeScore'] ?? v['noTradeScore']),
+    const noTrade = stateNumber('adaptiveNoTradeScore', 'noTradeScore'),
       noTradeThreshold = n(
         evalCfg['noTradePenaltyThreshold'] ??
-          evalCfg['NoTradePenaltyThreshold'],
+          evalCfg['NoTradePenaltyThreshold'] ??
+          cfgNumber('noTradePenaltyThreshold'),
       );
     if (noTradeThreshold > 0)
       gates.push({
@@ -1836,10 +1941,11 @@ export class TradingSimulationComponent {
         reason: 'No-trade score must remain below penalty threshold.',
         source: 'captured',
       });
-    const expected = n(d['adaptiveExpectedNetValue'] ?? v['expectedNetValue']),
+    const expected = stateNumber('adaptiveExpectedNetValue', 'expectedNetValue'),
       minExpected = n(
         evalCfg['minimumExpectedNetValue'] ??
-          evalCfg['MinimumExpectedNetValue'],
+          evalCfg['MinimumExpectedNetValue'] ??
+          cfgNumber('minimumExpectedNetValue'),
       );
     if (minExpected > 0)
       gates.push({
@@ -1851,14 +1957,13 @@ export class TradingSimulationComponent {
         reason: 'Expected net value must cover the configured floor.',
         source: 'captured',
       });
-    const edge = n(d['adaptiveEdgeScore'] ?? v['edgeScore']),
-      stat = n(
-        d['adaptiveStatisticalConfidence'] ?? v['statisticalConfidence'],
-      ),
-      minEdge = n(evalCfg['minimumEdgeScore'] ?? evalCfg['MinimumEdgeScore']),
+    const edge = stateNumber('adaptiveEdgeScore', 'edgeScore'),
+      stat = stateNumber('adaptiveStatisticalConfidence', 'statisticalConfidence'),
+      minEdge = n(evalCfg['minimumEdgeScore'] ?? evalCfg['MinimumEdgeScore'] ?? cfgNumber('minimumEdgeScore')),
       minStat = n(
         evalCfg['minimumStatisticalConfidence'] ??
-          evalCfg['MinimumStatisticalConfidence'],
+          evalCfg['MinimumStatisticalConfidence'] ??
+          cfgNumber('minimumStatisticalConfidence'),
       );
     if (minEdge > 0)
       gates.push({
@@ -1878,20 +1983,25 @@ export class TradingSimulationComponent {
             : 'Adaptive edge threshold.',
         source: 'captured',
       });
-    const favorable = short ? n(v['negativeTicks']) : n(v['positiveTicks']),
-      adverse = short ? n(v['positiveTicks']) : n(v['negativeTicks']),
+    const favorable = short ? stateNumber('negativeTicks') : stateNumber('positiveTicks'),
+      adverse = short ? stateNumber('positiveTicks') : stateNumber('negativeTicks'),
       total = Math.max(
         1,
-        n(v['positiveTicks']) + n(v['negativeTicks']) + n(v['flatTicks']),
+        stateNumber('positiveTicks') + stateNumber('negativeTicks') + stateNumber('flatTicks'),
       );
     const favRatio = favorable / total,
       advRatio = adverse / total;
     const minFav = n(
         d['adaptiveMinimumFavorableTickRatio'] ??
-          v['minimumFavorableTickRatio'],
+          (sourceTick as any)?.minimumFavorableTickRatio ??
+          (v as any)['minimumFavorableTickRatio'] ??
+          cfgNumber('minimumFavorableTickRatio'),
       ),
       maxAdv = n(
-        d['adaptiveMaximumAdverseTickRatio'] ?? v['maximumAdverseTickRatio'],
+        d['adaptiveMaximumAdverseTickRatio'] ??
+          (sourceTick as any)?.maximumAdverseTickRatio ??
+          (v as any)['maximumAdverseTickRatio'] ??
+          cfgNumber('maximumAdverseTickRatio'),
       );
     if (minFav > 0)
       gates.push({
@@ -1931,7 +2041,7 @@ export class TradingSimulationComponent {
     const policyImpact = learned
       ? `The debugger selects the learned ${regime} policy for counterfactual comparison; this does not modify live configuration.`
       : `No learned policy is available for ${regime}; baseline configuration is shown.`;
-    const signal = String(d['signal'] ?? 'HOLD').toUpperCase();
+    const signal = stateString('signal', 'Signal', 'decision').toUpperCase() || 'HOLD';
     gates.unshift(
       boolGate(
         'Technical BUY signal',
@@ -1995,8 +2105,15 @@ export class TradingSimulationComponent {
     stock: StockCapture,
   ): ExitReplay {
     const t: any = c.actualTrade ?? {};
-    const entry = this.num(t['EntryPrice']);
-    const exit = this.num(t['ExitPrice']);
+    const stateTick: any = c.ticks?.[c.ticks.length - 1];
+    const entry =
+      this.num(t['EntryPrice']) ||
+      this.num(c.decision['entryPrice']) ||
+      this.num(stateTick?.entryPrice);
+    const exit =
+      this.num(t['ExitPrice']) ||
+      this.num(c.decision['exitPrice']) ||
+      this.num(stateTick?.exitPrice);
     const direction = String(
       t['Direction'] ?? c.decision['direction'] ?? 'LONG',
     ).toUpperCase();
@@ -2018,27 +2135,30 @@ export class TradingSimulationComponent {
     const cfg: any = stock.configuration ?? {},
       ex: any = cfg['exit'] ?? cfg['Exit'] ?? {},
       policy: any = t['AdaptivePolicy'] ?? {};
+    const cfgNumber = (...names: string[]): number =>
+      this.num(this.configValue(cfg, ...names));
     const atr =
-      this.num(t['ATR']) || this.num(c.indicators['ATR']) || entry * 0.005;
-    const stop = this.num(t['StopLoss']) || this.num(c.decision['stopLoss']);
+      this.num(t['ATR']) || this.num(c.indicators['ATR']) || this.num(stateTick?.indicators && this.indicatorLookup(stateTick.indicators, 'ATR')) || entry * 0.005;
+    const stop = this.num(t['StopLoss']) || this.num(c.decision['stopLoss']) || this.num(stateTick?.stopLoss);
     const target =
-      this.num(t['TargetPrice']) || this.num(c.decision['targetPrice']);
+      this.num(t['TargetPrice']) || this.num(c.decision['targetPrice']) || this.num(stateTick?.targetPrice);
     const trailingMultiplier =
       this.num(t['AdaptiveTrailingAtrMultiplier']) ||
       this.num(policy['TrailingAtrMultiplier']) ||
       this.num(
-        ex['TrailingStopAtrMultiplier'] ?? ex['trailingStopAtrMultiplier'],
+        ex['TrailingStopAtrMultiplier'] ?? ex['trailingStopAtrMultiplier'] ?? cfgNumber('trailingStopAtrMultiplier'),
       );
     const activation =
       this.num(t['TrailingActivationNetProfit']) ||
       this.num(
-        ex['TrailingActivationNetProfit'] ?? ex['trailingActivationNetProfit'],
+        ex['TrailingActivationNetProfit'] ?? ex['trailingActivationNetProfit'] ?? cfgNumber('trailingActivationNetProfit'),
       );
     const retention =
       this.num(t['PeakProfitRetentionPercent']) ||
       this.num(
         ex['TrailingProfitRetentionPercent'] ??
-          ex['trailingProfitRetentionPercent'],
+          ex['trailingProfitRetentionPercent'] ??
+          cfgNumber('trailingProfitRetentionPercent'),
       );
     let highest = entry,
       lowest = entry,
@@ -2388,7 +2508,7 @@ export class TradingSimulationComponent {
   }
   private tickIndicatorValue(index: number, key: string): unknown {
     const c = this.candles()[index],
-      t = c?.ticks?.[0];
+      t = c?.ticks?.[c.ticks.length - 1];
     return (
       this.indicatorLookup(t?.indicators, key) ??
       this.indicatorLookup(c?.indicators, key)
