@@ -43,6 +43,11 @@ export class TradingSimulationComponent {
   });
   candles = computed<CandleCapture[]>(() => this.stock()?.candles ?? []);
   ticks = computed(() => this.stock()?.candles.flatMap(c => c.ticks) ?? []); indicators = computed(() => this.candle()?.indicators ?? {}); decision = computed(() => this.candle()?.decision ?? {});
+  currentConfiguration = computed(() => this.stock()?.configuration ?? {});
+  configurationEntries = computed(() => Object.entries(this.currentConfiguration()).filter(([k]) => !!k).sort(([a],[b]) => a.localeCompare(b)));
+  configurationCount = computed(() => this.configurationEntries().length);
+  configurationCapturedAt = computed(() => this.stock()?.configurationCapturedAt ?? '');
+  configurationVersion = computed(() => this.configValue(this.currentConfiguration(),'configurationVersion') ?? '');
 
   async upload(files: FileList|null): Promise<void> {
     if (!files?.length) return; this.error.set(''); const loaded: StockCapture[]=[];
@@ -319,7 +324,7 @@ export class TradingSimulationComponent {
 
   private regimeRows(regime: RegimeConfiguration['regime']): Array<{stock:StockCapture,candle:CandleCapture,index:number}> {
     const rows:Array<{stock:StockCapture,candle:CandleCapture,index:number}>=[];
-    for(const stock of this.stocks()) stock.candles.forEach((c,index)=>{ if(c.candle.close>0&&this.classifyRegime(c)===regime) rows.push({stock,candle:c,index}); });
+    for(const stock of this.stocks()) stock.candles.forEach((c,index)=>{ if(c.candle.close>0&&this.evaluationReady(c)&&this.classifyRegime(c)===regime) rows.push({stock,candle:c,index}); });
     return rows;
   }
   private classifyRegime(c:CandleCapture):RegimeConfiguration['regime'] {
@@ -579,90 +584,118 @@ export class TradingSimulationComponent {
 
   private analyzeActualTradePath(stock:StockCapture,ticks:Tick[]):FuturePathAnalysis|undefined { return this.analyzeAllTradePaths(stock,ticks)[0]; }
 
-  private loadParametersFromConfiguration(config:Record<string,unknown>):void {const tc:any=config,e=tc['equity']??tc['Equity']??{},d=tc['dynamicEvaluation']??tc['DynamicEvaluation']??{},v=tc['validation']??tc['Validation']??{};this.params.minimumScore=this.num(e['minimumFinalScore']??e['MinimumFinalScore']??this.params.minimumScore);this.params.minimumConfidence=this.num(e['minimumConfidence']??e['MinimumConfidence']??d['minimumEntryScore']??d['MinimumEntryScore']??this.params.minimumConfidence);this.params.minimumRiskReward=this.num(d['minimumRiskReward']??d['MinimumRiskReward']??e['minimumRiskReward']??e['MinimumRiskReward']??this.params.minimumRiskReward);this.params.minimumExpectedNetValue=this.num(d['minimumExpectedNetValue']??d['MinimumExpectedNetValue']??this.params.minimumExpectedNetValue);this.params.minimumEdgeScore=this.num(d['minimumEdgeScore']??d['MinimumEdgeScore']??this.params.minimumEdgeScore);this.params.minimumProfitPercent=this.num(e['minimumRoiPercent']??e['MinimumRoiPercent']??v['minimumGainPercent']??v['MinimumGainPercent']??this.params.minimumProfitPercent);this.params.maximumSpreadPercent=this.num(e['maximumSpreadPercent']??e['MaximumSpreadPercent']??this.params.maximumSpreadPercent);}
+  configurationSourceLabel(): string { return this.stock()?.configurationSource ?? ''; }
+  formatConfigurationValue(value: unknown): string {
+    if (value === null || value === undefined || value === '') return '—';
+    if (typeof value === 'object') { try { return JSON.stringify(value); } catch { return String(value); } }
+    return String(value);
+  }
+
+  private indicatorSnapshotReady(c:CandleCapture):boolean {
+    const indicatorNames=Object.keys(c.indicators ?? {}).filter(k => !['Signal','Score','AdaptiveExpectedNetValue','AdaptiveEdgeScore','AdaptiveRiskReward','SpreadPercent'].includes(k));
+    if (!indicatorNames.length) return false;
+    // If the workbook has begun emitting an indicator, a blank value at this
+    // observation means the indicator is not loaded yet. Do not turn missing
+    // values into zero and do not evaluate the stock at this point.
+    return indicatorNames.every(k => { const v=this.indicatorLookup(c.indicators,k); return v !== undefined && v !== null && String(v).trim() !== ''; });
+  }
+
+  private configValue(config:Record<string, unknown>, ...names:string[]): unknown {
+    const wanted = names.map(n => n.toLowerCase().replace(/[^a-z0-9]/g,''));
+    const entries = Object.entries(config);
+    for (const [key, value] of entries) {
+      const normalized = key.toLowerCase().replace(/[^a-z0-9]/g,'');
+      if (wanted.includes(normalized) || wanted.some(w => normalized.endsWith(w))) return value;
+    }
+    return undefined;
+  }
+
+  private loadParametersFromConfiguration(config:Record<string,unknown>):void {
+    const tc:any=config;
+    const e:any=tc['equity']??tc['Equity']??{};
+    const d:any=tc['dynamicEvaluation']??tc['DynamicEvaluation']??{};
+    const v:any=tc['validation']??tc['Validation']??{};
+    this.params.minimumScore=this.num(e['minimumFinalScore']??e['MinimumFinalScore']??this.configValue(config,'minimumFinalScore')??this.params.minimumScore);
+    this.params.minimumConfidence=this.num(e['minimumConfidence']??e['MinimumConfidence']??d['minimumEntryScore']??d['MinimumEntryScore']??this.configValue(config,'minimumConfidence','minimumEntryScore')??this.params.minimumConfidence);
+    this.params.minimumRiskReward=this.num(d['minimumRiskReward']??d['MinimumRiskReward']??e['minimumRiskReward']??e['MinimumRiskReward']??this.configValue(config,'minimumRiskReward')??this.params.minimumRiskReward);
+    this.params.minimumExpectedNetValue=this.num(d['minimumExpectedNetValue']??d['MinimumExpectedNetValue']??this.configValue(config,'minimumExpectedNetValue')??this.params.minimumExpectedNetValue);
+    this.params.minimumEdgeScore=this.num(d['minimumEdgeScore']??d['MinimumEdgeScore']??this.configValue(config,'minimumEdgeScore')??this.params.minimumEdgeScore);
+    this.params.minimumProfitPercent=this.num(e['minimumRoiPercent']??e['MinimumRoiPercent']??v['minimumGainPercent']??v['MinimumGainPercent']??this.configValue(config,'minimumRoiPercent','minimumGainPercent')??this.params.minimumProfitPercent);
+    this.params.maximumSpreadPercent=this.num(e['maximumSpreadPercent']??e['MaximumSpreadPercent']??this.configValue(config,'maximumSpreadPercent')??this.params.maximumSpreadPercent);
+  }
+
 
   private async readWorkbook(file:File):Promise<StockCapture>{
     const buffer=await file.arrayBuffer();
     const wb=XLSX.read(buffer,{type:'array',cellDates:true});
     if(!wb.SheetNames.length) throw new Error('Workbook contains no sheets.');
-    // New lifecycle format: exactly one sheet per stock, with one row per
-    // websocket tick. No candle sheets are required or expected.
-    const sheet=wb.Sheets[wb.SheetNames[0]];
+
+    // The current backend export contains a lifecycle tick sheet plus a
+    // "Current Configuration" sheet. Never treat the configuration sheet as
+    // market data and never fall back to hard-coded simulation parameters when
+    // the snapshot is present.
+    let lifecycleSheetName = wb.SheetNames.find(name => {
+      const rows=XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[name],{header:1,raw:true,defval:''});
+      return rows.some(r => String((r as unknown[])[0]??'').trim().toLowerCase()==='ticknumber');
+    });
+    if (!lifecycleSheetName) throw new Error('No lifecycle tick table found. Expected a TickNumber header.');
+
+    const configuration:Record<string,unknown>={};
+    let configurationSource='';
+    let configurationCapturedAt='';
+    const configName=wb.SheetNames.find(name => /current\s*configuration|configuration/i.test(name));
+    if (configName) {
+      const rows=XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[configName],{header:1,raw:true,defval:''});
+      configurationSource=configName;
+      for (const row of rows) {
+        const r=row as unknown[];
+        if (!r.length) continue;
+        const key=String(r[0]??'').trim();
+        if (!key || /^setting$|^path$|^configuration$/i.test(key)) continue;
+        const value=this.value(r.length>1?r[1]:'');
+        configuration[key]=value;
+        if (/capture(d)?\s*(at|timestamp)|timestamp/i.test(key)) configurationCapturedAt=this.iso(value);
+      }
+    }
+
+    const sheet=wb.Sheets[lifecycleSheetName];
     const rows=XLSX.utils.sheet_to_json<unknown[]>(sheet,{header:1,raw:true,defval:''});
     const headerIndex=rows.findIndex((r:unknown[])=>String(r[0]??'').trim()==='TickNumber');
-    if(headerIndex<0) throw new Error('No lifecycle tick table found. Expected a TickNumber header.');
     const headers=(rows[headerIndex] as unknown[]).map(x=>String(x??'').trim());
     const indexOf=(name:string)=>{const w=name.toLowerCase().replace(/[^a-z0-9]/g,'');return headers.findIndex(h=>h.toLowerCase().replace(/[^a-z0-9]/g,'')===w);};
     const firstIndex=(...names:string[])=>{for(const name of names){const idx=indexOf(name);if(idx>=0)return idx;}return -1;};
-    const hasAny=(...names:string[])=>firstIndex(...names)>=0;
-    const ticks:Tick[]=[];
-    const candles:CandleCapture[]=[];
+    const ticks:Tick[]=[]; const candles:CandleCapture[]=[];
     const metadata:Record<string,string|number|boolean>={};
-    for(let i=0;i<headerIndex;i++){
-      const r=rows[i] as unknown[];
-      if(String(r?.[0]??'').trim()) metadata[String(r[0]).trim()]=this.value(r[1]);
-    }
+    for(let i=0;i<headerIndex;i++){const r=rows[i] as unknown[];if(String(r?.[0]??'').trim()) metadata[String(r[0]).trim()]=this.value(r[1]);}
     const actual:ActualTrade={};
     for(const r0 of rows.slice(headerIndex+1)){
-      const r=r0 as unknown[];
-      if(!r.length || String(r[indexOf('TickNumber')]??'').trim()==='') continue;
+      const r=r0 as unknown[]; if(!r.length || String(r[indexOf('TickNumber')]??'').trim()==='') continue;
       const indicators:Indicators={};
       for(let j=0;j<headers.length;j++){
         const header=headers[j].trim(); if(!header) continue;
         const rawName=header.toLowerCase().startsWith('indicator.')?header.substring(header.indexOf('.')+1):header;
-        const canonical=this.canonicalIndicatorName(rawName);
-        if(canonical) indicators[canonical]=this.value(r[j]);
+        const canonical=this.canonicalIndicatorName(rawName); if(canonical) indicators[canonical]=this.value(r[j]);
       }
       const loadedDecisionFields:string[]=[];
       const fieldAliases:Record<string,string[]>={Signal:['Signal','Decision'],Score:['Score','FinalScore'],Confidence:['Confidence','AdaptiveConfidence'],AdaptiveRiskReward:['AdaptiveRiskReward','RiskReward'],AdaptiveEdgeScore:['AdaptiveEdgeScore','EdgeScore'],AdaptiveExpectedNetValue:['AdaptiveExpectedNetValue','ExpectedNetValue'],SpreadPercent:['SpreadPercent','SpreadPct']};
       for(const [field,aliases] of Object.entries(fieldAliases)){const idx=firstIndex(...aliases);if(idx>=0&&String(r[idx]??'').trim()!=='')loadedDecisionFields.push(field);}
       const tick:Tick={
-        n:this.num(r[indexOf('TickNumber')]), utc:this.iso(r[indexOf('TimestampUtc')]),
-        exchangeTime:this.iso(r[indexOf('ExchangeTime')]), sequence:this.num(r[indexOf('SequenceNumber')]),
-        ltp:this.num(r[indexOf('Price')]), bid:this.num(r[indexOf('Bid')]), ask:this.num(r[indexOf('Ask')]),
-        spread:this.num(r[indexOf('Spread')]), spreadPct:this.num(r[firstIndex('SpreadPercent','SpreadPct')]),
-        open:this.num(r[indexOf('Price')]), high:this.num(r[indexOf('High')]), low:this.num(r[indexOf('Low')]),
-        close:this.num(r[indexOf('Price')]), ltq:0, avgPrice:0, dayVolume:this.num(r[indexOf('Volume')]),
-        buyQty:0, sellQty:0,
-        stage:String(r[indexOf('Stage')]??''), decision:String(r[indexOf('Decision')]??''),
-        decisionReason:String(r[indexOf('DecisionReason')]??''), status:String(r[indexOf('Status')]??''),
-        movementScore:this.num(r[indexOf('MovementScore')]), trendStrength:this.num(r[indexOf('TrendStrength')]),
-        trendStability:this.num(r[indexOf('TrendStability')]), recoveryScore:this.num(r[indexOf('RecoveryScore')]),
-        breakoutStrength:this.num(r[indexOf('BreakoutStrength')]), noiseScore:this.num(r[indexOf('NoiseScore')]),
-        tickQualityScore:this.num(r[indexOf('TickQualityScore')]), confidence:this.num(r[firstIndex('Confidence','AdaptiveConfidence')]),
-        adaptiveExpectedNetValue:this.num(r[firstIndex('AdaptiveExpectedNetValue','ExpectedNetValue')]),
-        adaptiveEdgeScore:this.num(r[firstIndex('AdaptiveEdgeScore','EdgeScore')]), adaptiveRiskReward:this.num(r[firstIndex('AdaptiveRiskReward','RiskReward')]),
-        entryPrice:this.num(r[indexOf('EntryPrice')]), exitPrice:this.num(r[indexOf('ExitPrice')]),
-        stopLoss:this.num(r[indexOf('StopLoss')]), targetPrice:this.num(r[indexOf('TargetPrice')]),
-        exitReason:String(r[indexOf('ExitReason')]??''), indicators
+        n:this.num(r[indexOf('TickNumber')]), utc:this.iso(r[indexOf('TimestampUtc')]), exchangeTime:this.iso(r[indexOf('ExchangeTime')]), sequence:this.num(r[indexOf('SequenceNumber')]),
+        ltp:this.num(r[indexOf('Price')]), bid:this.num(r[indexOf('Bid')]), ask:this.num(r[indexOf('Ask')]), spread:this.num(r[indexOf('Spread')]), spreadPct:this.num(r[firstIndex('SpreadPercent','SpreadPct')]),
+        open:this.num(r[indexOf('Price')]),high:this.num(r[indexOf('High')]),low:this.num(r[indexOf('Low')]),close:this.num(r[indexOf('Price')]),ltq:0,avgPrice:0,dayVolume:this.num(r[indexOf('Volume')]),buyQty:0,sellQty:0,
+        stage:String(r[indexOf('Stage')]??''),decision:String(r[indexOf('Decision')]??''),decisionReason:String(r[indexOf('DecisionReason')]??''),status:String(r[indexOf('Status')]??''),movementScore:this.num(r[indexOf('MovementScore')]),trendStrength:this.num(r[indexOf('TrendStrength')]),trendStability:this.num(r[indexOf('TrendStability')]),recoveryScore:this.num(r[indexOf('RecoveryScore')]),breakoutStrength:this.num(r[indexOf('BreakoutStrength')]),noiseScore:this.num(r[indexOf('NoiseScore')]),tickQualityScore:this.num(r[indexOf('TickQualityScore')]),confidence:this.num(r[firstIndex('Confidence','AdaptiveConfidence')]),adaptiveExpectedNetValue:this.num(r[firstIndex('AdaptiveExpectedNetValue','ExpectedNetValue')]),adaptiveEdgeScore:this.num(r[firstIndex('AdaptiveEdgeScore','EdgeScore')]),adaptiveRiskReward:this.num(r[firstIndex('AdaptiveRiskReward','RiskReward')]),entryPrice:this.num(r[indexOf('EntryPrice')]),exitPrice:this.num(r[indexOf('ExitPrice')]),stopLoss:this.num(r[indexOf('StopLoss')]),targetPrice:this.num(r[indexOf('TargetPrice')]),exitReason:String(r[indexOf('ExitReason')]??''),indicators
       };
       ticks.push(tick);
       const close=tick.ltp;
-      const candle:CandleCapture={
-        index:candles.length,timestamp:tick.utc||tick.exchangeTime,
-        candle:{timestamp:tick.utc||tick.exchangeTime,open:close,high:close,low:close,close,volume:tick.dayVolume},
-        indicators,
+      const candle:CandleCapture={index:candles.length,timestamp:tick.utc||tick.exchangeTime,candle:{timestamp:tick.utc||tick.exchangeTime,open:close,high:close,low:close,close,volume:tick.dayVolume},indicators,
         decision:(()=>{const d:Record<string,string|number|boolean>={};if(indicators['Signal']!==undefined||tick.decision)d['signal']=String(indicators['Signal']??tick.decision??'');if(indicators['Score']!==undefined)d['score']=this.num(indicators['Score']);if(loadedDecisionFields.includes('Confidence'))d['adaptiveConfidence']=this.num(tick.confidence);if(loadedDecisionFields.includes('AdaptiveRiskReward'))d['adaptiveRiskReward']=this.num(tick.adaptiveRiskReward);if(loadedDecisionFields.includes('AdaptiveEdgeScore'))d['adaptiveEdgeScore']=this.num(tick.adaptiveEdgeScore);if(loadedDecisionFields.includes('AdaptiveExpectedNetValue'))d['adaptiveExpectedNetValue']=this.num(tick.adaptiveExpectedNetValue);return d;})(),
-        virtualTrade:{
-          movementScore:tick.movementScore??0, trendStrength:tick.trendStrength??0,
-          trendStability:tick.trendStability??0, recoveryScore:tick.recoveryScore??0,
-          breakoutStrength:tick.breakoutStrength??0, noiseScore:tick.noiseScore??0,
-          tickQualityScore:tick.tickQualityScore??0, priceSlope:0, stage:tick.stage??''
-        },
-        actualTrade:{},ticks:[tick],loadedDecisionFields
-      };
+        virtualTrade:{movementScore:tick.movementScore??0,trendStrength:tick.trendStrength??0,trendStability:tick.trendStability??0,recoveryScore:tick.recoveryScore??0,breakoutStrength:tick.breakoutStrength??0,noiseScore:tick.noiseScore??0,tickQualityScore:tick.tickQualityScore??0,priceSlope:0,stage:tick.stage??''},actualTrade:{},ticks:[tick],loadedDecisionFields};
       candles.push(candle);
     }
     if(!ticks.length) throw new Error('Lifecycle workbook contains no tick rows.');
-    actual['Status']=metadata['Status']??ticks[ticks.length-1].status??'';
-    actual['EntryPrice']=metadata['Entry Price']??ticks.find(x=>x.entryPrice!>0)?.entryPrice??0;
-    actual['ExitPrice']=metadata['Exit Price']??ticks.find(x=>x.exitPrice!>0)?.exitPrice??0;
-    actual['ExitReason']=metadata['Exit Reason']??ticks.find(x=>x.exitReason)?.exitReason??'';
-    actual['EstimatedNetProfit']=metadata['Estimated Net Profit']??0;
-    const symbol=String(metadata['Symbol']??file.name.replace(/\.xlsx$/i,''));
-    const token=String(metadata['Symbol Token']??file.name.match(/_([0-9]+)\.xlsx$/)?.[1]??'');
-    const exchange=String(metadata['Exchange']??'');
-    return {symbol,token,exchange,candles,configuration:{}};
+    actual['Status']=metadata['Status']??ticks[ticks.length-1].status??''; actual['EntryPrice']=metadata['Entry Price']??ticks.find(x=>x.entryPrice!>0)?.entryPrice??0; actual['ExitPrice']=metadata['Exit Price']??ticks.find(x=>x.exitPrice!>0)?.exitPrice??0; actual['ExitReason']=metadata['Exit Reason']??ticks.find(x=>x.exitReason)?.exitReason??''; actual['EstimatedNetProfit']=metadata['Estimated Net Profit']??0;
+    const symbol=String(metadata['Symbol']??file.name.replace(/\.xlsx$/i,'')); const token=String(metadata['Symbol Token']??file.name.match(/_([0-9]+)\.xlsx$/)?.[1]??''); const exchange=String(metadata['Exchange']??'');
+    return {symbol,token,exchange,candles,configuration,configurationSource,configurationCapturedAt};
   }
 
   private parseSheet(sheet:XLSX.WorkSheet,index:number):CandleCapture{

@@ -40,6 +40,7 @@
       <div><span>Skipped</span><b>{{ skippedObservationCount() }}</b><small>missing required decision inputs</small></div>
       <div><span>Chart overlays</span><b>{{ chartOverlayKeys().length }}</b><small>{{ chartOscillatorKeys().length }} oscillator(s)</small></div>
       <div class="health-note"><strong>Replay safety</strong><small>Future prices are used only for outcome attribution/holdout scoring. They never create the original decision inputs.</small></div>
+      <div class="health-note"><strong>Configuration</strong><small>{{ configurationCount() }} captured settings{{ configurationSourceLabel() ? ' · ' + configurationSourceLabel() : '' }}</small></div>
     </section>
 
     <nav class="tabs">
@@ -89,6 +90,14 @@
           <div *ngFor="let key of ['EMA9','EMA21','EMA50','EMA200','VWAP','AnchoredVWAP','RSI','ADX','RelativeVolume','ATR','MACD','MACDSignal','MACDHistogram','BollingerUpper','BollingerMiddle','BollingerLower','Choppiness','EMASlope9','EMASlope21','PullbackDistance','DistanceFromEMA','DistanceFromVWAP']" class="metric"><span>{{key}}</span><b>{{ indicatorValue(key) }}</b></div>
         </div>
       </div>
+      <div class="panel current-config">
+        <div class="panel-head"><div><strong>Current Configuration Used by Replay</strong><small>Loaded from the workbook snapshot generated with the virtual-tick email</small></div><span class="config-source" *ngIf="configurationCapturedAt()">v{{ configurationVersion() || '—' }} · Captured {{ configurationCapturedAt() | date:'medium' }}</span></div>
+        <div *ngIf="configurationCount(); else noConfiguration" class="config-table-wrap">
+          <table class="config-table"><thead><tr><th>Setting</th><th>Current value</th></tr></thead><tbody><tr *ngFor="let item of configurationEntries()"><td>{{item[0]}}</td><td>{{formatConfigurationValue(item[1])}}</td></tr></tbody></table>
+        </div>
+        <ng-template #noConfiguration><div class="config-empty">No configuration snapshot was found in this workbook. Replay will remain conservative and will not invent backend configuration values.</div></ng-template>
+      </div>
+
       <div class="panel indicator-audit">
         <div class="panel-head"><div><strong>Indicator utilisation audit</strong><small>Separates indicators displayed here from indicators that actually participate in evaluation.</small></div></div>
         <div class="audit-note"><b>How to read this:</b> an indicator being visible on the chart does <strong>not</strong> automatically mean it is an independent entry gate. This simulation directly gates on the captured <strong>Signal, Score, Confidence, R/R, Edge and SpreadPercent</strong>. <strong>ATR/Volatility</strong> participate in regime classification. Other indicators are audited as captured inputs; their exact influence is only attributable if the upstream engine exposes its scoring formula/weights. Missing required decision inputs are skipped rather than converted to zero.</div>
@@ -114,9 +123,9 @@
         <div class="module-grid">
           <div><strong>Price chart</strong><p>Shows captured LTP and supported indicator overlays. Replay adds a moving cursor.</p></div>
           <div><strong>Indicators</strong><p>Inspect exact captured values and overlays. The audit distinguishes chart-only, regime, direct-gate and upstream Signal/Score usage.</p></div>
-          <div><strong>Tick tape</strong><p>Use this to trace stage, decision, spread, score and reason tick by tick.</p></div>
+          <div><strong>Tick tape</strong><p>Trace the lifecycle from indicator evaluation to BUY, virtual observation and tick-based execution readiness.</p></div>
           <div><strong>Decision timeline</strong><p>Select an observation to inspect the production-parity BUY/exit gates and debugger.</p></div>
-          <div><strong>Simulation & Fix</strong><p>Run the baseline, test thresholds, learn global/regime policies and review evidence-backed fixes.</p></div>
+          <div><strong>Simulation & Fix</strong><p>Run the baseline using the captured configuration, then test counterfactual thresholds without changing production settings.</p></div>
           <div><strong>Holdout validation</strong><p>Learned settings are evaluated on later observations before they are considered trustworthy; they are not automatically promoted to production.</p></div>
         </div>
       </div>
