@@ -34,6 +34,14 @@
       <div class="stat"><span>Missed opportunity</span><b>{{ simulation().opportunityPercent | number:'1.1-1' }}%</b><small>Replay estimate</small></div><div class="stat"><span>Actual losses</span><b>{{ simulation().actualLosses }}</b><small>{{ simulation().avoidableLosses }} potentially avoidable</small></div>
     </section>
 
+    <section class="data-health" *ngIf="stock() as s">
+      <div><span>Indicators loaded</span><b>{{ indicatorLoadedCount() }}</b><small>of {{ indicatorKeysForUi().length }} tracked</small></div>
+      <div><span>Decision observations</span><b>{{ evaluatedObservationCount() }}</b><small>{{ evaluationCoveragePercent() | number:'1.0-1' }}% evaluation-ready</small></div>
+      <div><span>Skipped</span><b>{{ skippedObservationCount() }}</b><small>missing required decision inputs</small></div>
+      <div><span>Chart overlays</span><b>{{ chartOverlayKeys().length }}</b><small>{{ chartOscillatorKeys().length }} oscillator(s)</small></div>
+      <div class="health-note"><strong>Replay safety</strong><small>Future prices are used only for outcome attribution/holdout scoring. They never create the original decision inputs.</small></div>
+    </section>
+
     <nav class="tabs">
       <button [class.active]="activeTab()==='overview'" (click)="activeTab.set('overview')">Overview</button>
       <button [class.active]="activeTab()==='ticks'" (click)="activeTab.set('ticks')">Tick tape</button>
@@ -51,7 +59,7 @@
             <line x1="42" y1="210" x2="1058" y2="210" class="chart-grid"></line>
             <line x1="42" y1="378" x2="1058" y2="378" class="chart-grid"></line>
             <polyline [attr.points]="chartPoints()" class="price-line"></polyline>
-            <polyline *ngFor="let key of chartOverlayKeys()" [attr.points]="chartOverlayPoints(key)" class="indicator-line"></polyline>
+            <polyline *ngFor="let key of chartOverlayKeys()" [attr.points]="chartOverlayPoints(key)" [attr.class]="'indicator-line indicator-' + key"></polyline>
             <g *ngFor="let marker of chartStageMarkers()">
               <circle [attr.cx]="marker.x" [attr.cy]="marker.y" r="4" [class.entry-marker]="marker.stage==='ENTRY'" [class.exit-marker]="marker.stage==='EXIT'" [class.reject-marker]="marker.stage==='REJECTED'||marker.stage==='EXPIRED'"></circle>
             </g>
@@ -61,6 +69,13 @@
             </g>
           </svg>
           <div class="chart-caption"><span>{{ replayStatus() }}</span><b *ngIf="replayTick() as rt">Tick {{ rt.n }} · ₹{{ rt.ltp | number:'1.2-2' }} · {{ rt.stage || 'VIRTUAL' }}</b></div>
+          <div class="chart-legend"><span class="price-key">Price</span><span *ngFor="let key of chartOverlayKeys()" [class]="'key-' + key">{{ key }}</span><span *ngIf="!chartOverlayKeys().length">No loaded price overlays for this workbook.</span></div>
+          <div class="oscillator-charts" *ngIf="chartOscillatorKeys().length">
+            <div class="oscillator" *ngFor="let key of chartOscillatorKeys()">
+              <div class="oscillator-head"><strong>{{ key }}</strong><span>{{ indicatorValue(key) }}</span></div>
+              <svg viewBox="0 0 1100 160" preserveAspectRatio="none" aria-hidden="true"><line x1="22" y1="22" x2="1078" y2="22" class="chart-grid"></line><line x1="22" y1="80" x2="1078" y2="80" class="chart-grid"></line><line x1="22" y1="138" x2="1078" y2="138" class="chart-grid"></line><polyline [attr.points]="chartSeriesPoints(key)" class="oscillator-line"></polyline></svg>
+            </div>
+          </div>
         </div>
         <ng-template #noChart><div class="chart-placeholder">Upload a lifecycle workbook with tick rows to render the price chart.</div></ng-template>
         <div class="candle-strip"><button *ngFor="let c of candles(); let i=index" [class.selected]="i===selectedCandle()" (click)="selectCandle(i)">{{ c.timestamp | date:'HH:mm' }}</button></div>
@@ -73,6 +88,11 @@
         <div class="indicator-grid">
           <div *ngFor="let key of ['EMA9','EMA21','EMA50','EMA200','VWAP','AnchoredVWAP','RSI','ADX','RelativeVolume','ATR','MACD','MACDSignal','MACDHistogram','BollingerUpper','BollingerMiddle','BollingerLower','Choppiness','EMASlope9','EMASlope21','PullbackDistance','DistanceFromEMA','DistanceFromVWAP']" class="metric"><span>{{key}}</span><b>{{ indicatorValue(key) }}</b></div>
         </div>
+      </div>
+      <div class="panel indicator-audit">
+        <div class="panel-head"><div><strong>Indicator utilisation audit</strong><small>Separates indicators displayed here from indicators that actually participate in evaluation.</small></div></div>
+        <div class="audit-note"><b>How to read this:</b> an indicator being visible on the chart does <strong>not</strong> automatically mean it is an independent entry gate. This simulation directly gates on the captured <strong>Signal, Score, Confidence, R/R, Edge and SpreadPercent</strong>. <strong>ATR/Volatility</strong> participate in regime classification. Other indicators are audited as captured inputs; their exact influence is only attributable if the upstream engine exposes its scoring formula/weights. Missing required decision inputs are skipped rather than converted to zero.</div>
+        <div class="audit-grid"><div *ngFor="let a of indicatorAudit()" class="audit-item"><strong>{{a.name}}</strong><span>{{a.available}}/{{candles().length}} observations</span><small>{{a.usage}}</small></div></div>
       </div>
       <div class="panel decision-card">
         <div class="panel-head"><div><strong>Why did the engine decide this?</strong><small>{{ decision()['reason'] || 'No decision captured' }}</small></div><span class="badge" [class.good]="decision()['signal']==='BUY'">{{ decision()['signal'] || 'HOLD' }}</span></div>
@@ -93,7 +113,7 @@
         </div>
         <div class="module-grid">
           <div><strong>Price chart</strong><p>Shows captured LTP and supported indicator overlays. Replay adds a moving cursor.</p></div>
-          <div><strong>Indicators</strong><p>Inspect the exact values available at the selected decision. A missing indicator should not be treated as a valid signal.</p></div>
+          <div><strong>Indicators</strong><p>Inspect exact captured values and overlays. The audit distinguishes chart-only, regime, direct-gate and upstream Signal/Score usage.</p></div>
           <div><strong>Tick tape</strong><p>Use this to trace stage, decision, spread, score and reason tick by tick.</p></div>
           <div><strong>Decision timeline</strong><p>Select an observation to inspect the production-parity BUY/exit gates and debugger.</p></div>
           <div><strong>Simulation & Fix</strong><p>Run the baseline, test thresholds, learn global/regime policies and review evidence-backed fixes.</p></div>
@@ -123,7 +143,7 @@
           <label>Minimum profit %<input type="number" step="0.05" [(ngModel)]="params.minimumProfitPercent" (change)="runSimulation()"></label>
           <label>Maximum spread %<input type="number" step="0.1" [(ngModel)]="params.maximumSpreadPercent" (change)="runSimulation()"></label>
         </div>
-        <div class="buttons"><button class="primary" [disabled]="actionBusy() || !stock()" (click)="runSimulationFromUi()">Run simulation</button><button class="accent" [disabled]="actionBusy() || !stock()" (click)="optimizeFromUi()">Find stock best config</button><button class="accent" [disabled]="actionBusy() || !stock()" (click)="optimizeGlobalFromUi()">Find GLOBAL config</button><button class="accent" [disabled]="actionBusy() || !stock()" (click)="learnGlobalFromUi()">Learn GLOBAL dynamics</button><button class="accent" [disabled]="actionBusy() || !stock()" (click)="learnRegimeFromUi()">Learn REGIME policies</button><button class="ghost" [disabled]="!stock()" (click)="runLive()">{{playing()?'Pause':'▶ Play live'}}</button></div><div class="action-status" *ngIf="actionStatus() || replayStatus()"><span *ngIf="actionBusy()" class="busy-dot"></span>{{ actionStatus() || replayStatus() }}</div>
+        <div class="buttons"><button class="primary" [disabled]="actionBusy() || !stock()" (click)="runSimulationFromUi()">Run simulation</button><button class="accent" [disabled]="actionBusy() || !stock()" (click)="optimizeFromUi()">Find stock best config</button><button class="accent" [disabled]="actionBusy() || !stock()" (click)="optimizeGlobalFromUi()">Find GLOBAL config</button><button class="accent" [disabled]="actionBusy() || !stock()" (click)="learnGlobalFromUi()">Learn GLOBAL dynamics</button><button class="accent" [disabled]="actionBusy() || !stock()" (click)="learnRegimeFromUi()">Learn REGIME policies</button><button class="ghost" [disabled]="!stock()" (click)="runLive()">{{playing()?'Pause':'▶ Play replay'}}</button></div><div class="action-status" *ngIf="actionStatus() || replayStatus()"><span *ngIf="actionBusy()" class="busy-dot"></span>{{ actionStatus() || replayStatus() }}</div>
       </div>
       <div class="panel result">
         <div class="panel-head"><div><strong>Diagnostic result</strong><small>Evidence from the uploaded window</small></div></div>

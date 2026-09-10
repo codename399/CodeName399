@@ -22,7 +22,10 @@ export class TradingSimulationComponent {
   replayStatus = signal('Ready');
   actionBusy = signal(false);
   actionStatus = signal('');
-  activeTab = signal<'overview'|'ticks'|'decisions'|'simulation'>('overview'); error = signal('');
+  activeTab = signal<'overview'|'ticks'|'decisions'|'simulation'>('overview');
+  error = signal('');
+  evaluatedObservationCount = signal(0);
+  skippedObservationCount = signal(0);
   toggles: Record<string, boolean> = { EMA9:true, EMA21:true, EMA50:true, EMA200:false, VWAP:true, AnchoredVWAP:false, SuperTrend:false, Bollinger:true, RSI:true, MACD:false, ADX:false };
   params = { minimumScore:70, minimumConfidence:65, minimumRiskReward:1.5, minimumExpectedNetValue:0, minimumEdgeScore:45, minimumProfitPercent:0.3, maximumSpreadPercent:1.5, useAdaptiveScore:true };
   simulation = signal<SimulationResult>({ netProfit:0,trades:0,wins:0,losses:0,missed:0,actualLosses:0,avoidableLosses:0,missedProfit:0,bestEntry:0,bestExit:0,bestEntryTime:'',bestExitTime:'',opportunityPercent:0,reasons:[],recommendation:'Upload analysis files to begin.',issues:[],recommendations:[] });
@@ -145,7 +148,7 @@ export class TradingSimulationComponent {
   }
 
   runSimulation():void {
-    const stock=this.stock(); if(!stock)return; const candles=stock.candles.filter(c=>c.candle.close>0 && this.evaluationReady(c)); const issues:DiagnosticIssue[]=[]; const reasons=new Map<string,number>();
+    const stock=this.stock(); if(!stock)return; const allCandles=stock.candles; const candles=allCandles.filter(c=>c.candle.close>0 && this.evaluationReady(c)); this.evaluatedObservationCount.set(candles.length); this.skippedObservationCount.set(Math.max(0,allCandles.length-candles.length)); const issues:DiagnosticIssue[]=[]; const reasons=new Map<string,number>();
     let net=0,trades=0,wins=0,losses=0,missed=0,actualLosses=0,avoidableLosses=0,missedProfit=0; let bestEntry=0,bestExit=0,bestEntryTime='',bestExitTime='';
     const allTicks=stock.candles.flatMap(c=>c.ticks).filter(t=>t.ltp>0).sort((a,b)=>this.time(a)-this.time(b));
     const globalPair=this.bestPair(allTicks); if(globalPair){bestEntry=globalPair.entry;bestExit=globalPair.exit;bestEntryTime=globalPair.entryTime;bestExitTime=globalPair.exitTime;}
@@ -153,7 +156,7 @@ export class TradingSimulationComponent {
 
     candles.forEach((c,i)=>{
       const d=c.decision; const p=c.candle.close; const score=this.num(d['score']); const conf=this.num(d['adaptiveConfidence']); const rr=this.num(d['adaptiveRiskReward']); const edge=this.num(d['adaptiveEdgeScore']);
-      const spread=this.num(c.indicators['SpreadPercent'] ?? c.indicators['spreadPercent']);
+      const spread=this.num(this.indicatorLookup(c.indicators,'SpreadPercent') ?? c.ticks[0]?.spreadPct);
       const technicalBuy=String(d['signal']??'').toUpperCase()==='BUY';
       const scorePass=score>=this.params.minimumScore, confPass=!this.params.useAdaptiveScore||conf>=this.params.minimumConfidence, rrPass=!this.params.useAdaptiveScore||rr>=this.params.minimumRiskReward, edgePass=!this.params.useAdaptiveScore||edge>=this.params.minimumEdgeScore, spreadPass=spread<=this.params.maximumSpreadPercent;
       const passes=technicalBuy&&scorePass&&confPass&&rrPass&&edgePass&&spreadPass;
@@ -169,7 +172,7 @@ export class TradingSimulationComponent {
       void futureWorst; void lossPct;
     });
     const opportunity=candles.length?missed/candles.length*100:0; const top=[...reasons.entries()].sort((a,b)=>b[1]-a[1]).slice(0,8).map(([r,n])=>`${r} (${n})`);
-    const replay=this.replayProductionDecision(stock, candles, this.selectedCandle());
+    const replay=this.replayProductionDecision(stock, allCandles, this.selectedCandle());
     const futurePaths=this.analyzeAllTradePaths(stock, allTicks);
     const futurePath=futurePaths[futurePaths.length-1];
     const recommendations=this.buildRecommendations(recommendationEvidence); const recommendation=this.recommendation(top,recommendations,missed,actualLosses,avoidableLosses);
@@ -328,7 +331,7 @@ export class TradingSimulationComponent {
   }
   private evaluateRows(rows:Array<{stock:StockCapture,candle:CandleCapture,index:number}>,params:any):any {
     let netProfit=0,missed=0,missedProfit=0,losses=0,observations=0,profitableOpportunities=0;
-    for(const row of rows){const c=row.candle,d=c.decision,p=c.candle.close;if(!p||!this.evaluationReady(c))continue;const future=this.futureTicks(row.stock.candles,row.index);if(!future.length)continue;observations++;const best=Math.max(p,...future.map(t=>t.ltp));const gain=(best-p)/p*100;if(gain>params.minimumProfitPercent)profitableOpportunities++;const spread=this.num(c.indicators['SpreadPercent']??c.indicators['spreadPercent']);const pass=String(d['signal']??'').toUpperCase()==='BUY'&&this.num(d['score'])>=params.minimumScore&&(!params.useAdaptiveScore||this.num(d['adaptiveConfidence'])>=params.minimumConfidence)&&(!params.useAdaptiveScore||this.num(d['adaptiveRiskReward'])>=params.minimumRiskReward)&&(!params.useAdaptiveScore||this.num(d['adaptiveEdgeScore'])>=params.minimumEdgeScore)&&spread<=params.maximumSpreadPercent;const value=Math.max(0,p*(gain-params.minimumProfitPercent)/100);if(pass){netProfit+=value;const worst=Math.min(p,...future.map(t=>t.ltp));if(worst<p*.997)losses++;}else if(gain>params.minimumProfitPercent){missed++;missedProfit+=value;}}
+    for(const row of rows){const c=row.candle,d=c.decision,p=c.candle.close;if(!p||!this.evaluationReady(c))continue;const future=this.futureTicks(row.stock.candles,row.index);if(!future.length)continue;observations++;const best=Math.max(p,...future.map(t=>t.ltp));const gain=(best-p)/p*100;if(gain>params.minimumProfitPercent)profitableOpportunities++;const spread=this.num(this.indicatorLookup(c.indicators,'SpreadPercent') ?? c.ticks[0]?.spreadPct);const pass=String(d['signal']??'').toUpperCase()==='BUY'&&this.num(d['score'])>=params.minimumScore&&(!params.useAdaptiveScore||this.num(d['adaptiveConfidence'])>=params.minimumConfidence)&&(!params.useAdaptiveScore||this.num(d['adaptiveRiskReward'])>=params.minimumRiskReward)&&(!params.useAdaptiveScore||this.num(d['adaptiveEdgeScore'])>=params.minimumEdgeScore)&&spread<=params.maximumSpreadPercent;const value=Math.max(0,p*(gain-params.minimumProfitPercent)/100);if(pass){netProfit+=value;const worst=Math.min(p,...future.map(t=>t.ltp));if(worst<p*.997)losses++;}else if(gain>params.minimumProfitPercent){missed++;missedProfit+=value;}}
     return {netProfit,missed,missedProfit,losses,observations,profitableOpportunities};
   }
   private evaluateRegimeHoldout(regimes:RegimeConfiguration[]):{improvement:number;lossIncrease:number}{
@@ -341,7 +344,7 @@ export class TradingSimulationComponent {
     let netProfit=0, base=0, missed=0, losses=0, observations=0;
     for(const stock of this.stocks()){
       const cs=stock.candles.filter(c=>c.candle.close>0); const cut=Math.max(1,Math.floor(cs.length*.7));
-      for(let i=cut;i<cs.length;i++){const c=cs[i],d=c.decision,p=c.candle.close;if(!p||!this.evaluationReady(c))continue;const future=this.futureTicks(cs,i);if(!future.length)continue;observations++;const gain=(Math.max(p,...future.map(t=>t.ltp))-p)/p*100;const signal=String(d['signal']??'').toUpperCase()==='BUY';const score=this.num(d['score']),conf=this.num(d['adaptiveConfidence']),rr=this.num(d['adaptiveRiskReward']),edge=this.num(d['adaptiveEdgeScore']),spread=this.num(c.indicators['SpreadPercent']??c.indicators['spreadPercent']);const pass=signal&&score>=params.minimumScore&&(!params.useAdaptiveScore||conf>=params.minimumConfidence)&&(!params.useAdaptiveScore||rr>=params.minimumRiskReward)&&(!params.useAdaptiveScore||edge>=params.minimumEdgeScore)&&spread<=params.maximumSpreadPercent;const value=Math.max(0,p*(gain-params.minimumProfitPercent)/100);if(pass){netProfit+=value;if(gain<0)losses++;}else if(gain>params.minimumProfitPercent){missed++;}const bpass=signal&&score>=this.params.minimumScore&&(!this.params.useAdaptiveScore||conf>=this.params.minimumConfidence)&&(!this.params.useAdaptiveScore||rr>=this.params.minimumRiskReward)&&(!this.params.useAdaptiveScore||edge>=this.params.minimumEdgeScore)&&spread<=this.params.maximumSpreadPercent;if(bpass)base+=value;}
+      for(let i=cut;i<cs.length;i++){const c=cs[i],d=c.decision,p=c.candle.close;if(!p||!this.evaluationReady(c))continue;const future=this.futureTicks(cs,i);if(!future.length)continue;observations++;const gain=(Math.max(p,...future.map(t=>t.ltp))-p)/p*100;const signal=String(d['signal']??'').toUpperCase()==='BUY';const score=this.num(d['score']),conf=this.num(d['adaptiveConfidence']),rr=this.num(d['adaptiveRiskReward']),edge=this.num(d['adaptiveEdgeScore']),spread=this.num(this.indicatorLookup(c.indicators,'SpreadPercent') ?? c.ticks[0]?.spreadPct);const pass=signal&&score>=params.minimumScore&&(!params.useAdaptiveScore||conf>=params.minimumConfidence)&&(!params.useAdaptiveScore||rr>=params.minimumRiskReward)&&(!params.useAdaptiveScore||edge>=params.minimumEdgeScore)&&spread<=params.maximumSpreadPercent;const value=Math.max(0,p*(gain-params.minimumProfitPercent)/100);if(pass){netProfit+=value;if(gain<0)losses++;}else if(gain>params.minimumProfitPercent){missed++;}const bpass=signal&&score>=this.params.minimumScore&&(!this.params.useAdaptiveScore||conf>=this.params.minimumConfidence)&&(!this.params.useAdaptiveScore||rr>=this.params.minimumRiskReward)&&(!this.params.useAdaptiveScore||edge>=this.params.minimumEdgeScore)&&spread<=this.params.maximumSpreadPercent;if(bpass)base+=value;}
     }
     return {netProfit,improvement:netProfit-base,missed,losses,observations};
   }
@@ -353,7 +356,7 @@ export class TradingSimulationComponent {
 
   private globalRobustness(params:any):GlobalLearningResult['robustness'] {
     let covered=0,positive=0,total=0,worst=Infinity,maxLossIncrease=0;
-    for(const stock of this.stocks()){total++;const cs=stock.candles.filter(c=>c.candle.close>0);const cut=Math.max(1,Math.floor(cs.length*.7));let base=0,opt=0;for(let i=cut;i<cs.length;i++){const c=cs[i],d=c.decision,p=c.candle.close;if(!p)continue;const f=this.futureTicks(cs,i);if(!f.length)continue;const gain=(Math.max(p,...f.map(t=>t.ltp))-p)/p*100;const score=this.num(d['score']),conf=this.num(d['adaptiveConfidence']),rr=this.num(d['adaptiveRiskReward']),edge=this.num(d['adaptiveEdgeScore']),spread=this.num(c.indicators['SpreadPercent']??c.indicators['spreadPercent']);const value=Math.max(0,p*(gain-params.minimumProfitPercent)/100);const pass=(x:any)=>String(d['signal']??'').toUpperCase()==='BUY'&&score>=x.minimumScore&&(!x.useAdaptiveScore||conf>=x.minimumConfidence)&&(!x.useAdaptiveScore||rr>=x.minimumRiskReward)&&(!x.useAdaptiveScore||edge>=x.minimumEdgeScore)&&spread<=x.maximumSpreadPercent;if(pass(this.params))base+=value;if(pass(params))opt+=value;}if(base||opt){covered++;if(opt>=base)positive++;worst=Math.min(worst,opt-base);}}
+    for(const stock of this.stocks()){total++;const cs=stock.candles.filter(c=>c.candle.close>0);const cut=Math.max(1,Math.floor(cs.length*.7));let base=0,opt=0;for(let i=cut;i<cs.length;i++){const c=cs[i],d=c.decision,p=c.candle.close;if(!p)continue;const f=this.futureTicks(cs,i);if(!f.length)continue;const gain=(Math.max(p,...f.map(t=>t.ltp))-p)/p*100;const score=this.num(d['score']),conf=this.num(d['adaptiveConfidence']),rr=this.num(d['adaptiveRiskReward']),edge=this.num(d['adaptiveEdgeScore']),spread=this.num(this.indicatorLookup(c.indicators,'SpreadPercent') ?? c.ticks[0]?.spreadPct);const value=Math.max(0,p*(gain-params.minimumProfitPercent)/100);const pass=(x:any)=>String(d['signal']??'').toUpperCase()==='BUY'&&score>=x.minimumScore&&(!x.useAdaptiveScore||conf>=x.minimumConfidence)&&(!x.useAdaptiveScore||rr>=x.minimumRiskReward)&&(!x.useAdaptiveScore||edge>=x.minimumEdgeScore)&&spread<=x.maximumSpreadPercent;if(pass(this.params))base+=value;if(pass(params))opt+=value;}if(base||opt){covered++;if(opt>=base)positive++;worst=Math.min(worst,opt-base);}}
     return {stockCoveragePercent:total?covered/total*100:0,positiveHoldoutStocks:positive,totalHoldoutStocks:total,worstStockImprovement:worst===Infinity?0:worst,maxLossIncrease:0};
   }
 
@@ -463,24 +466,57 @@ export class TradingSimulationComponent {
 
   private evaluateGlobalSplit(params:any):GlobalConfigurationResult['validation'] {
     const stocks=this.stocks(); let trainObs=0,testObs=0,trainBase=0,trainOpt=0,testBase=0,testOpt=0,baseLoss=0,optLoss=0;
-    for(const stock of stocks){ const candles=stock.candles.filter(c=>c.candle.close>0); const cut=Math.max(1,Math.floor(candles.length*.7)); for(let i=0;i<candles.length;i++){const c=candles[i],d=c.decision,p=c.candle.close;const future=this.futureTicks(candles,i);if(!future.length||!p)continue;const gain=(Math.max(p,...future.map(t=>t.ltp))-p)/p*100;const score=this.num(d['score']),conf=this.num(d['adaptiveConfidence']),rr=this.num(d['adaptiveRiskReward']),edge=this.num(d['adaptiveEdgeScore']),spread=this.num(c.indicators['SpreadPercent']??c.indicators['spreadPercent']);const current=String(d['signal']??'').toUpperCase()==='BUY'&&score>=this.params.minimumScore&&(!this.params.useAdaptiveScore||conf>=this.params.minimumConfidence)&&(!this.params.useAdaptiveScore||rr>=this.params.minimumRiskReward)&&(!this.params.useAdaptiveScore||edge>=this.params.minimumEdgeScore)&&spread<=this.params.maximumSpreadPercent;const opt=String(d['signal']??'').toUpperCase()==='BUY'&&score>=params.minimumScore&&(!params.useAdaptiveScore||conf>=params.minimumConfidence)&&(!params.useAdaptiveScore||rr>=params.minimumRiskReward)&&(!params.useAdaptiveScore||edge>=params.minimumEdgeScore)&&spread<=params.maximumSpreadPercent;const isTrain=i<cut;if(isTrain){trainObs++;trainBase+=current?Math.max(0,p*(gain-this.params.minimumProfitPercent)/100):0;trainOpt+=opt?Math.max(0,p*(gain-params.minimumProfitPercent)/100):0;}else{testObs++;testBase+=current?Math.max(0,p*(gain-this.params.minimumProfitPercent)/100):0;testOpt+=opt?Math.max(0,p*(gain-params.minimumProfitPercent)/100):0;}if(current&&gain<0)baseLoss++;if(opt&&gain<0)optLoss++;}}
+    for(const stock of stocks){ const candles=stock.candles.filter(c=>c.candle.close>0); const cut=Math.max(1,Math.floor(candles.length*.7)); for(let i=0;i<candles.length;i++){const c=candles[i],d=c.decision,p=c.candle.close;const future=this.futureTicks(candles,i);if(!future.length||!p)continue;const gain=(Math.max(p,...future.map(t=>t.ltp))-p)/p*100;const score=this.num(d['score']),conf=this.num(d['adaptiveConfidence']),rr=this.num(d['adaptiveRiskReward']),edge=this.num(d['adaptiveEdgeScore']),spread=this.num(this.indicatorLookup(c.indicators,'SpreadPercent') ?? c.ticks[0]?.spreadPct);const current=String(d['signal']??'').toUpperCase()==='BUY'&&score>=this.params.minimumScore&&(!this.params.useAdaptiveScore||conf>=this.params.minimumConfidence)&&(!this.params.useAdaptiveScore||rr>=this.params.minimumRiskReward)&&(!this.params.useAdaptiveScore||edge>=this.params.minimumEdgeScore)&&spread<=this.params.maximumSpreadPercent;const opt=String(d['signal']??'').toUpperCase()==='BUY'&&score>=params.minimumScore&&(!params.useAdaptiveScore||conf>=params.minimumConfidence)&&(!params.useAdaptiveScore||rr>=params.minimumRiskReward)&&(!params.useAdaptiveScore||edge>=params.minimumEdgeScore)&&spread<=params.maximumSpreadPercent;const isTrain=i<cut;if(isTrain){trainObs++;trainBase+=current?Math.max(0,p*(gain-this.params.minimumProfitPercent)/100):0;trainOpt+=opt?Math.max(0,p*(gain-params.minimumProfitPercent)/100):0;}else{testObs++;testBase+=current?Math.max(0,p*(gain-this.params.minimumProfitPercent)/100):0;testOpt+=opt?Math.max(0,p*(gain-params.minimumProfitPercent)/100):0;}if(current&&gain<0)baseLoss++;if(opt&&gain<0)optLoss++;}}
     const trainImprovement=trainOpt-trainBase,testImprovement=testOpt-testBase,coverage=(trainObs+testObs)?((trainObs+testObs)/Math.max(1,stocks.reduce((n,s)=>n+s.candles.length,0)))*100:0; return {trainObservations:trainObs,testObservations:testObs,trainImprovement,testImprovement,coveragePercent:Math.min(100,coverage),maxLossIncrease:Math.max(0,optLoss-baseLoss),rollbackRule:'Do not promote if holdout improvement ≤ 0 or simulated losses increase; rollback to the prior configuration.'};
   }
 
-  indicatorValue(name:string):string { const v=this.indicators()[name];return v===undefined?'—':typeof v==='number'?v.toFixed(3):String(v); }
+  private indicatorKeys = ['EMA9','EMA21','EMA50','EMA200','VWAP','AnchoredVWAP','SuperTrend','BollingerUpper','BollingerMiddle','BollingerLower','RSI','MACD','MACDSignal','MACDHistogram','ADX','RelativeVolume','ATR','Choppiness','EMASlope9','EMASlope21','PullbackDistance','DistanceFromEMA','DistanceFromVWAP'];
+  private priceOverlayKeys = ['EMA9','EMA21','EMA50','EMA200','VWAP','AnchoredVWAP','SuperTrend','BollingerUpper','BollingerMiddle','BollingerLower'];
+  private oscillatorKeys = ['RSI','MACD','MACDSignal','MACDHistogram','ADX'];
+  private indicatorLookup(source:Indicators|undefined,name:string):unknown {
+    if(!source)return undefined;if(source[name]!==undefined)return source[name];const wanted=name.toLowerCase().replace(/[^a-z0-9]/g,'');const found=Object.keys(source).find(k=>k.toLowerCase().replace(/[^a-z0-9]/g,'')===wanted);return found?source[found]:undefined;
+  }
+  private canonicalIndicatorName(name:string):string|undefined {
+    const n=name.trim().toLowerCase().replace(/[^a-z0-9]/g,'');const a:Record<string,string>={ema9:'EMA9',ema21:'EMA21',ema50:'EMA50',ema200:'EMA200',vwap:'VWAP',anchoredvwap:'AnchoredVWAP',avwap:'AnchoredVWAP',supertrend:'SuperTrend',bollinger:'BollingerMiddle',bollingerupper:'BollingerUpper',bollingerbandupper:'BollingerUpper',bollingermiddle:'BollingerMiddle',bollingerbandmiddle:'BollingerMiddle',bollingerlower:'BollingerLower',bollingerbandlower:'BollingerLower',rsi:'RSI',macd:'MACD',macdsignal:'MACDSignal',macdhistogram:'MACDHistogram',macdhist:'MACDHistogram',adx:'ADX',relativevolume:'RelativeVolume',relvolume:'RelativeVolume',atr:'ATR',volatility:'Volatility',choppiness:'Choppiness',emaslope9:'EMASlope9',emaslope21:'EMASlope21',pullbackdistance:'PullbackDistance',distancefromema:'DistanceFromEMA',distancefromvwap:'DistanceFromVWAP',spreadpercent:'SpreadPercent',spreadpct:'SpreadPercent',signal:'Signal',score:'Score',finalscore:'Score',adaptiveexpectednetvalue:'AdaptiveExpectedNetValue',adaptiveedgescore:'AdaptiveEdgeScore',adaptiveriskreward:'AdaptiveRiskReward'};return a[n];
+  }
+  private tickIndicatorValue(index:number,key:string):unknown {const c=this.candles()[index],t=c?.ticks?.[0];return this.indicatorLookup(t?.indicators,key) ?? this.indicatorLookup(c?.indicators,key);}
+  indicatorValue(name:string):string { const v=this.indicatorLookup(this.indicators(),name);return v===undefined||v===''?'—':typeof v==='number'?v.toFixed(3):String(v); }
+  indicatorPresence(name:string):number { return this.candles().filter(c=>{const v=this.indicatorLookup(c.indicators,name) ?? this.indicatorLookup(c.ticks?.[0]?.indicators,name);return v!==undefined&&v!==null&&String(v)!=='';}).length; }
+  indicatorLoadedCount():number{return this.indicatorKeys.filter(k=>this.indicatorPresence(k)>0).length;}
+  indicatorKeysForUi():string[]{return this.indicatorKeys;}
+  evaluationCoveragePercent():number{const total=this.candles().length;return total?this.evaluatedObservationCount()/total*100:0;}
+  indicatorAudit(): Array<{name:string;available:number;usage:string}> {
+    const direct=new Set(['SpreadPercent','ATR','Volatility']);
+    const indirect=new Set(['EMA9','EMA21','EMA50','EMA200','VWAP','AnchoredVWAP','SuperTrend','BollingerUpper','BollingerMiddle','BollingerLower','RSI','MACD','MACDSignal','MACDHistogram','ADX','RelativeVolume','Choppiness','EMASlope9','EMASlope21','PullbackDistance','DistanceFromEMA','DistanceFromVWAP']);
+    return [...new Set([...this.indicatorKeys,'SpreadPercent','Volatility'])].map(name=>({
+      name, available:this.indicatorPresence(name),
+      usage: direct.has(name) ? (name==='SpreadPercent' ? 'Direct evaluation gate' : 'Direct regime classification / context') : indirect.has(name) ? 'Captured value; upstream Signal/Score may depend on it, but this page does not invent a separate threshold.' : 'Displayed / contextual only'
+    }));
+  }
+  chartOverlayKeys(): string[] { return this.priceOverlayKeys.filter(k => this.toggles[k.startsWith('Bollinger')?'Bollinger':k] && this.candles().some((_,i)=>{const v=this.tickIndicatorValue(i,k);return v!==undefined&&v!==null&&String(v)!==''&&Number.isFinite(this.num(v));})); }
+  chartOscillatorKeys(): string[] { return this.oscillatorKeys.filter(k => this.toggles[k] && this.candles().some((_,i)=>{const v=this.tickIndicatorValue(i,k);return v!==undefined&&v!==null&&String(v)!==''&&Number.isFinite(this.num(v));})); }
+  chartSeriesPoints(key:string): string { return this.chartIndicatorPoints(key, this.chartOscillatorKeys().includes(key) ? 1100 : 1100, this.chartOscillatorKeys().includes(key) ? 160 : 420); }
+  chartIndicatorPoints(key:string,width=1100,height=420): string {
+    const cs=this.candles(); if(!cs.length)return '';
+    const vals=cs.map((_,i)=>this.num(this.tickIndicatorValue(i,key))).filter(v=>Number.isFinite(v)); if(!vals.length)return '';
+    const min=Math.min(...vals),max=Math.max(...vals),range=Math.max(0.0001,max-min),pad=22;
+    const x=(i:number)=>pad+i*((width-pad*2)/Math.max(1,cs.length-1)); const y=(v:number)=>height-pad-((v-min)/range)*(height-pad*2);
+    return cs.map((_,i)=>{const raw=this.tickIndicatorValue(i,key);if(raw===undefined||raw===null||String(raw)==='')return '';const v=this.num(raw);return `${x(i).toFixed(1)},${y(v).toFixed(1)}`}).filter(Boolean).join(' ');
+  }
+  chartOscillatorY(key:string,tick:Tick):number {
+    const vals=(this.stock()?.candles.flatMap(c=>c.ticks)??[]).map(t=>this.num(this.indicatorLookup(t.indicators,key))).filter(v=>Number.isFinite(v)); if(!vals.length)return 80;
+    const min=Math.min(...vals),max=Math.max(...vals),range=Math.max(.0001,max-min),v=this.num(this.indicatorLookup(tick.indicators,key)); return 140-18-((v-min)/range)*104;
+  }
   private time(t:Tick):number { return new Date(t.exchangeTime||t.utc).getTime(); }
   num(v:unknown):number { const n=Number(v);return Number.isFinite(n)?n:0; }
   private format(v:string):string { const d=new Date(v);return Number.isNaN(d.getTime())?v:d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
   private futureTicks(c:CandleCapture[],i:number):Tick[]{return c.slice(i+1).flatMap(x=>x.ticks).filter(t=>t.ltp>0).sort((a,b)=>this.time(a)-this.time(b));}
 
-  private evaluationReady(c:CandleCapture): boolean {
-    const d = c.decision;
-    const signal = String(d['signal'] ?? '').trim();
-    const score = d['score'];
-    if (!signal || score === undefined || score === null || !Number.isFinite(Number(score))) return false;
-    if (!this.params.useAdaptiveScore) return true;
-    return ['adaptiveConfidence','adaptiveRiskReward','adaptiveEdgeScore']
-      .every(key => d[key] !== undefined && d[key] !== null && Number.isFinite(Number(d[key])));
+  private evaluationReady(c:CandleCapture):boolean {
+    const loadedDecisionFields = c.loadedDecisionFields ?? [];
+    if(!loadedDecisionFields.includes('Signal') || !loadedDecisionFields.includes('Score')) return false;
+    if(this.params.useAdaptiveScore && !['Confidence','AdaptiveRiskReward','AdaptiveEdgeScore'].every(k=>loadedDecisionFields.includes(k))) return false;
+    return loadedDecisionFields.includes('SpreadPercent');
   }
   private gates(d:Record<string,string|number|boolean>,score:number,conf:number,rr:number,edge:number,spread:number,technical:boolean,sp:boolean,cp:boolean,rp:boolean,ep:boolean,spreadPass:boolean):string[]{const g:string[]=[];if(!technical)g.push(`Technical signal=${d['signal']??'HOLD'}`);if(!sp)g.push(`Minimum score ${this.params.minimumScore} blocked score ${score}`);if(!cp)g.push(`Minimum confidence ${this.params.minimumConfidence} blocked confidence ${conf.toFixed(1)}`);if(!rp)g.push(`Minimum R/R ${this.params.minimumRiskReward.toFixed(2)} blocked R/R ${rr.toFixed(2)}`);if(!ep)g.push(`Minimum edge ${this.params.minimumEdgeScore} blocked edge ${edge.toFixed(1)}`);if(!spreadPass)g.push(`Maximum spread ${this.params.maximumSpreadPercent}% blocked spread ${spread.toFixed(2)}%`);const gf=String(d['gateFailures']??'');if(gf&&g.length===0)g.push(gf.split('|')[0]);return g;}
   private gateValue(g:string,s:number,c:number,rr:number,e:number,sp:number):number {if(/score/i.test(g))return s;if(/confidence/i.test(g))return c;if(/R\/R/i.test(g))return rr;if(/edge/i.test(g))return e;if(/spread/i.test(g))return sp;return 0;}
@@ -504,7 +540,7 @@ export class TradingSimulationComponent {
       for(let i=0;i<candles.length;i++){
         const c=candles[i],d=c.decision,p=c.candle.close;if(!p||!this.evaluationReady(c))continue;observations++;
         const score=this.num(d['score']),conf=this.num(d['adaptiveConfidence']),rr=this.num(d['adaptiveRiskReward']),edge=this.num(d['adaptiveEdgeScore']);
-        const spread=this.num(c.indicators['SpreadPercent']??c.indicators['spreadPercent']);
+        const spread=this.num(this.indicatorLookup(c.indicators,'SpreadPercent') ?? c.ticks[0]?.spreadPct);
         const technical=String(d['signal']??'').toUpperCase()==='BUY';
         const passes=technical&&score>=params.minimumScore&&(!params.useAdaptiveScore||conf>=params.minimumConfidence)&&(!params.useAdaptiveScore||rr>=params.minimumRiskReward)&&(!params.useAdaptiveScore||edge>=params.minimumEdgeScore)&&spread<=params.maximumSpreadPercent;
         const future=this.futureTicks(candles,i);if(!future.length)continue;
@@ -556,7 +592,9 @@ export class TradingSimulationComponent {
     const headerIndex=rows.findIndex((r:unknown[])=>String(r[0]??'').trim()==='TickNumber');
     if(headerIndex<0) throw new Error('No lifecycle tick table found. Expected a TickNumber header.');
     const headers=(rows[headerIndex] as unknown[]).map(x=>String(x??'').trim());
-    const indexOf=(name:string)=>headers.findIndex(h=>h===name);
+    const indexOf=(name:string)=>{const w=name.toLowerCase().replace(/[^a-z0-9]/g,'');return headers.findIndex(h=>h.toLowerCase().replace(/[^a-z0-9]/g,'')===w);};
+    const firstIndex=(...names:string[])=>{for(const name of names){const idx=indexOf(name);if(idx>=0)return idx;}return -1;};
+    const hasAny=(...names:string[])=>firstIndex(...names)>=0;
     const ticks:Tick[]=[];
     const candles:CandleCapture[]=[];
     const metadata:Record<string,string|number|boolean>={};
@@ -570,13 +608,19 @@ export class TradingSimulationComponent {
       if(!r.length || String(r[indexOf('TickNumber')]??'').trim()==='') continue;
       const indicators:Indicators={};
       for(let j=0;j<headers.length;j++){
-        if(headers[j].startsWith('Indicator.')) indicators[headers[j].substring(10)]=this.value(r[j]);
+        const header=headers[j].trim(); if(!header) continue;
+        const rawName=header.toLowerCase().startsWith('indicator.')?header.substring(header.indexOf('.')+1):header;
+        const canonical=this.canonicalIndicatorName(rawName);
+        if(canonical) indicators[canonical]=this.value(r[j]);
       }
+      const loadedDecisionFields:string[]=[];
+      const fieldAliases:Record<string,string[]>={Signal:['Signal','Decision'],Score:['Score','FinalScore'],Confidence:['Confidence','AdaptiveConfidence'],AdaptiveRiskReward:['AdaptiveRiskReward','RiskReward'],AdaptiveEdgeScore:['AdaptiveEdgeScore','EdgeScore'],AdaptiveExpectedNetValue:['AdaptiveExpectedNetValue','ExpectedNetValue'],SpreadPercent:['SpreadPercent','SpreadPct']};
+      for(const [field,aliases] of Object.entries(fieldAliases)){const idx=firstIndex(...aliases);if(idx>=0&&String(r[idx]??'').trim()!=='')loadedDecisionFields.push(field);}
       const tick:Tick={
         n:this.num(r[indexOf('TickNumber')]), utc:this.iso(r[indexOf('TimestampUtc')]),
         exchangeTime:this.iso(r[indexOf('ExchangeTime')]), sequence:this.num(r[indexOf('SequenceNumber')]),
         ltp:this.num(r[indexOf('Price')]), bid:this.num(r[indexOf('Bid')]), ask:this.num(r[indexOf('Ask')]),
-        spread:this.num(r[indexOf('Spread')]), spreadPct:this.num(r[indexOf('SpreadPercent')]),
+        spread:this.num(r[indexOf('Spread')]), spreadPct:this.num(r[firstIndex('SpreadPercent','SpreadPct')]),
         open:this.num(r[indexOf('Price')]), high:this.num(r[indexOf('High')]), low:this.num(r[indexOf('Low')]),
         close:this.num(r[indexOf('Price')]), ltq:0, avgPrice:0, dayVolume:this.num(r[indexOf('Volume')]),
         buyQty:0, sellQty:0,
@@ -585,9 +629,9 @@ export class TradingSimulationComponent {
         movementScore:this.num(r[indexOf('MovementScore')]), trendStrength:this.num(r[indexOf('TrendStrength')]),
         trendStability:this.num(r[indexOf('TrendStability')]), recoveryScore:this.num(r[indexOf('RecoveryScore')]),
         breakoutStrength:this.num(r[indexOf('BreakoutStrength')]), noiseScore:this.num(r[indexOf('NoiseScore')]),
-        tickQualityScore:this.num(r[indexOf('TickQualityScore')]), confidence:this.num(r[indexOf('Confidence')]),
-        adaptiveExpectedNetValue:this.num(r[indexOf('AdaptiveExpectedNetValue')]),
-        adaptiveEdgeScore:this.num(r[indexOf('AdaptiveEdgeScore')]), adaptiveRiskReward:this.num(r[indexOf('AdaptiveRiskReward')]),
+        tickQualityScore:this.num(r[indexOf('TickQualityScore')]), confidence:this.num(r[firstIndex('Confidence','AdaptiveConfidence')]),
+        adaptiveExpectedNetValue:this.num(r[firstIndex('AdaptiveExpectedNetValue','ExpectedNetValue')]),
+        adaptiveEdgeScore:this.num(r[firstIndex('AdaptiveEdgeScore','EdgeScore')]), adaptiveRiskReward:this.num(r[firstIndex('AdaptiveRiskReward','RiskReward')]),
         entryPrice:this.num(r[indexOf('EntryPrice')]), exitPrice:this.num(r[indexOf('ExitPrice')]),
         stopLoss:this.num(r[indexOf('StopLoss')]), targetPrice:this.num(r[indexOf('TargetPrice')]),
         exitReason:String(r[indexOf('ExitReason')]??''), indicators
@@ -598,21 +642,14 @@ export class TradingSimulationComponent {
         index:candles.length,timestamp:tick.utc||tick.exchangeTime,
         candle:{timestamp:tick.utc||tick.exchangeTime,open:close,high:close,low:close,close,volume:tick.dayVolume},
         indicators,
-        decision:{
-          signal:String(indicators['Signal']??''),
-          score:this.num(indicators['Score']),
-          adaptiveConfidence:tick.confidence??0,
-          adaptiveRiskReward:tick.adaptiveRiskReward??0,
-          adaptiveEdgeScore:tick.adaptiveEdgeScore??0,
-          expectedNetValue:tick.adaptiveExpectedNetValue??0
-        },
+        decision:(()=>{const d:Record<string,string|number|boolean>={};if(indicators['Signal']!==undefined||tick.decision)d['signal']=String(indicators['Signal']??tick.decision??'');if(indicators['Score']!==undefined)d['score']=this.num(indicators['Score']);if(loadedDecisionFields.includes('Confidence'))d['adaptiveConfidence']=this.num(tick.confidence);if(loadedDecisionFields.includes('AdaptiveRiskReward'))d['adaptiveRiskReward']=this.num(tick.adaptiveRiskReward);if(loadedDecisionFields.includes('AdaptiveEdgeScore'))d['adaptiveEdgeScore']=this.num(tick.adaptiveEdgeScore);if(loadedDecisionFields.includes('AdaptiveExpectedNetValue'))d['adaptiveExpectedNetValue']=this.num(tick.adaptiveExpectedNetValue);return d;})(),
         virtualTrade:{
           movementScore:tick.movementScore??0, trendStrength:tick.trendStrength??0,
           trendStability:tick.trendStability??0, recoveryScore:tick.recoveryScore??0,
           breakoutStrength:tick.breakoutStrength??0, noiseScore:tick.noiseScore??0,
           tickQualityScore:tick.tickQualityScore??0, priceSlope:0, stage:tick.stage??''
         },
-        actualTrade:actual,ticks:[tick]
+        actualTrade:{},ticks:[tick],loadedDecisionFields
       };
       candles.push(candle);
     }
@@ -633,64 +670,16 @@ export class TradingSimulationComponent {
   }
 
   chartPoints(): string {
-    const ticks = this.stock()?.candles.flatMap(c => c.ticks).filter(t => t.ltp > 0) ?? [];
-    if (!ticks.length) return '';
-    const prices = ticks.map(t => t.ltp);
-    const overlays = ['EMA9','EMA21','EMA50','EMA200','VWAP','AnchoredVWAP'].filter(k => this.toggles[k])
-      .flatMap(k => ticks.map(t => this.num(t.indicators?.[k])).filter(v => v > 0));
-    const min = Math.min(...prices, ...overlays);
-    const max = Math.max(...prices, ...overlays);
-    const range = Math.max(0.0001, max - min);
-    const width = 1100, height = 420, pad = 42;
-    const x = (i:number) => pad + i * ((width - pad * 2) / Math.max(1, ticks.length - 1));
-    const y = (v:number) => height - pad - ((v - min) / range) * (height - pad * 2);
-    return ticks.map((t,i) => `${x(i).toFixed(1)},${y(t.ltp).toFixed(1)}`).join(' ');
+    const ticks=this.stock()?.candles.flatMap(c=>c.ticks).filter(t=>t.ltp>0)??[]; if(!ticks.length)return '';
+    const vals=ticks.map(t=>t.ltp).concat(this.chartOverlayKeys().flatMap(k=>ticks.map(t=>this.num(this.indicatorLookup(t.indicators,k))).filter(v=>v!==0)));
+    const min=Math.min(...vals),max=Math.max(...vals),range=Math.max(.0001,max-min),width=1100,height=420,pad=42;
+    const x=(i:number)=>pad+i*((width-pad*2)/Math.max(1,ticks.length-1)); const y=(v:number)=>height-pad-((v-min)/range)*(height-pad*2);
+    return ticks.map((t,i)=>`${x(i).toFixed(1)},${y(t.ltp).toFixed(1)}`).join(' ');
   }
-
-  chartOverlayPoints(key: string): string {
-    const ticks = this.stock()?.candles.flatMap(c => c.ticks).filter(t => t.ltp > 0) ?? [];
-    if (!ticks.length) return '';
-    const prices = ticks.map(t => t.ltp);
-    const overlays = ['EMA9','EMA21','EMA50','EMA200','VWAP','AnchoredVWAP'].filter(k => this.toggles[k])
-      .flatMap(k => ticks.map(t => this.num(t.indicators?.[k])).filter(v => v > 0));
-    const min = Math.min(...prices, ...overlays);
-    const max = Math.max(...prices, ...overlays);
-    const range = Math.max(0.0001, max - min);
-    const width = 1100, height = 420, pad = 42;
-    const x = (i:number) => pad + i * ((width - pad * 2) / Math.max(1, ticks.length - 1));
-    const y = (v:number) => height - pad - ((v - min) / range) * (height - pad * 2);
-    return ticks.map((t,i) => {
-      const v = this.num(t.indicators?.[key]);
-      return v > 0 ? `${x(i).toFixed(1)},${y(v).toFixed(1)}` : '';
-    }).filter(Boolean).join(' ');
-  }
-
-  chartXForTick(tick: Tick): number {
-    const ticks = this.stock()?.candles.flatMap(c => c.ticks).filter(t => t.ltp > 0) ?? [];
-    const i = ticks.findIndex(t => t.n === tick.n && t.sequence === tick.sequence);
-    return 42 + Math.max(0, i) * ((1100 - 84) / Math.max(1, ticks.length - 1));
-  }
-
-  chartYForTick(tick: Tick): number {
-    const ticks = this.stock()?.candles.flatMap(c => c.ticks).filter(t => t.ltp > 0) ?? [];
-    if (!ticks.length) return 210;
-    const prices = ticks.map(t => t.ltp);
-    const overlays = ['EMA9','EMA21','EMA50','EMA200','VWAP','AnchoredVWAP'].filter(k => this.toggles[k])
-      .flatMap(k => ticks.map(t => this.num(t.indicators?.[k])).filter(v => v > 0));
-    const min = Math.min(...prices, ...overlays), max = Math.max(...prices, ...overlays);
-    const range = Math.max(0.0001, max - min);
-    return 420 - 42 - ((tick.ltp - min) / range) * (420 - 84);
-  }
-
-  chartStageMarkers(): Array<{x:number;y:number;stage:string}> {
-    const ticks = this.stock()?.candles.flatMap(c => c.ticks).filter(t => t.ltp > 0) ?? [];
-    return ticks.map(t => ({x:this.chartXForTick(t), y:this.chartYForTick(t), stage:(t.stage || '').toUpperCase()}))
-      .filter(m => ['ENTRY','EXIT','REJECTED','EXPIRED'].includes(m.stage));
-  }
-
-  chartOverlayKeys(): string[] {
-    return ['EMA9','EMA21','EMA50','EMA200','VWAP','AnchoredVWAP'].filter(k => this.toggles[k]);
-  }
+  chartOverlayPoints(key:string): string { return this.chartIndicatorPoints(key); }
+  chartXForTick(tick:Tick): number { const ticks=this.stock()?.candles.flatMap(c=>c.ticks).filter(t=>t.ltp>0)??[]; const i=ticks.findIndex(t=>t.n===tick.n&&t.sequence===tick.sequence); return 42+Math.max(0,i)*((1100-84)/Math.max(1,ticks.length-1)); }
+  chartYForTick(tick:Tick): number { const ticks=this.stock()?.candles.flatMap(c=>c.ticks).filter(t=>t.ltp>0)??[]; if(!ticks.length)return 210; const vals=ticks.map(t=>t.ltp).concat(this.chartOverlayKeys().flatMap(k=>ticks.map(t=>this.num(this.indicatorLookup(t.indicators,k))).filter(v=>v!==0))); const min=Math.min(...vals),max=Math.max(...vals),range=Math.max(.0001,max-min); return 420-42-((tick.ltp-min)/range)*(420-84); }
+  chartStageMarkers(): Array<{x:number;y:number;stage:string}> { const ticks=this.stock()?.candles.flatMap(c=>c.ticks).filter(t=>t.ltp>0)??[]; return ticks.map(t=>({x:this.chartXForTick(t),y:this.chartYForTick(t),stage:(t.stage||'').toUpperCase()})).filter(m=>['ENTRY','EXIT','REJECTED','EXPIRED'].includes(m.stage)); }
   private value(v:unknown):string|number|boolean{if(typeof v==='boolean')return v;if(typeof v==='number')return v;const s=String(v??'');if(s==='true'||s==='false')return s==='true';const n=Number(s);return s!==''&&Number.isFinite(n)?n:s;}
   private iso(v:unknown):string{if(v instanceof Date)return v.toISOString();return String(v??'');}
 }

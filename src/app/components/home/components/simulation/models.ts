@@ -38,6 +38,7 @@ export interface CandleCapture {
   virtualTrade: Record<string, string | number | boolean>;
   actualTrade: ActualTrade;
   ticks: Tick[];
+  loadedDecisionFields?: string[];
 }
 
 export interface StockCapture { symbol: string; token: string; exchange: string; candles: CandleCapture[]; configuration: Record<string, unknown>; }
