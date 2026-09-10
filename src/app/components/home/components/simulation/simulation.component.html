@@ -14,7 +14,7 @@
   <main class="main">
     <header class="topbar">
       <div><div class="eyebrow">MARKET REPLAY</div><h1>{{ stock()?.symbol || 'Trading Analysis' }}</h1></div>
-      <div class="top-actions"><button type="button" class="simulation-dashboard-button" (click)="returnToDashboard()">← Dashboard</button><button class="ghost" (click)="activeTab.set('simulation')">Diagnostics</button><button class="primary" (click)="runLive()">{{ playing() ? 'Pause replay' : '▶ Replay ticks' }}</button></div>
+      <div class="top-actions"><button type="button" class="simulation-dashboard-button" (click)="returnToDashboard()">← Dashboard</button><button class="ghost" (click)="activeTab.set('simulation')">Diagnostics</button><button class="primary" [disabled]="!stock()" (click)="runLive()">{{ playing() ? 'Pause replay' : '▶ Replay ticks' }}</button></div>
     </header>
 
     <div *ngIf="error()" class="error">{{ error() }}</div>
@@ -44,7 +44,25 @@
     <section *ngIf="activeTab()==='overview'" class="workspace">
       <div class="panel chart-panel">
         <div class="panel-head"><div><strong>Price action</strong><small>Captured tick lifecycle</small></div><div class="legend">{{ candle()?.timestamp | date:'medium' }}</div></div>
-        <div class="chart" [innerHTML]="svg()"></div>
+        <div class="chart" *ngIf="stock()?.candles?.length; else noChart">
+          <svg class="native-chart" viewBox="0 0 1100 420" preserveAspectRatio="none" role="img" aria-label="Captured price replay chart">
+            <rect x="0" y="0" width="1100" height="420" class="chart-bg"></rect>
+            <line x1="42" y1="42" x2="1058" y2="42" class="chart-grid"></line>
+            <line x1="42" y1="210" x2="1058" y2="210" class="chart-grid"></line>
+            <line x1="42" y1="378" x2="1058" y2="378" class="chart-grid"></line>
+            <polyline [attr.points]="chartPoints()" class="price-line"></polyline>
+            <polyline *ngFor="let key of chartOverlayKeys()" [attr.points]="chartOverlayPoints(key)" class="indicator-line"></polyline>
+            <g *ngFor="let marker of chartStageMarkers()">
+              <circle [attr.cx]="marker.x" [attr.cy]="marker.y" r="4" [class.entry-marker]="marker.stage==='ENTRY'" [class.exit-marker]="marker.stage==='EXIT'" [class.reject-marker]="marker.stage==='REJECTED'||marker.stage==='EXPIRED'"></circle>
+            </g>
+            <g *ngIf="replayTick() as rt">
+              <line [attr.x1]="chartXForTick(rt)" y1="20" [attr.x2]="chartXForTick(rt)" y2="400" class="replay-cursor"></line>
+              <circle [attr.cx]="chartXForTick(rt)" [attr.cy]="chartYForTick(rt)" r="6" class="replay-dot"></circle>
+            </g>
+          </svg>
+          <div class="chart-caption"><span>{{ replayStatus() }}</span><b *ngIf="replayTick() as rt">Tick {{ rt.n }} · ₹{{ rt.ltp | number:'1.2-2' }} · {{ rt.stage || 'VIRTUAL' }}</b></div>
+        </div>
+        <ng-template #noChart><div class="chart-placeholder">Upload a lifecycle workbook with tick rows to render the price chart.</div></ng-template>
         <div class="candle-strip"><button *ngFor="let c of candles(); let i=index" [class.selected]="i===selectedCandle()" (click)="selectCandle(i)">{{ c.timestamp | date:'HH:mm' }}</button></div>
       </div>
       <div class="panel indicator-panel">
@@ -59,6 +77,28 @@
       <div class="panel decision-card">
         <div class="panel-head"><div><strong>Why did the engine decide this?</strong><small>{{ decision()['reason'] || 'No decision captured' }}</small></div><span class="badge" [class.good]="decision()['signal']==='BUY'">{{ decision()['signal'] || 'HOLD' }}</span></div>
         <div class="decision-grid"><div><span>Score</span><b>{{ decision()['score'] || 0 }}</b></div><div><span>Adaptive required</span><b>{{ decision()['adaptiveRequiredEntryScore'] || 0 }}</b></div><div><span>Confidence</span><b>{{ num(decision()['adaptiveConfidence']) | number:'1.1-1' }}</b></div><div><span>Risk / reward</span><b>{{ num(decision()['adaptiveRiskReward']) | number:'1.2-2' }}</b></div><div><span>Expected value</span><b>{{ num(decision()['adaptiveExpectedNetValue']) | number:'1.2-2' }}</b></div><div><span>Gate failures</span><b>{{ decision()['gateFailures'] || 'None recorded' }}</b></div></div>
+      </div>
+      <div class="panel learning-panel">
+        <div class="panel-head"><div><strong>Learn the simulation flow</strong><small>This page is a diagnostic lab, not a live trading engine</small></div></div>
+        <div class="flow">
+          <div class="flow-step"><b>1. Capture</b><span>Read the lifecycle workbook and reconstruct each tick, indicator snapshot and trade stage.</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step"><b>2. Evaluate</b><span>Apply the captured signal plus score, confidence, R/R, edge and spread gates at the decision point.</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step"><b>3. Replay</b><span>Walk ticks chronologically. The cursor shows exactly where the selected observation sits in the market path.</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step"><b>4. Attribute</b><span>Compare accepted, missed and losing outcomes with future-price evidence to explain what happened.</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step"><b>5. Learn</b><span>Optimization tests counterfactual thresholds; holdout checks whether a proposed change generalizes.</span></div>
+        </div>
+        <div class="module-grid">
+          <div><strong>Price chart</strong><p>Shows captured LTP and supported indicator overlays. Replay adds a moving cursor.</p></div>
+          <div><strong>Indicators</strong><p>Inspect the exact values available at the selected decision. A missing indicator should not be treated as a valid signal.</p></div>
+          <div><strong>Tick tape</strong><p>Use this to trace stage, decision, spread, score and reason tick by tick.</p></div>
+          <div><strong>Decision timeline</strong><p>Select an observation to inspect the production-parity BUY/exit gates and debugger.</p></div>
+          <div><strong>Simulation & Fix</strong><p>Run the baseline, test thresholds, learn global/regime policies and review evidence-backed fixes.</p></div>
+          <div><strong>Holdout validation</strong><p>Learned settings are evaluated on later observations before they are considered trustworthy; they are not automatically promoted to production.</p></div>
+        </div>
       </div>
     </section>
 
@@ -83,7 +123,7 @@
           <label>Minimum profit %<input type="number" step="0.05" [(ngModel)]="params.minimumProfitPercent" (change)="runSimulation()"></label>
           <label>Maximum spread %<input type="number" step="0.1" [(ngModel)]="params.maximumSpreadPercent" (change)="runSimulation()"></label>
         </div>
-        <div class="buttons"><button class="primary" (click)="runSimulation()">Run simulation</button><button class="accent" (click)="optimize()">Find stock best config</button><button class="accent" (click)="optimizeGlobal()">Find GLOBAL config</button><button class="accent" (click)="learnGlobalDynamics()">Learn GLOBAL dynamics</button><button class="accent" (click)="learnRegimeDynamics()">Learn REGIME policies</button><button class="ghost" (click)="runLive()">{{playing()?'Pause':'▶ Play live'}}</button></div>
+        <div class="buttons"><button class="primary" [disabled]="actionBusy() || !stock()" (click)="runSimulationFromUi()">Run simulation</button><button class="accent" [disabled]="actionBusy() || !stock()" (click)="optimizeFromUi()">Find stock best config</button><button class="accent" [disabled]="actionBusy() || !stock()" (click)="optimizeGlobalFromUi()">Find GLOBAL config</button><button class="accent" [disabled]="actionBusy() || !stock()" (click)="learnGlobalFromUi()">Learn GLOBAL dynamics</button><button class="accent" [disabled]="actionBusy() || !stock()" (click)="learnRegimeFromUi()">Learn REGIME policies</button><button class="ghost" [disabled]="!stock()" (click)="runLive()">{{playing()?'Pause':'▶ Play live'}}</button></div><div class="action-status" *ngIf="actionStatus() || replayStatus()"><span *ngIf="actionBusy()" class="busy-dot"></span>{{ actionStatus() || replayStatus() }}</div>
       </div>
       <div class="panel result">
         <div class="panel-head"><div><strong>Diagnostic result</strong><small>Evidence from the uploaded window</small></div></div>

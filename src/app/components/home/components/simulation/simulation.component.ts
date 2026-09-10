@@ -13,7 +13,15 @@ export class TradingSimulationComponent {
     void this.router.navigate(['/home/angel-one']);
   }
 
-  stocks = signal<StockCapture[]>([]); selectedSymbol = signal(''); selectedCandle = signal(0); playing = signal(false); playIndex = signal(0);
+  stocks = signal<StockCapture[]>([]);
+  selectedSymbol = signal('');
+  selectedCandle = signal(0);
+  playing = signal(false);
+  playIndex = signal(0);
+  replayTick = signal<Tick | null>(null);
+  replayStatus = signal('Ready');
+  actionBusy = signal(false);
+  actionStatus = signal('');
   activeTab = signal<'overview'|'ticks'|'decisions'|'simulation'>('overview'); error = signal('');
   toggles: Record<string, boolean> = { EMA9:true, EMA21:true, EMA50:true, EMA200:false, VWAP:true, AnchoredVWAP:false, SuperTrend:false, Bollinger:true, RSI:true, MACD:false, ADX:false };
   params = { minimumScore:70, minimumConfidence:65, minimumRiskReward:1.5, minimumExpectedNetValue:0, minimumEdgeScore:45, minimumProfitPercent:0.3, maximumSpreadPercent:1.5, useAdaptiveScore:true };
@@ -31,7 +39,7 @@ export class TradingSimulationComponent {
     return stock.candles[this.selectedCandle()] ?? stock.candles[0];
   });
   candles = computed<CandleCapture[]>(() => this.stock()?.candles ?? []);
-  ticks = computed(() => this.stock()?.candles.flatMap(c => c.ticks) ?? []); indicators = computed(() => this.candle()?.indicators ?? {}); decision = computed(() => this.candle()?.decision ?? {}); svg = computed(() => this.buildChart());
+  ticks = computed(() => this.stock()?.candles.flatMap(c => c.ticks) ?? []); indicators = computed(() => this.candle()?.indicators ?? {}); decision = computed(() => this.candle()?.decision ?? {});
 
   async upload(files: FileList|null): Promise<void> {
     if (!files?.length) return; this.error.set(''); const loaded: StockCapture[]=[];
@@ -41,10 +49,103 @@ export class TradingSimulationComponent {
   selectStock(symbol:string):void { this.selectedSymbol.set(symbol);this.selectedCandle.set(0);this.playIndex.set(0);const s=this.stocks().find(x=>x.symbol===symbol);if(s)this.loadParametersFromConfiguration(s.configuration);this.runSimulation(); }
   selectCandle(index:number):void { this.selectedCandle.set(index);this.playIndex.set(0); }
   toggle(name:string):void { this.toggles[name]=!this.toggles[name]; }
-  async runLive():Promise<void> { if(this.playing()){this.playing.set(false);return;} const stock=this.stock();if(!stock)return;this.playing.set(true);const ticks=stock.candles.flatMap(c=>c.ticks).sort((a,b)=>this.time(a)-this.time(b));for(let i=this.playIndex();i<ticks.length&&this.playing();i++){this.playIndex.set(i+1);await new Promise(r=>setTimeout(r,80));}this.playing.set(false); }
+  async runLive():Promise<void> {
+    const stock = this.stock();
+    if (!stock) {
+      this.replayStatus.set('Upload a lifecycle workbook first.');
+      return;
+    }
+    const ticks = stock.candles.flatMap(c => c.ticks).filter(t => t.ltp > 0).sort((a,b) => this.time(a)-this.time(b));
+    if (!ticks.length) {
+      this.replayStatus.set('No valid ticks are available for replay.');
+      return;
+    }
+    if (this.playing()) {
+      this.playing.set(false);
+      this.replayStatus.set(`Paused at tick ${this.playIndex()} of ${ticks.length}.`);
+      return;
+    }
+    if (this.playIndex() >= ticks.length) this.playIndex.set(0);
+    this.playing.set(true);
+    this.replayStatus.set('Replaying captured ticks…');
+    this.activeTab.set('overview');
+    for (let i = this.playIndex(); i < ticks.length && this.playing(); i++) {
+      const tick = ticks[i];
+      this.playIndex.set(i + 1);
+      this.replayTick.set(tick);
+      const candleIndex = stock.candles.findIndex(c => c.ticks.some(t => t.n === tick.n && t.sequence === tick.sequence));
+      if (candleIndex >= 0) this.selectedCandle.set(candleIndex);
+      await new Promise(resolve => setTimeout(resolve, 80));
+    }
+    const finished = this.playIndex() >= ticks.length;
+    this.playing.set(false);
+    this.replayStatus.set(finished ? `Replay complete — ${ticks.length} ticks evaluated.` : `Paused at tick ${this.playIndex()} of ${ticks.length}.`);
+  }
+
+  private yieldToUi(): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, 0));
+  }
+
+  runSimulationFromUi(): void {
+    if (!this.stock()) {
+      this.replayStatus.set('Upload a lifecycle workbook before running a simulation.');
+      return;
+    }
+    this.actionBusy.set(true);
+    this.actionStatus.set('Running simulation…');
+    setTimeout(() => {
+      try {
+        this.runSimulation();
+        this.activeTab.set('simulation');
+        this.actionStatus.set(`Simulation complete — ${this.simulation().trades} accepted trade(s), ${this.simulation().missed} missed opportunity(ies).`);
+      } catch (e) {
+        this.error.set(e instanceof Error ? e.message : 'Simulation failed.');
+        this.actionStatus.set('Simulation failed.');
+      } finally {
+        this.actionBusy.set(false);
+      }
+    }, 0);
+  }
+
+  optimizeFromUi(): void {
+    this.runLongAction('Finding the best configuration for the selected stock…', () => this.optimize());
+  }
+
+  optimizeGlobalFromUi(): void {
+    this.runLongAction('Searching for a global configuration across all stocks…', () => this.optimizeGlobal());
+  }
+
+  learnGlobalFromUi(): void {
+    this.runLongAction('Learning global dynamics from captured decisions…', () => this.learnGlobalDynamics());
+  }
+
+  learnRegimeFromUi(): void {
+    this.runLongAction('Learning regime-specific policies…', () => this.learnRegimeDynamics());
+  }
+
+  private runLongAction(message: string, action: () => void): void {
+    if (!this.stock()) {
+      this.replayStatus.set('Upload a lifecycle workbook before starting this operation.');
+      return;
+    }
+    this.actionBusy.set(true);
+    this.actionStatus.set(message);
+    setTimeout(() => {
+      try {
+        action();
+        this.activeTab.set('simulation');
+        this.actionStatus.set('Operation complete. Review the diagnostic result below.');
+      } catch (e) {
+        this.error.set(e instanceof Error ? e.message : 'Operation failed.');
+        this.actionStatus.set('Operation failed.');
+      } finally {
+        this.actionBusy.set(false);
+      }
+    }, 0);
+  }
 
   runSimulation():void {
-    const stock=this.stock(); if(!stock)return; const candles=stock.candles.filter(c=>c.candle.close>0); const issues:DiagnosticIssue[]=[]; const reasons=new Map<string,number>();
+    const stock=this.stock(); if(!stock)return; const candles=stock.candles.filter(c=>c.candle.close>0 && this.evaluationReady(c)); const issues:DiagnosticIssue[]=[]; const reasons=new Map<string,number>();
     let net=0,trades=0,wins=0,losses=0,missed=0,actualLosses=0,avoidableLosses=0,missedProfit=0; let bestEntry=0,bestExit=0,bestEntryTime='',bestExitTime='';
     const allTicks=stock.candles.flatMap(c=>c.ticks).filter(t=>t.ltp>0).sort((a,b)=>this.time(a)-this.time(b));
     const globalPair=this.bestPair(allTicks); if(globalPair){bestEntry=globalPair.entry;bestExit=globalPair.exit;bestEntryTime=globalPair.entryTime;bestExitTime=globalPair.exitTime;}
@@ -227,7 +328,7 @@ export class TradingSimulationComponent {
   }
   private evaluateRows(rows:Array<{stock:StockCapture,candle:CandleCapture,index:number}>,params:any):any {
     let netProfit=0,missed=0,missedProfit=0,losses=0,observations=0,profitableOpportunities=0;
-    for(const row of rows){const c=row.candle,d=c.decision,p=c.candle.close;if(!p)continue;const future=this.futureTicks(row.stock.candles,row.index);if(!future.length)continue;observations++;const best=Math.max(p,...future.map(t=>t.ltp));const gain=(best-p)/p*100;if(gain>params.minimumProfitPercent)profitableOpportunities++;const spread=this.num(c.indicators['SpreadPercent']??c.indicators['spreadPercent']);const pass=String(d['signal']??'').toUpperCase()==='BUY'&&this.num(d['score'])>=params.minimumScore&&(!params.useAdaptiveScore||this.num(d['adaptiveConfidence'])>=params.minimumConfidence)&&(!params.useAdaptiveScore||this.num(d['adaptiveRiskReward'])>=params.minimumRiskReward)&&(!params.useAdaptiveScore||this.num(d['adaptiveEdgeScore'])>=params.minimumEdgeScore)&&spread<=params.maximumSpreadPercent;const value=Math.max(0,p*(gain-params.minimumProfitPercent)/100);if(pass){netProfit+=value;const worst=Math.min(p,...future.map(t=>t.ltp));if(worst<p*.997)losses++;}else if(gain>params.minimumProfitPercent){missed++;missedProfit+=value;}}
+    for(const row of rows){const c=row.candle,d=c.decision,p=c.candle.close;if(!p||!this.evaluationReady(c))continue;const future=this.futureTicks(row.stock.candles,row.index);if(!future.length)continue;observations++;const best=Math.max(p,...future.map(t=>t.ltp));const gain=(best-p)/p*100;if(gain>params.minimumProfitPercent)profitableOpportunities++;const spread=this.num(c.indicators['SpreadPercent']??c.indicators['spreadPercent']);const pass=String(d['signal']??'').toUpperCase()==='BUY'&&this.num(d['score'])>=params.minimumScore&&(!params.useAdaptiveScore||this.num(d['adaptiveConfidence'])>=params.minimumConfidence)&&(!params.useAdaptiveScore||this.num(d['adaptiveRiskReward'])>=params.minimumRiskReward)&&(!params.useAdaptiveScore||this.num(d['adaptiveEdgeScore'])>=params.minimumEdgeScore)&&spread<=params.maximumSpreadPercent;const value=Math.max(0,p*(gain-params.minimumProfitPercent)/100);if(pass){netProfit+=value;const worst=Math.min(p,...future.map(t=>t.ltp));if(worst<p*.997)losses++;}else if(gain>params.minimumProfitPercent){missed++;missedProfit+=value;}}
     return {netProfit,missed,missedProfit,losses,observations,profitableOpportunities};
   }
   private evaluateRegimeHoldout(regimes:RegimeConfiguration[]):{improvement:number;lossIncrease:number}{
@@ -240,7 +341,7 @@ export class TradingSimulationComponent {
     let netProfit=0, base=0, missed=0, losses=0, observations=0;
     for(const stock of this.stocks()){
       const cs=stock.candles.filter(c=>c.candle.close>0); const cut=Math.max(1,Math.floor(cs.length*.7));
-      for(let i=cut;i<cs.length;i++){const c=cs[i],d=c.decision,p=c.candle.close;if(!p)continue;const future=this.futureTicks(cs,i);if(!future.length)continue;observations++;const gain=(Math.max(p,...future.map(t=>t.ltp))-p)/p*100;const signal=String(d['signal']??'').toUpperCase()==='BUY';const score=this.num(d['score']),conf=this.num(d['adaptiveConfidence']),rr=this.num(d['adaptiveRiskReward']),edge=this.num(d['adaptiveEdgeScore']),spread=this.num(c.indicators['SpreadPercent']??c.indicators['spreadPercent']);const pass=signal&&score>=params.minimumScore&&(!params.useAdaptiveScore||conf>=params.minimumConfidence)&&(!params.useAdaptiveScore||rr>=params.minimumRiskReward)&&(!params.useAdaptiveScore||edge>=params.minimumEdgeScore)&&spread<=params.maximumSpreadPercent;const value=Math.max(0,p*(gain-params.minimumProfitPercent)/100);if(pass){netProfit+=value;if(gain<0)losses++;}else if(gain>params.minimumProfitPercent){missed++;}const bpass=signal&&score>=this.params.minimumScore&&(!this.params.useAdaptiveScore||conf>=this.params.minimumConfidence)&&(!this.params.useAdaptiveScore||rr>=this.params.minimumRiskReward)&&(!this.params.useAdaptiveScore||edge>=this.params.minimumEdgeScore)&&spread<=this.params.maximumSpreadPercent;if(bpass)base+=value;}
+      for(let i=cut;i<cs.length;i++){const c=cs[i],d=c.decision,p=c.candle.close;if(!p||!this.evaluationReady(c))continue;const future=this.futureTicks(cs,i);if(!future.length)continue;observations++;const gain=(Math.max(p,...future.map(t=>t.ltp))-p)/p*100;const signal=String(d['signal']??'').toUpperCase()==='BUY';const score=this.num(d['score']),conf=this.num(d['adaptiveConfidence']),rr=this.num(d['adaptiveRiskReward']),edge=this.num(d['adaptiveEdgeScore']),spread=this.num(c.indicators['SpreadPercent']??c.indicators['spreadPercent']);const pass=signal&&score>=params.minimumScore&&(!params.useAdaptiveScore||conf>=params.minimumConfidence)&&(!params.useAdaptiveScore||rr>=params.minimumRiskReward)&&(!params.useAdaptiveScore||edge>=params.minimumEdgeScore)&&spread<=params.maximumSpreadPercent;const value=Math.max(0,p*(gain-params.minimumProfitPercent)/100);if(pass){netProfit+=value;if(gain<0)losses++;}else if(gain>params.minimumProfitPercent){missed++;}const bpass=signal&&score>=this.params.minimumScore&&(!this.params.useAdaptiveScore||conf>=this.params.minimumConfidence)&&(!this.params.useAdaptiveScore||rr>=this.params.minimumRiskReward)&&(!this.params.useAdaptiveScore||edge>=this.params.minimumEdgeScore)&&spread<=this.params.maximumSpreadPercent;if(bpass)base+=value;}
     }
     return {netProfit,improvement:netProfit-base,missed,losses,observations};
   }
@@ -371,6 +472,16 @@ export class TradingSimulationComponent {
   num(v:unknown):number { const n=Number(v);return Number.isFinite(n)?n:0; }
   private format(v:string):string { const d=new Date(v);return Number.isNaN(d.getTime())?v:d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
   private futureTicks(c:CandleCapture[],i:number):Tick[]{return c.slice(i+1).flatMap(x=>x.ticks).filter(t=>t.ltp>0).sort((a,b)=>this.time(a)-this.time(b));}
+
+  private evaluationReady(c:CandleCapture): boolean {
+    const d = c.decision;
+    const signal = String(d['signal'] ?? '').trim();
+    const score = d['score'];
+    if (!signal || score === undefined || score === null || !Number.isFinite(Number(score))) return false;
+    if (!this.params.useAdaptiveScore) return true;
+    return ['adaptiveConfidence','adaptiveRiskReward','adaptiveEdgeScore']
+      .every(key => d[key] !== undefined && d[key] !== null && Number.isFinite(Number(d[key])));
+  }
   private gates(d:Record<string,string|number|boolean>,score:number,conf:number,rr:number,edge:number,spread:number,technical:boolean,sp:boolean,cp:boolean,rp:boolean,ep:boolean,spreadPass:boolean):string[]{const g:string[]=[];if(!technical)g.push(`Technical signal=${d['signal']??'HOLD'}`);if(!sp)g.push(`Minimum score ${this.params.minimumScore} blocked score ${score}`);if(!cp)g.push(`Minimum confidence ${this.params.minimumConfidence} blocked confidence ${conf.toFixed(1)}`);if(!rp)g.push(`Minimum R/R ${this.params.minimumRiskReward.toFixed(2)} blocked R/R ${rr.toFixed(2)}`);if(!ep)g.push(`Minimum edge ${this.params.minimumEdgeScore} blocked edge ${edge.toFixed(1)}`);if(!spreadPass)g.push(`Maximum spread ${this.params.maximumSpreadPercent}% blocked spread ${spread.toFixed(2)}%`);const gf=String(d['gateFailures']??'');if(gf&&g.length===0)g.push(gf.split('|')[0]);return g;}
   private gateValue(g:string,s:number,c:number,rr:number,e:number,sp:number):number {if(/score/i.test(g))return s;if(/confidence/i.test(g))return c;if(/R\/R/i.test(g))return rr;if(/edge/i.test(g))return e;if(/spread/i.test(g))return sp;return 0;}
   private gateSuggestion(g:string,s:number,c:number,rr:number,e:number,sp:number):number {if(/score/i.test(g))return Math.max(0,s);if(/confidence/i.test(g))return Math.max(0,c);if(/R\/R/i.test(g))return Math.max(0,rr);if(/edge/i.test(g))return Math.max(0,e);if(/spread/i.test(g))return Math.max(sp,this.params.maximumSpreadPercent);return 0;}
@@ -391,7 +502,7 @@ export class TradingSimulationComponent {
     for(const stock of this.stocks()){
       const candles=stock.candles.filter(c=>c.candle.close>0);
       for(let i=0;i<candles.length;i++){
-        const c=candles[i],d=c.decision,p=c.candle.close;if(!p)continue;observations++;
+        const c=candles[i],d=c.decision,p=c.candle.close;if(!p||!this.evaluationReady(c))continue;observations++;
         const score=this.num(d['score']),conf=this.num(d['adaptiveConfidence']),rr=this.num(d['adaptiveRiskReward']),edge=this.num(d['adaptiveEdgeScore']);
         const spread=this.num(c.indicators['SpreadPercent']??c.indicators['spreadPercent']);
         const technical=String(d['signal']??'').toUpperCase()==='BUY';
@@ -521,34 +632,65 @@ export class TradingSimulationComponent {
     throw new Error('Legacy candle-sheet format is no longer supported. Export the new one-sheet lifecycle workbook.');
   }
 
-  private buildChart():string{
-    const s=this.stock(); if(!s) return '';
-    const ticks=s.candles.flatMap(c=>c.ticks).filter(t=>t.ltp>0);
-    if(!ticks.length) return '';
-    const w=1100,h=420,pad=45;
-    const vals=ticks.map(t=>t.ltp);
-    for(const k of Object.keys(this.toggles).filter(k=>this.toggles[k])){
-      for(const t of ticks){const v=Number(t.indicators?.[k]);if(Number.isFinite(v)&&v>0)vals.push(v);}
-    }
-    const min=Math.min(...vals),max=Math.max(...vals),range=Math.max(.0001,max-min);
-    const x=(i:number)=>pad+i*((w-pad*2)/Math.max(1,ticks.length-1));
-    const y=(v:number)=>h-pad-((v-min)/range)*(h-pad*2);
-    let svg=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><rect x="0" y="0" width="${w}" height="${h}" fill="#0b1220"/>`;
-    const pricePts=ticks.map((t,i)=>`${x(i)},${y(t.ltp)}`).join(' ');
-    svg+=`<polyline points="${pricePts}" fill="none" stroke="#e6edf7" stroke-width="2"/>`;
-    for(const k of ['EMA9','EMA21','EMA50','EMA200','VWAP','AnchoredVWAP'].filter(k=>this.toggles[k])){
-      const pts=ticks.map((t,i)=>{const v=Number(t.indicators?.[k]);return Number.isFinite(v)&&v>0?`${x(i)},${y(v)}`:''}).filter(Boolean).join(' ');
-      if(pts) svg+=`<polyline points="${pts}" fill="none" stroke="#9aa8ff" stroke-width="1.5" opacity=".85"/>`;
-    }
-    ticks.forEach((t,i)=>{
-      const stage=(t.stage||'').toUpperCase();
-      if(stage==='ENTRY'){svg+=`<polygon points="${x(i)},${y(t.ltp)-14} ${x(i)-7},${y(t.ltp)-2} ${x(i)+7},${y(t.ltp)-2}" fill="#42d392"/><text x="${x(i)+8}" y="${y(t.ltp)-5}" fill="#42d392" font-size="12">ENTRY</text>`;}
-      if(stage==='EXIT'){svg+=`<polygon points="${x(i)},${y(t.ltp)+14} ${x(i)-7},${y(t.ltp)+2} ${x(i)+7},${y(t.ltp)+2}" fill="#ff667a"/><text x="${x(i)+8}" y="${y(t.ltp)+18}" fill="#ff667a" font-size="12">EXIT</text>`;}
-      if(stage==='REJECTED'||stage==='EXPIRED'){svg+=`<circle cx="${x(i)}" cy="${y(t.ltp)}" r="5" fill="#f6c85f"/><text x="${x(i)+8}" y="${y(t.ltp)-8}" fill="#f6c85f" font-size="11">${stage}</text>`;}
-    });
-    return svg+'</svg>';
+  chartPoints(): string {
+    const ticks = this.stock()?.candles.flatMap(c => c.ticks).filter(t => t.ltp > 0) ?? [];
+    if (!ticks.length) return '';
+    const prices = ticks.map(t => t.ltp);
+    const overlays = ['EMA9','EMA21','EMA50','EMA200','VWAP','AnchoredVWAP'].filter(k => this.toggles[k])
+      .flatMap(k => ticks.map(t => this.num(t.indicators?.[k])).filter(v => v > 0));
+    const min = Math.min(...prices, ...overlays);
+    const max = Math.max(...prices, ...overlays);
+    const range = Math.max(0.0001, max - min);
+    const width = 1100, height = 420, pad = 42;
+    const x = (i:number) => pad + i * ((width - pad * 2) / Math.max(1, ticks.length - 1));
+    const y = (v:number) => height - pad - ((v - min) / range) * (height - pad * 2);
+    return ticks.map((t,i) => `${x(i).toFixed(1)},${y(t.ltp).toFixed(1)}`).join(' ');
   }
 
+  chartOverlayPoints(key: string): string {
+    const ticks = this.stock()?.candles.flatMap(c => c.ticks).filter(t => t.ltp > 0) ?? [];
+    if (!ticks.length) return '';
+    const prices = ticks.map(t => t.ltp);
+    const overlays = ['EMA9','EMA21','EMA50','EMA200','VWAP','AnchoredVWAP'].filter(k => this.toggles[k])
+      .flatMap(k => ticks.map(t => this.num(t.indicators?.[k])).filter(v => v > 0));
+    const min = Math.min(...prices, ...overlays);
+    const max = Math.max(...prices, ...overlays);
+    const range = Math.max(0.0001, max - min);
+    const width = 1100, height = 420, pad = 42;
+    const x = (i:number) => pad + i * ((width - pad * 2) / Math.max(1, ticks.length - 1));
+    const y = (v:number) => height - pad - ((v - min) / range) * (height - pad * 2);
+    return ticks.map((t,i) => {
+      const v = this.num(t.indicators?.[key]);
+      return v > 0 ? `${x(i).toFixed(1)},${y(v).toFixed(1)}` : '';
+    }).filter(Boolean).join(' ');
+  }
+
+  chartXForTick(tick: Tick): number {
+    const ticks = this.stock()?.candles.flatMap(c => c.ticks).filter(t => t.ltp > 0) ?? [];
+    const i = ticks.findIndex(t => t.n === tick.n && t.sequence === tick.sequence);
+    return 42 + Math.max(0, i) * ((1100 - 84) / Math.max(1, ticks.length - 1));
+  }
+
+  chartYForTick(tick: Tick): number {
+    const ticks = this.stock()?.candles.flatMap(c => c.ticks).filter(t => t.ltp > 0) ?? [];
+    if (!ticks.length) return 210;
+    const prices = ticks.map(t => t.ltp);
+    const overlays = ['EMA9','EMA21','EMA50','EMA200','VWAP','AnchoredVWAP'].filter(k => this.toggles[k])
+      .flatMap(k => ticks.map(t => this.num(t.indicators?.[k])).filter(v => v > 0));
+    const min = Math.min(...prices, ...overlays), max = Math.max(...prices, ...overlays);
+    const range = Math.max(0.0001, max - min);
+    return 420 - 42 - ((tick.ltp - min) / range) * (420 - 84);
+  }
+
+  chartStageMarkers(): Array<{x:number;y:number;stage:string}> {
+    const ticks = this.stock()?.candles.flatMap(c => c.ticks).filter(t => t.ltp > 0) ?? [];
+    return ticks.map(t => ({x:this.chartXForTick(t), y:this.chartYForTick(t), stage:(t.stage || '').toUpperCase()}))
+      .filter(m => ['ENTRY','EXIT','REJECTED','EXPIRED'].includes(m.stage));
+  }
+
+  chartOverlayKeys(): string[] {
+    return ['EMA9','EMA21','EMA50','EMA200','VWAP','AnchoredVWAP'].filter(k => this.toggles[k]);
+  }
   private value(v:unknown):string|number|boolean{if(typeof v==='boolean')return v;if(typeof v==='number')return v;const s=String(v??'');if(s==='true'||s==='false')return s==='true';const n=Number(s);return s!==''&&Number.isFinite(n)?n:s;}
   private iso(v:unknown):string{if(v instanceof Date)return v.toISOString();return String(v??'');}
 }
