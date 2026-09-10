@@ -131,3 +131,23 @@
 /* The price chart itself is a replay control: tap/click to play or pause. */
 .replay-tappable{cursor:pointer;outline:none;touch-action:manipulation}
 .replay-tappable:focus-visible{outline:2px solid #8fa2ff;outline-offset:3px}
+
+/* Chart replay interaction */
+.replay-tappable {
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.replay-tappable:focus {
+  outline: 2px solid var(--accent, #4f6ff0);
+  outline-offset: 2px;
+}
+.replay-tappable.replay-playing {
+  cursor: pointer;
+}
+.chart-play-hint {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: .85;
+}

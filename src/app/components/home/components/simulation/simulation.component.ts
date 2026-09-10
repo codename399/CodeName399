@@ -180,7 +180,11 @@ export class TradingSimulationComponent {
     this.toggles[name] = !this.toggles[name];
   }
   toggleReplayFromChart(): void {
-    if (!this.stock()) return;
+    const stock = this.stock();
+    if (!stock) return;
+
+    // A chart tap is intentionally the same play/pause action as the replay button.
+    // runLive() resumes from playIndex() when paused and starts over only after completion.
     void this.runLive();
   }
 
@@ -1751,7 +1755,7 @@ export class TradingSimulationComponent {
       t['Direction'] ?? c.decision['direction'] ?? 'LONG',
     ).toUpperCase();
     const short = direction.includes('SHORT');
-    const entryTime = new Date(String(t['EntryTime'] ?? c.timestamp)).getTime();
+    const entryTime = this.parseTimestamp(t['EntryTime'] ?? c.timestamp).getTime();
     const all = candles
       .flatMap((x) => x.ticks)
       .filter((x) => x.ltp > 0 && this.time(x) >= entryTime)
@@ -1828,7 +1832,7 @@ export class TradingSimulationComponent {
       exit > 0
         ? all.filter(
             (x) =>
-              this.time(x) >= new Date(String(t['ExitTime'] ?? '')).getTime(),
+              this.time(x) >= this.parseTimestamp(t['ExitTime'] ?? '').getTime(),
           )
         : [];
     const postExitBest = afterExit.length
@@ -2285,7 +2289,7 @@ export class TradingSimulationComponent {
     return 140 - 18 - ((v - min) / range) * 104;
   }
   private time(t: Tick): number {
-    return new Date(t.exchangeTime || t.utc).getTime();
+    return this.parseTimestamp(t.utc || t.exchangeTime).getTime();
   }
   num(v: unknown): number {
     const n = Number(v);
@@ -3254,7 +3258,8 @@ export class TradingSimulationComponent {
     const ticks =
       this.stock()
         ?.candles.flatMap((c) => c.ticks)
-        .filter((t) => t.ltp > 0) ?? [];
+        .filter((t) => t.ltp > 0)
+        .sort((a, b) => this.time(a) - this.time(b)) ?? [];
     if (!ticks.length) return [];
 
     const width = 1100;
