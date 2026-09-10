@@ -100,3 +100,34 @@
 
 .data-health{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr)) minmax(240px,2fr);gap:8px;margin:10px 0}.data-health>div{padding:9px 11px;border:1px solid #18263b;border-radius:9px;background:#0a111d}.data-health span,.data-health b,.data-health small{display:block}.data-health span{font-size:10px;color:#78869a;text-transform:uppercase;letter-spacing:.04em}.data-health b{font-size:16px;color:#e8eef7;margin-top:2px}.data-health small{font-size:10px;color:#8e9bb0;margin-top:2px}.data-health .health-note{background:rgba(95,155,255,.05);border-color:#203452}.health-note strong{display:block;font-size:11px;color:#dbe5f4}.health-note small{line-height:1.45}@media(max-width:1100px){.data-health{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.data-health{grid-template-columns:1fr}}
 .current-config{grid-column:1/-1}.config-source{font-size:10px;color:#7f8da5;white-space:nowrap}.config-table-wrap{max-height:420px;overflow:auto;border:1px solid #18263b;border-radius:9px}.config-table{font-size:11px}.config-table th,.config-table td{padding:7px 9px}.config-table td:first-child{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:#aebbd0;text-align:left}.config-table td:nth-child(2){text-align:left;color:#e3eaf7;word-break:break-word;white-space:normal}.config-empty{padding:14px;border:1px dashed #33435f;border-radius:9px;color:#8997aa;font-size:11px;line-height:1.5}
+
+/* Simulation action controls: keep buttons evenly spaced and readable. */
+.buttons{display:grid;grid-template-columns:repeat(6,minmax(110px,1fr));gap:10px;margin-top:10px;align-items:stretch}
+.buttons button{min-width:0;min-height:72px;padding:14px 12px;line-height:1.35;display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal}
+.chart-time-axis text{fill:#71809a;font-size:12px;font-family:inherit}
+@media(max-width:1100px){.buttons{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:700px){.buttons{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.buttons button{min-height:58px;padding:12px 10px}}
+@media(max-width:420px){.buttons{grid-template-columns:1fr}}
+
+
+/* Clear, consistent loading state for simulation/optimization/learning actions. */
+.buttons{gap:12px;margin-top:14px;padding:2px 0}
+.buttons button{gap:9px;border:1px solid rgba(255,255,255,.06);box-sizing:border-box}
+.buttons button:disabled{opacity:.68;cursor:not-allowed}
+.button-spinner,.busy-spinner,.loader-ring{display:inline-block;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sim-spin .75s linear infinite;flex:0 0 auto}
+.button-spinner{width:14px;height:14px}
+.busy-spinner{width:12px;height:12px;vertical-align:-2px;margin-right:8px}
+.action-status{display:flex;align-items:center;gap:8px;min-height:20px;margin-top:12px;padding:10px 12px}
+.action-status.loading{border-color:#304b78;background:#0d1728}
+.simulation-loader{display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px 14px;border:1px solid #263b5e;border-radius:10px;background:#0d1728;color:#dce6f8}
+.simulation-loader strong,.simulation-loader small{display:block}
+.simulation-loader small{margin-top:3px;color:#8797b0;font-size:11px}
+.loader-ring{width:22px;height:22px;border-width:3px;color:#8fa2ff}
+.timezone-label{color:#65758e;font-size:10px;margin-left:auto}
+.chart-time-axis text{font-size:11px}
+@keyframes sim-spin{to{transform:rotate(360deg)}}
+@media(max-width:700px){.buttons{gap:9px;margin-top:12px}.simulation-loader{padding:10px 12px}.timezone-label{display:block;margin-left:0}}
+
+/* The price chart itself is a replay control: tap/click to play or pause. */
+.replay-tappable{cursor:pointer;outline:none;touch-action:manipulation}
+.replay-tappable:focus-visible{outline:2px solid #8fa2ff;outline-offset:3px}

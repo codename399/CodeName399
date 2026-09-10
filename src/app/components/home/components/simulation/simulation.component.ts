@@ -46,6 +46,7 @@ export class TradingSimulationComponent {
   replayTick = signal<Tick | null>(null);
   replayStatus = signal('Ready');
   actionBusy = signal(false);
+  busyAction = signal('');
   actionStatus = signal('');
   activeTab = signal<'overview' | 'ticks' | 'decisions' | 'simulation'>(
     'overview',
@@ -132,6 +133,9 @@ export class TradingSimulationComponent {
   async upload(files: FileList | null): Promise<void> {
     if (!files?.length) return;
     this.error.set('');
+    this.actionBusy.set(true);
+    this.busyAction.set('upload');
+    this.actionStatus.set('Loading workbook(s)…');
     const loaded: StockCapture[] = [];
     for (const file of Array.from(files)) {
       try {
@@ -148,7 +152,12 @@ export class TradingSimulationComponent {
       this.selectedCandle.set(0);
       this.loadParametersFromConfiguration(loaded[0].configuration);
       this.runSimulation();
+      this.actionStatus.set(`Loaded ${loaded.length} workbook${loaded.length === 1 ? '' : 's'}.`);
+    } else {
+      this.actionStatus.set('Unable to load the selected workbook(s).');
     }
+    this.actionBusy.set(false);
+    this.busyAction.set('');
   }
   selectStock(symbol: string): void {
     this.selectedSymbol.set(symbol);
@@ -170,6 +179,11 @@ export class TradingSimulationComponent {
   toggle(name: string): void {
     this.toggles[name] = !this.toggles[name];
   }
+  toggleReplayFromChart(): void {
+    if (!this.stock()) return;
+    void this.runLive();
+  }
+
   async runLive(): Promise<void> {
     const stock = this.stock();
     if (!stock) {
@@ -226,6 +240,7 @@ export class TradingSimulationComponent {
       return;
     }
     this.actionBusy.set(true);
+    this.busyAction.set('simulation');
     this.actionStatus.set('Running simulation…');
     setTimeout(() => {
       try {
@@ -239,12 +254,14 @@ export class TradingSimulationComponent {
         this.actionStatus.set('Simulation failed.');
       } finally {
         this.actionBusy.set(false);
+        this.busyAction.set('');
       }
     }, 0);
   }
 
   optimizeFromUi(): void {
     this.runLongAction(
+      'stock-config',
       'Finding the best configuration for the selected stock…',
       () => this.optimize(),
     );
@@ -252,6 +269,7 @@ export class TradingSimulationComponent {
 
   optimizeGlobalFromUi(): void {
     this.runLongAction(
+      'global-config',
       'Searching for a global configuration across all stocks…',
       () => this.optimizeGlobal(),
     );
@@ -259,18 +277,19 @@ export class TradingSimulationComponent {
 
   learnGlobalFromUi(): void {
     this.runLongAction(
+      'global-learning',
       'Learning global dynamics from captured decisions…',
       () => this.learnGlobalDynamics(),
     );
   }
 
   learnRegimeFromUi(): void {
-    this.runLongAction('Learning regime-specific policies…', () =>
+    this.runLongAction('regime-learning', 'Learning regime-specific policies…', () =>
       this.learnRegimeDynamics(),
     );
   }
 
-  private runLongAction(message: string, action: () => void): void {
+  private runLongAction(actionKey: string, message: string, action: () => void): void {
     if (!this.stock()) {
       this.replayStatus.set(
         'Upload a lifecycle workbook before starting this operation.',
@@ -278,6 +297,7 @@ export class TradingSimulationComponent {
       return;
     }
     this.actionBusy.set(true);
+    this.busyAction.set(actionKey);
     this.actionStatus.set(message);
     setTimeout(() => {
       try {
@@ -291,6 +311,7 @@ export class TradingSimulationComponent {
         this.actionStatus.set('Operation failed.');
       } finally {
         this.actionBusy.set(false);
+        this.busyAction.set('');
       }
     }, 0);
   }
@@ -2270,16 +2291,43 @@ export class TradingSimulationComponent {
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
   }
-  private format(v: string): string {
-    const d = new Date(v);
-    return Number.isNaN(d.getTime())
-      ? v
-      : d.toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        });
+  /** Format workbook timestamps as Indian Standard Time everywhere in the UI.
+   *  Plain ISO/date-time strings from the workbook are treated as UTC because
+   *  the lifecycle source exposes TimestampUtc; explicit offsets are respected.
+   */
+  istTime(value: unknown): string {
+    const d = this.parseTimestamp(value);
+    if (Number.isNaN(d.getTime())) return String(value ?? '');
+    return d.toLocaleTimeString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
   }
+
+  private format(v: string): string {
+    return this.istTime(v);
+  }
+
+  private parseTimestamp(value: unknown): Date {
+    if (value instanceof Date) return value;
+    const raw = String(value ?? '').trim();
+    if (!raw) return new Date(NaN);
+    // Explicit timezone/offset: let Date convert it correctly.
+    if (/Z$/i.test(raw) || /[+-]\d{2}:?\d{2}$/.test(raw)) return new Date(raw);
+    // Workbook UTC fields are sometimes exported without a trailing Z.
+    // Treat ISO/date-time strings as UTC instead of browser-local time.
+    if (/^\d{4}-\d{2}-\d{2}[T ]/.test(raw)) return new Date(raw.replace(' ', 'T') + 'Z');
+    // Excel/local time-only values: anchor them to today's UTC date.
+    if (/^\d{1,2}:\d{2}(:\d{2}(?:\.\d+)?)?$/.test(raw)) {
+      const today = new Date();
+      const date = today.toISOString().slice(0, 10);
+      return new Date(`${date}T${raw}Z`);
+    }
+    return new Date(raw);
+  }
+
   private futureTicks(c: CandleCapture[], i: number): Tick[] {
     return c
       .slice(i + 1)
@@ -3200,6 +3248,37 @@ export class TradingSimulationComponent {
     throw new Error(
       'Legacy candle-sheet format is no longer supported. Export the new one-sheet lifecycle workbook.',
     );
+  }
+
+  chartTimeLabels(): Array<{ x: number; text: string }> {
+    const ticks =
+      this.stock()
+        ?.candles.flatMap((c) => c.ticks)
+        .filter((t) => t.ltp > 0) ?? [];
+    if (!ticks.length) return [];
+
+    const width = 1100;
+    const pad = 42;
+    const count = Math.min(6, ticks.length);
+    const indexes = Array.from({ length: count }, (_, i) =>
+      count === 1 ? 0 : Math.round((i * (ticks.length - 1)) / (count - 1)),
+    );
+
+    return indexes.map((index) => {
+      const tick = ticks[index];
+      const date = this.parseTimestamp(tick.utc || tick.exchangeTime);
+      const text = Number.isNaN(date.getTime())
+        ? ''
+        : date.toLocaleTimeString('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+      return {
+        x: pad + index * ((width - pad * 2) / Math.max(1, ticks.length - 1)),
+        text,
+      };
+    });
   }
 
   chartPoints(): string {
