@@ -1340,3 +1340,21 @@ textarea {
   margin: 0 !important;
   box-sizing: border-box !important;
 }
+
+/* Virtual-trade reporting stage selector */
+.stage-filter-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.stage-filter-list .toggle-field {
+  min-height: 42px;
+  padding: 9px 12px;
+}
+
+@media (max-width: 768px) {
+  .stage-filter-list {
+    grid-template-columns: 1fr;
+  }
+}
