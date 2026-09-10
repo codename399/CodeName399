@@ -21,7 +21,6 @@ import {
   FuturesTradingSettings,
   OptionsTradingSettings,
   TradingStrictnessProfile,
-  AnalysisCaptureSettings,
 } from '../../../models/trading-configuration';
 import { TradingStrategy } from '../../../models/enum/trading-strategy';
 import { AngelOneService } from '../../../services/angel-one.service';
@@ -576,25 +575,7 @@ export class TradingSettingsComponent implements OnInit {
       marketRegimeWeight: [0.10],
       relativeStrengthWeight: [0.10],
     }),
-
-    analysisCapture: this.#fb.group({
-      enabled: [false],
-      batchIntervalMinutes: [30],
-      captureWindowMinutes: [30],
-      stockCount: [100],
-      candleCount: [30],
-      instrumentType: ['Equity'],
-      outputDirectory: ['Data/TradingAnalysis'],
-      publicBaseUrl: [''],
-      downloadLinkLifetimeHours: [48],
-      downloadSigningKey: [''],
-      emailOnCompletion: [true],
-      includeTickData: [true],
-      includeConfiguration: [true],
-      includeActualVirtualTradeState: [true],
-    }),
-
-    dynamicVirtualTrading: this.#fb.group({
+dynamicVirtualTrading: this.#fb.group({
       enabled: [true],
       minimumObservationTicks: [3],
       maximumObservationTicks: [40],
@@ -938,8 +919,9 @@ export class TradingSettingsComponent implements OnInit {
       ],
       volatilityScoreThreshold: [60, [Validators.min(0), Validators.max(100)]],
       riskRewardThreshold: [2, [Validators.min(0)]],
-      enableVirtualTradeTickEmails: [true],
-      minimumVirtualTradeTicksForEmail: [10, [Validators.min(1)]],
+        enableVirtualTradeTickEmails: [true],
+      minimumVirtualTradeTicksForEmail: [3, [Validators.min(0)]],
+      virtualTradeEmailStages: [["REJECTED", "EXPIRED", "ENTRY", "EXIT"]],
     }),
 
     exit: this.#fb.group({
@@ -970,6 +952,25 @@ export class TradingSettingsComponent implements OnInit {
   enableAutoTradingPreviousValue = this.enableAutoTradingFormControl?.value;
 
   settingsSearch = '';
+
+  readonly virtualTradeEmailStageOptions = ['REJECTED', 'EXPIRED', 'ENTRY', 'EXIT'] as const;
+
+  isVirtualTradeEmailStageSelected(stage: string): boolean {
+    const stages = this.form.get('reporting.virtualTradeEmailStages')?.value as string[] | null;
+    return Array.isArray(stages) && stages.includes(stage);
+  }
+
+  toggleVirtualTradeEmailStage(stage: string, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const control = this.form.get('reporting.virtualTradeEmailStages');
+    if (!control) return;
+    const current = Array.isArray(control.value) ? [...control.value] : [];
+    const next = input.checked
+      ? Array.from(new Set([...current, stage]))
+      : current.filter(value => value !== stage);
+    control.setValue(next);
+    control.markAsDirty();
+  }
 
   filterSettings(event: Event): void {
     this.settingsSearch = (event.target as HTMLInputElement).value;
@@ -1904,7 +1905,11 @@ export class TradingSettingsComponent implements OnInit {
           enableVirtualTradeTickEmails:
             configuration.reporting?.enableVirtualTradeTickEmails ?? true,
           minimumVirtualTradeTicksForEmail:
-            configuration.reporting?.minimumVirtualTradeTicksForEmail ?? 10,
+            configuration.reporting?.minimumVirtualTradeTicksForEmail ?? 3,
+          virtualTradeEmailStages:
+            configuration.reporting?.virtualTradeEmailStages?.length
+              ? configuration.reporting.virtualTradeEmailStages
+              : ["REJECTED", "EXPIRED", "ENTRY", "EXIT"],
         },
       },
       {
@@ -2825,23 +2830,7 @@ export class TradingSettingsComponent implements OnInit {
         marketRegimeWeight: Number(value.dynamicEvaluation?.marketRegimeWeight ?? 0.10),
         relativeStrengthWeight: Number(value.dynamicEvaluation?.relativeStrengthWeight ?? 0.10),
       },
-      analysisCapture: {
-        enabled: value.analysisCapture?.enabled ?? false,
-        batchIntervalMinutes: Number(value.analysisCapture?.batchIntervalMinutes ?? 30),
-        captureWindowMinutes: Number(value.analysisCapture?.captureWindowMinutes ?? 30),
-        stockCount: Number(value.analysisCapture?.stockCount ?? 100),
-        candleCount: Number(value.analysisCapture?.candleCount ?? 30),
-        instrumentType: String(value.analysisCapture?.instrumentType ?? 'Equity'),
-        outputDirectory: String(value.analysisCapture?.outputDirectory ?? 'Data/TradingAnalysis'),
-        publicBaseUrl: String(value.analysisCapture?.publicBaseUrl ?? ''),
-        downloadLinkLifetimeHours: Number(value.analysisCapture?.downloadLinkLifetimeHours ?? 48),
-        downloadSigningKey: String(value.analysisCapture?.downloadSigningKey ?? ''),
-        emailOnCompletion: value.analysisCapture?.emailOnCompletion ?? true,
-        includeTickData: value.analysisCapture?.includeTickData ?? true,
-        includeConfiguration: value.analysisCapture?.includeConfiguration ?? true,
-        includeActualVirtualTradeState: value.analysisCapture?.includeActualVirtualTradeState ?? true,
-      },
-      dynamicVirtualTrading: {
+dynamicVirtualTrading: {
         enabled: (value.dynamicVirtualTrading?.enabled ?? true),
         minimumObservationTicks: Number(value.dynamicVirtualTrading?.minimumObservationTicks ?? 3),
         maximumObservationTicks: Number(value.dynamicVirtualTrading?.maximumObservationTicks ?? 40),
@@ -3277,8 +3266,11 @@ export class TradingSettingsComponent implements OnInit {
         riskRewardThreshold: Number(value.reporting?.riskRewardThreshold ?? 2),
         enableVirtualTradeTickEmails: value.reporting?.enableVirtualTradeTickEmails ?? true,
         minimumVirtualTradeTicksForEmail: Number(
-          value.reporting?.minimumVirtualTradeTicksForEmail ?? 10,
+          value.reporting?.minimumVirtualTradeTicksForEmail ?? 3,
         ),
+        virtualTradeEmailStages: Array.isArray(value.reporting?.virtualTradeEmailStages)
+          ? value.reporting.virtualTradeEmailStages
+          : ["REJECTED", "EXPIRED", "ENTRY", "EXIT"],
       },
     };
 

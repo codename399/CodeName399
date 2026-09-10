@@ -153,7 +153,6 @@ export interface TradingConfiguration {
   strategy: TradingStrategy;
   dynamicEvaluation?: DynamicEvaluationSettings;
   dynamicVirtualTrading?: DynamicVirtualTradingSettings;
-  analysisCapture?: AnalysisCaptureSettings;
   tradingStrictnessProfile?: TradingStrictnessProfile;
 
   riskPercentage: number;
@@ -464,22 +463,6 @@ export interface VirtualTradingSettings {
   maximumPullbackGainPercent?: number;
 }
 
-export interface AnalysisCaptureSettings {
-  enabled: boolean;
-  batchIntervalMinutes: number;
-  captureWindowMinutes: number;
-  stockCount: number;
-  candleCount: number;
-  instrumentType: string;
-  outputDirectory: string;
-  publicBaseUrl: string;
-  downloadLinkLifetimeHours: number;
-  downloadSigningKey: string;
-  emailOnCompletion: boolean;
-  includeTickData: boolean;
-  includeConfiguration: boolean;
-  includeActualVirtualTradeState: boolean;
-}
 
 export interface DynamicEvaluationSettings {
   enabled: boolean;
@@ -586,6 +569,7 @@ export interface ReportingSettings {
   riskRewardThreshold: number;
   enableVirtualTradeTickEmails?: boolean;
   minimumVirtualTradeTicksForEmail?: number;
+  virtualTradeEmailStages?: string[];
 }
 
 export interface ConfidenceSettings {

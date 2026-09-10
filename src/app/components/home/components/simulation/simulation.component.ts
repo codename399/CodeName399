@@ -31,7 +31,7 @@ export class TradingSimulationComponent {
     return stock.candles[this.selectedCandle()] ?? stock.candles[0];
   });
   candles = computed<CandleCapture[]>(() => this.stock()?.candles ?? []);
-  ticks = computed(() => this.candle()?.ticks ?? []); indicators = computed(() => this.candle()?.indicators ?? {}); decision = computed(() => this.candle()?.decision ?? {}); svg = computed(() => this.buildChart());
+  ticks = computed(() => this.stock()?.candles.flatMap(c => c.ticks) ?? []); indicators = computed(() => this.candle()?.indicators ?? {}); decision = computed(() => this.candle()?.decision ?? {}); svg = computed(() => this.buildChart());
 
   async upload(files: FileList|null): Promise<void> {
     if (!files?.length) return; this.error.set(''); const loaded: StockCapture[]=[];
@@ -434,9 +434,121 @@ export class TradingSimulationComponent {
 
   private loadParametersFromConfiguration(config:Record<string,unknown>):void {const tc:any=config,e=tc['equity']??tc['Equity']??{},d=tc['dynamicEvaluation']??tc['DynamicEvaluation']??{},v=tc['validation']??tc['Validation']??{};this.params.minimumScore=this.num(e['minimumFinalScore']??e['MinimumFinalScore']??this.params.minimumScore);this.params.minimumConfidence=this.num(e['minimumConfidence']??e['MinimumConfidence']??d['minimumEntryScore']??d['MinimumEntryScore']??this.params.minimumConfidence);this.params.minimumRiskReward=this.num(d['minimumRiskReward']??d['MinimumRiskReward']??e['minimumRiskReward']??e['MinimumRiskReward']??this.params.minimumRiskReward);this.params.minimumExpectedNetValue=this.num(d['minimumExpectedNetValue']??d['MinimumExpectedNetValue']??this.params.minimumExpectedNetValue);this.params.minimumEdgeScore=this.num(d['minimumEdgeScore']??d['MinimumEdgeScore']??this.params.minimumEdgeScore);this.params.minimumProfitPercent=this.num(e['minimumRoiPercent']??e['MinimumRoiPercent']??v['minimumGainPercent']??v['MinimumGainPercent']??this.params.minimumProfitPercent);this.params.maximumSpreadPercent=this.num(e['maximumSpreadPercent']??e['MaximumSpreadPercent']??this.params.maximumSpreadPercent);}
 
-  private async readWorkbook(file:File):Promise<StockCapture>{const buffer=await file.arrayBuffer();const wb=XLSX.read(buffer,{type:'array',cellDates:true});const candles=wb.SheetNames.filter((n: string)=>/^Candle_\d+$/i.test(n)).map((name: string,idx: number)=>this.parseSheet(wb.Sheets[name],idx));if(!candles.length)throw new Error('No Candle_XX sheets found.');const rows=XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:''});const title=String(rows[0]?.[0]??file.name.replace(/\.xlsx$/i,''));const symbol=title.split(' — ')[0].trim()||file.name.replace(/\.xlsx$/i,'');let configuration:Record<string,unknown>={};const cr=rows.findIndex((r: unknown[])=>String(r[0]??'').trim()==='JSON');if(cr>=0){try{configuration=JSON.parse(String(rows[cr]?.[1]??'{}'));}catch{configuration={};}}return {symbol,token:file.name.match(/_([0-9]+)\.xlsx$/)?.[1]??'',exchange:String(rows[1]?.[5]??''),candles,configuration};}
-  private parseSheet(sheet:XLSX.WorkSheet,index:number):CandleCapture{const rows=XLSX.utils.sheet_to_json<unknown[]>(sheet,{header:1,raw:true,defval:''});const decision:any={},indicators:Indicators={},actual:any={},virtual:any={};let candle={timestamp:'',open:0,high:0,low:0,close:0,volume:0};const ticks:Tick[]=[];let section='';for(const row of rows){const first=String(row[0]??'').trim();if(/^(CANDLE|INDICATORS|BUY \/ DECISION|ACTUAL TRADE STATE|VIRTUAL TRADING STATE|CONFIGURATION|TICK-BY-TICK DATA)/i.test(first)){section=first;continue;}if(section==='CANDLE'&&row[0]){const k=String(row[0]),v=row[1];if(k==='Timestamp')candle.timestamp=this.iso(v);if(k==='Open')candle.open=this.num(v);if(k==='High')candle.high=this.num(v);if(k==='Low')candle.low=this.num(v);if(k==='Close')candle.close=this.num(v);if(k==='Volume')candle.volume=this.num(v);}else if(section==='INDICATORS'&&row[0])indicators[String(row[0])]=this.value(row[1]);else if(section==='BUY / DECISION'&&row[0])decision[String(row[0])]=this.value(row[1]);else if(section==='ACTUAL TRADE STATE'&&row[0])actual[String(row[0])]=this.value(row[1]);else if(section==='VIRTUAL TRADING STATE'&&row[0])virtual[String(row[0])]=this.value(row[1]);else if(section==='TICK-BY-TICK DATA'&&first&&first!=='#'&&String(row[1]??'').length)ticks.push({n:this.num(row[0]),utc:this.iso(row[1]),exchangeTime:this.iso(row[2]),sequence:this.num(row[3]),ltp:this.num(row[4]),bid:this.num(row[5]),ask:this.num(row[6]),spread:this.num(row[7]),spreadPct:this.num(row[8]),open:this.num(row[9]),high:this.num(row[10]),low:this.num(row[11]),close:this.num(row[12]),ltq:this.num(row[13]),avgPrice:this.num(row[14]),dayVolume:this.num(row[15]),buyQty:this.num(row[16]),sellQty:this.num(row[17])});}return {index,timestamp:candle.timestamp,candle,indicators,decision,virtualTrade:virtual,actualTrade:actual,ticks};}
-  private buildChart():string{const s=this.stock();if(!s)return '';const data=s.candles.filter(c=>c.candle.close>0).slice(-30);if(!data.length)return '';const w=1000,h=360,pad=35,vals=data.flatMap(c=>[c.candle.low,c.candle.high]);for(const k of Object.keys(this.toggles).filter(k=>this.toggles[k]))for(const c of data){const v=Number(c.indicators[k]);if(Number.isFinite(v)&&v>0)vals.push(v);}const min=Math.min(...vals),max=Math.max(...vals),range=Math.max(.0001,max-min),x=(i:number)=>pad+i*((w-pad*2)/Math.max(1,data.length-1)),y=(v:number)=>h-pad-((v-min)/range)*(h-pad*2);let svg=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><rect x="0" y="0" width="${w}" height="${h}" fill="#0b1220"/>`;data.forEach((c,i)=>{const xx=x(i),o=y(c.candle.open),cl=y(c.candle.close),hi=y(c.candle.high),lo=y(c.candle.low),up=c.candle.close>=c.candle.open;svg+=`<line x1="${xx}" y1="${hi}" x2="${xx}" y2="${lo}" stroke="${up?'#42d392':'#ff667a'}"/><rect x="${xx-7}" y="${Math.min(o,cl)}" width="14" height="${Math.max(2,Math.abs(cl-o))}" fill="${up?'#42d392':'#ff667a'}"/>`;});for(const k of ['EMA9','EMA21','EMA50','EMA200','VWAP','AnchoredVWAP'].filter(k=>this.toggles[k])){const pts=data.map((c,i)=>`${x(i)},${y(Number(c.indicators[k])||0)}`).join(' ');svg+=`<polyline points="${pts}" fill="none" stroke="#9aa8ff" stroke-width="2" opacity=".85"/>`;}return svg+'</svg>';}
+  private async readWorkbook(file:File):Promise<StockCapture>{
+    const buffer=await file.arrayBuffer();
+    const wb=XLSX.read(buffer,{type:'array',cellDates:true});
+    if(!wb.SheetNames.length) throw new Error('Workbook contains no sheets.');
+    // New lifecycle format: exactly one sheet per stock, with one row per
+    // websocket tick. No candle sheets are required or expected.
+    const sheet=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json<unknown[]>(sheet,{header:1,raw:true,defval:''});
+    const headerIndex=rows.findIndex((r:unknown[])=>String(r[0]??'').trim()==='TickNumber');
+    if(headerIndex<0) throw new Error('No lifecycle tick table found. Expected a TickNumber header.');
+    const headers=(rows[headerIndex] as unknown[]).map(x=>String(x??'').trim());
+    const indexOf=(name:string)=>headers.findIndex(h=>h===name);
+    const ticks:Tick[]=[];
+    const candles:CandleCapture[]=[];
+    const metadata:Record<string,string|number|boolean>={};
+    for(let i=0;i<headerIndex;i++){
+      const r=rows[i] as unknown[];
+      if(String(r?.[0]??'').trim()) metadata[String(r[0]).trim()]=this.value(r[1]);
+    }
+    const actual:ActualTrade={};
+    for(const r0 of rows.slice(headerIndex+1)){
+      const r=r0 as unknown[];
+      if(!r.length || String(r[indexOf('TickNumber')]??'').trim()==='') continue;
+      const indicators:Indicators={};
+      for(let j=0;j<headers.length;j++){
+        if(headers[j].startsWith('Indicator.')) indicators[headers[j].substring(10)]=this.value(r[j]);
+      }
+      const tick:Tick={
+        n:this.num(r[indexOf('TickNumber')]), utc:this.iso(r[indexOf('TimestampUtc')]),
+        exchangeTime:this.iso(r[indexOf('ExchangeTime')]), sequence:this.num(r[indexOf('SequenceNumber')]),
+        ltp:this.num(r[indexOf('Price')]), bid:this.num(r[indexOf('Bid')]), ask:this.num(r[indexOf('Ask')]),
+        spread:this.num(r[indexOf('Spread')]), spreadPct:this.num(r[indexOf('SpreadPercent')]),
+        open:this.num(r[indexOf('Price')]), high:this.num(r[indexOf('High')]), low:this.num(r[indexOf('Low')]),
+        close:this.num(r[indexOf('Price')]), ltq:0, avgPrice:0, dayVolume:this.num(r[indexOf('Volume')]),
+        buyQty:0, sellQty:0,
+        stage:String(r[indexOf('Stage')]??''), decision:String(r[indexOf('Decision')]??''),
+        decisionReason:String(r[indexOf('DecisionReason')]??''), status:String(r[indexOf('Status')]??''),
+        movementScore:this.num(r[indexOf('MovementScore')]), trendStrength:this.num(r[indexOf('TrendStrength')]),
+        trendStability:this.num(r[indexOf('TrendStability')]), recoveryScore:this.num(r[indexOf('RecoveryScore')]),
+        breakoutStrength:this.num(r[indexOf('BreakoutStrength')]), noiseScore:this.num(r[indexOf('NoiseScore')]),
+        tickQualityScore:this.num(r[indexOf('TickQualityScore')]), confidence:this.num(r[indexOf('Confidence')]),
+        adaptiveExpectedNetValue:this.num(r[indexOf('AdaptiveExpectedNetValue')]),
+        adaptiveEdgeScore:this.num(r[indexOf('AdaptiveEdgeScore')]), adaptiveRiskReward:this.num(r[indexOf('AdaptiveRiskReward')]),
+        entryPrice:this.num(r[indexOf('EntryPrice')]), exitPrice:this.num(r[indexOf('ExitPrice')]),
+        stopLoss:this.num(r[indexOf('StopLoss')]), targetPrice:this.num(r[indexOf('TargetPrice')]),
+        exitReason:String(r[indexOf('ExitReason')]??''), indicators
+      };
+      ticks.push(tick);
+      const close=tick.ltp;
+      const candle:CandleCapture={
+        index:candles.length,timestamp:tick.utc||tick.exchangeTime,
+        candle:{timestamp:tick.utc||tick.exchangeTime,open:close,high:close,low:close,close,volume:tick.dayVolume},
+        indicators,
+        decision:{
+          signal:String(indicators['Signal']??''),
+          score:this.num(indicators['Score']),
+          adaptiveConfidence:tick.confidence??0,
+          adaptiveRiskReward:tick.adaptiveRiskReward??0,
+          adaptiveEdgeScore:tick.adaptiveEdgeScore??0,
+          expectedNetValue:tick.adaptiveExpectedNetValue??0
+        },
+        virtualTrade:{
+          movementScore:tick.movementScore??0, trendStrength:tick.trendStrength??0,
+          trendStability:tick.trendStability??0, recoveryScore:tick.recoveryScore??0,
+          breakoutStrength:tick.breakoutStrength??0, noiseScore:tick.noiseScore??0,
+          tickQualityScore:tick.tickQualityScore??0, priceSlope:0, stage:tick.stage??''
+        },
+        actualTrade:actual,ticks:[tick]
+      };
+      candles.push(candle);
+    }
+    if(!ticks.length) throw new Error('Lifecycle workbook contains no tick rows.');
+    actual['Status']=metadata['Status']??ticks[ticks.length-1].status??'';
+    actual['EntryPrice']=metadata['Entry Price']??ticks.find(x=>x.entryPrice!>0)?.entryPrice??0;
+    actual['ExitPrice']=metadata['Exit Price']??ticks.find(x=>x.exitPrice!>0)?.exitPrice??0;
+    actual['ExitReason']=metadata['Exit Reason']??ticks.find(x=>x.exitReason)?.exitReason??'';
+    actual['EstimatedNetProfit']=metadata['Estimated Net Profit']??0;
+    const symbol=String(metadata['Symbol']??file.name.replace(/\.xlsx$/i,''));
+    const token=String(metadata['Symbol Token']??file.name.match(/_([0-9]+)\.xlsx$/)?.[1]??'');
+    const exchange=String(metadata['Exchange']??'');
+    return {symbol,token,exchange,candles,configuration:{}};
+  }
+
+  private parseSheet(sheet:XLSX.WorkSheet,index:number):CandleCapture{
+    throw new Error('Legacy candle-sheet format is no longer supported. Export the new one-sheet lifecycle workbook.');
+  }
+
+  private buildChart():string{
+    const s=this.stock(); if(!s) return '';
+    const ticks=s.candles.flatMap(c=>c.ticks).filter(t=>t.ltp>0);
+    if(!ticks.length) return '';
+    const w=1100,h=420,pad=45;
+    const vals=ticks.map(t=>t.ltp);
+    for(const k of Object.keys(this.toggles).filter(k=>this.toggles[k])){
+      for(const t of ticks){const v=Number(t.indicators?.[k]);if(Number.isFinite(v)&&v>0)vals.push(v);}
+    }
+    const min=Math.min(...vals),max=Math.max(...vals),range=Math.max(.0001,max-min);
+    const x=(i:number)=>pad+i*((w-pad*2)/Math.max(1,ticks.length-1));
+    const y=(v:number)=>h-pad-((v-min)/range)*(h-pad*2);
+    let svg=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><rect x="0" y="0" width="${w}" height="${h}" fill="#0b1220"/>`;
+    const pricePts=ticks.map((t,i)=>`${x(i)},${y(t.ltp)}`).join(' ');
+    svg+=`<polyline points="${pricePts}" fill="none" stroke="#e6edf7" stroke-width="2"/>`;
+    for(const k of ['EMA9','EMA21','EMA50','EMA200','VWAP','AnchoredVWAP'].filter(k=>this.toggles[k])){
+      const pts=ticks.map((t,i)=>{const v=Number(t.indicators?.[k]);return Number.isFinite(v)&&v>0?`${x(i)},${y(v)}`:''}).filter(Boolean).join(' ');
+      if(pts) svg+=`<polyline points="${pts}" fill="none" stroke="#9aa8ff" stroke-width="1.5" opacity=".85"/>`;
+    }
+    ticks.forEach((t,i)=>{
+      const stage=(t.stage||'').toUpperCase();
+      if(stage==='ENTRY'){svg+=`<polygon points="${x(i)},${y(t.ltp)-14} ${x(i)-7},${y(t.ltp)-2} ${x(i)+7},${y(t.ltp)-2}" fill="#42d392"/><text x="${x(i)+8}" y="${y(t.ltp)-5}" fill="#42d392" font-size="12">ENTRY</text>`;}
+      if(stage==='EXIT'){svg+=`<polygon points="${x(i)},${y(t.ltp)+14} ${x(i)-7},${y(t.ltp)+2} ${x(i)+7},${y(t.ltp)+2}" fill="#ff667a"/><text x="${x(i)+8}" y="${y(t.ltp)+18}" fill="#ff667a" font-size="12">EXIT</text>`;}
+      if(stage==='REJECTED'||stage==='EXPIRED'){svg+=`<circle cx="${x(i)}" cy="${y(t.ltp)}" r="5" fill="#f6c85f"/><text x="${x(i)+8}" y="${y(t.ltp)-8}" fill="#f6c85f" font-size="11">${stage}</text>`;}
+    });
+    return svg+'</svg>';
+  }
+
   private value(v:unknown):string|number|boolean{if(typeof v==='boolean')return v;if(typeof v==='number')return v;const s=String(v??'');if(s==='true'||s==='false')return s==='true';const n=Number(s);return s!==''&&Number.isFinite(n)?n:s;}
   private iso(v:unknown):string{if(v instanceof Date)return v.toISOString();return String(v??'');}
 }

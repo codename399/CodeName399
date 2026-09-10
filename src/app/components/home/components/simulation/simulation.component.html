@@ -5,7 +5,7 @@
     <div class="side-title">STOCKS <span>{{ stocks().length }}</span></div>
     <div class="stock-list">
       <button *ngFor="let s of stocks()" [class.active]="s.symbol === selectedSymbol()" (click)="selectStock(s.symbol)">
-        <span>{{ s.symbol }}</span><small>{{ s.candles.length }} candles</small>
+        <span>{{ s.symbol }}</span><small>{{ s.candles.length }} tick stages</small>
       </button>
     </div>
     <div class="side-foot">Replay locally in your browser. Uploaded workbooks are not sent anywhere by this UI.</div>
@@ -21,7 +21,7 @@
 
     <section *ngIf="!stock()" class="panel empty-state">
       <div class="empty-icon">↥</div>
-      <h2>Upload trading analysis workbooks</h2>
+      <h2>Upload trading lifecycle workbooks</h2>
       <p>Select one or more <strong>.xlsx</strong> analysis files from the panel on the left. The replay, diagnostics, decision timeline and optimization panels will populate automatically.</p>
       <label class="upload empty-upload"><input type="file" multiple accept=".xlsx" (change)="upload($any($event.target).files)"><span>＋ Choose Excel files</span><small>Nothing is uploaded to a server by this UI.</small></label>
     </section>
@@ -43,7 +43,7 @@
 
     <section *ngIf="activeTab()==='overview'" class="workspace">
       <div class="panel chart-panel">
-        <div class="panel-head"><div><strong>Price action</strong><small>30-minute captured window</small></div><div class="legend">{{ candle()?.timestamp | date:'medium' }}</div></div>
+        <div class="panel-head"><div><strong>Price action</strong><small>Captured tick lifecycle</small></div><div class="legend">{{ candle()?.timestamp | date:'medium' }}</div></div>
         <div class="chart" [innerHTML]="svg()"></div>
         <div class="candle-strip"><button *ngFor="let c of candles(); let i=index" [class.selected]="i===selectedCandle()" (click)="selectCandle(i)">{{ c.timestamp | date:'HH:mm' }}</button></div>
       </div>
@@ -63,12 +63,12 @@
     </section>
 
     <section *ngIf="activeTab()==='ticks'" class="panel full">
-      <div class="panel-head"><div><strong>Tick-by-tick tape</strong><small>{{ ticks().length }} ticks in minute {{ selectedCandle()+1 }}</small></div></div>
-      <div class="table-wrap"><table><thead><tr><th>#</th><th>Time</th><th>Price</th><th>Bid</th><th>Ask</th><th>Spread</th><th>LTQ</th><th>Day volume</th><th>Buy qty</th><th>Sell qty</th></tr></thead><tbody><tr *ngFor="let t of ticks()"><td>{{t.n}}</td><td>{{t.exchangeTime | date:'HH:mm:ss.SSS'}}</td><td class="price">₹{{t.ltp|number:'1.2-2'}}</td><td>{{t.bid|number:'1.2-2'}}</td><td>{{t.ask|number:'1.2-2'}}</td><td>{{t.spreadPct|number:'1.2-2'}}%</td><td>{{t.ltq}}</td><td>{{t.dayVolume}}</td><td>{{t.buyQty|number:'1.0-0'}}</td><td>{{t.sellQty|number:'1.0-0'}}</td></tr></tbody></table></div>
+      <div class="panel-head"><div><strong>Tick-by-tick tape</strong><small>{{ ticks().length }} ticks across the selected stock</small></div></div>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Time</th><th>Stage</th><th>Decision</th><th>Price</th><th>Bid</th><th>Ask</th><th>Spread</th><th>Score</th><th>Confidence</th><th>Recovery</th><th>Reason</th></tr></thead><tbody><tr *ngFor="let t of ticks()"><td>{{t.n}}</td><td>{{t.exchangeTime | date:'HH:mm:ss.SSS'}}</td><td><span class="badge">{{t.stage || 'VIRTUAL'}}</span></td><td>{{t.decision || '—'}}</td><td class="price">₹{{t.ltp|number:'1.2-2'}}</td><td>{{t.bid|number:'1.2-2'}}</td><td>{{t.ask|number:'1.2-2'}}</td><td>{{t.spreadPct|number:'1.2-2'}}%</td><td>{{t.indicators?.['Score'] || 0}}</td><td>{{(t.confidence || 0) | number:'1.1-1'}}</td><td>{{(t.recoveryScore || 0) | number:'1.1-1'}}</td><td>{{t.decisionReason || t.exitReason || t.status || '—'}}</td></tr></tbody></table></div>
     </section>
 
     <section *ngIf="activeTab()==='decisions'" class="panel full">
-      <div class="panel-head"><div><strong>Decision timeline</strong><small>One row per captured minute</small></div></div>
+      <div class="panel-head"><div><strong>Decision timeline</strong><small>One row per captured tick/stage</small></div></div>
       <div class="timeline"><button *ngFor="let c of candles(); let i=index" (click)="selectCandle(i)" [class.selected]="i===selectedCandle()"><span>{{c.timestamp|date:'HH:mm'}}</span><b>{{c.decision['signal']||'HOLD'}}</b><small>Score {{c.decision['score']||0}} · Edge {{c.decision['adaptiveEdgeScore']||0}}</small></button></div>
     </section>
 

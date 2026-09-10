@@ -2,6 +2,29 @@ export interface Tick {
   n: number; utc: string; exchangeTime: string; sequence: number; ltp: number; bid: number; ask: number;
   spread: number; spreadPct: number; open: number; high: number; low: number; close: number;
   ltq: number; avgPrice: number; dayVolume: number; buyQty: number; sellQty: number;
+
+  // Lifecycle fields captured by the virtual-tick workbook.
+  stage?: string;
+  decision?: string;
+  decisionReason?: string;
+  status?: string;
+  movementScore?: number;
+  trendStrength?: number;
+  trendStability?: number;
+  recoveryScore?: number;
+  breakoutStrength?: number;
+  noiseScore?: number;
+  tickQualityScore?: number;
+  confidence?: number;
+  adaptiveExpectedNetValue?: number;
+  adaptiveEdgeScore?: number;
+  adaptiveRiskReward?: number;
+  entryPrice?: number;
+  exitPrice?: number;
+  stopLoss?: number;
+  targetPrice?: number;
+  exitReason?: string;
+  indicators?: Indicators;
 }
 
 export interface Indicators { [key: string]: number | boolean | string; }
