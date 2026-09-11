@@ -1443,9 +1443,60 @@ export class TradingSimulationComponent implements OnInit, OnDestroy {
             Value: this.exportExcelValue(Value),
           })))
         );
-        addSheet('Tick Indicators', tickIndicatorRows);
+        // Tick indicators can also exceed Excel's worksheet row limit for
+        // high-frequency captures, so partition them exactly like tick rows.
+        const indicatorChunkSize = 50000;
+        for (let offset = 0, part = 1; offset < tickIndicatorRows.length || part === 1; offset += indicatorChunkSize, part++) {
+          addSheet(`Tick Indicators ${part}`, tickIndicatorRows.slice(offset, offset + indicatorChunkSize));
+          if (offset >= tickIndicatorRows.length) break;
+        }
+
         addSheet('Issues', r.issues ?? []);
         addSheet('Recommendations', r.recommendations ?? []);
+        addSheet('Simulation Details', [
+          { Field: 'Reasons', Value: this.exportExcelValue(r.reasons) },
+          { Field: 'Recommendation', Value: this.exportExcelValue(r.recommendation) },
+          { Field: 'Replay', Value: this.exportExcelValue(r.replay) },
+          { Field: 'Future Path', Value: this.exportExcelValue(r.futurePath) },
+          { Field: 'Future Paths', Value: this.exportExcelValue(r.futurePaths) },
+          { Field: 'Global Configuration', Value: this.exportExcelValue(r.globalConfiguration) },
+          { Field: 'Global Learning', Value: this.exportExcelValue(this.globalLearning()) },
+          { Field: 'Regime Learning', Value: this.exportExcelValue(this.regimeLearning()) },
+          { Field: 'Configuration Proposal', Value: this.exportExcelValue(this.configurationProposal()) },
+        ]);
+
+        // Keep an explicit, lossless representation of every captured object.
+        // The JSON is chunked below Excel's 32,767-character cell limit so no
+        // nested/optional fields are silently lost.
+        const completeRows: Array<{ Dataset: string; CandleIndex: number; Tick?: number; TimestampIST: string; Chunk: number; Data: string }> = [];
+        const appendJsonChunks = (dataset: string, candleIndex: number, tick: number | undefined, timestamp: string, value: unknown): void => {
+          const rawValue = JSON.stringify(value ?? null, (_key, v) => {
+            if (v === undefined) return null;
+            if (typeof v === 'bigint') return v.toString();
+            return v;
+          });
+          const chunkSize = 30000;
+          for (let i = 0, chunk = 1; i < rawValue.length || chunk === 1; i += chunkSize, chunk++) {
+            completeRows.push({
+              Dataset: dataset,
+              CandleIndex: candleIndex,
+              ...(tick === undefined ? {} : { Tick: tick }),
+              TimestampIST: timestamp,
+              Chunk: chunk,
+              Data: rawValue.slice(i, i + chunkSize),
+            });
+            if (i >= rawValue.length) break;
+          }
+        };
+        s.candles.forEach((c, candleIndex) => {
+          appendJsonChunks('Candle', candleIndex, undefined, this.istTime(c.timestamp), c);
+          c.ticks.forEach(t => appendJsonChunks('Tick', candleIndex, t.n, this.istTime(t.exchangeTime || t.utc), t));
+        });
+        const completeChunkSize = 50000;
+        for (let offset = 0, part = 1; offset < completeRows.length || part === 1; offset += completeChunkSize, part++) {
+          addSheet(`Complete Data ${part}`, completeRows.slice(offset, offset + completeChunkSize));
+          if (offset >= completeRows.length) break;
+        }
 
         const rawPayload = {
           schemaVersion: '1.0',
@@ -1524,12 +1575,161 @@ export class TradingSimulationComponent implements OnInit, OnDestroy {
   }
 
   exportSimulationToPdf(): void {
-    const s = this.stock(); if (!s) return; const r = this.simulation();
-    const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch] as string));
-    const rows = r.issues.slice(0,20).map(i => `<tr><td>${esc(i.kind)}</td><td>${esc(i.title)}</td><td>${esc(i.detail)}</td></tr>`).join(''); const explanation = esc(this.entryExplanation());
-    const html = `<!doctype html><html><head><title>${esc(s.symbol)} simulation report</title><style>body{font-family:Arial,sans-serif;color:#172033;margin:32px}h1{margin-bottom:4px}h2{margin-top:26px}.meta{color:#657086;font-size:12px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.card{border:1px solid #d7deea;padding:10px;border-radius:7px}.card span{display:block;color:#68758a;font-size:10px}.card b{display:block;margin-top:4px}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #d7deea;padding:7px;text-align:left;vertical-align:top}th{background:#eef2f7}.explain{white-space:pre-wrap;background:#f5f7fa;border-left:3px solid #4f6ff0;padding:12px;font-size:11px;line-height:1.5}@media print{body{margin:15mm}}</style></head><body><h1>${esc(s.symbol)} — Simulation Report</h1><div class="meta">Generated ${esc(this.istTime(new Date().toISOString()))} IST · Source ${esc(this.sourceMode())}</div><h2>Overall result</h2><div class="grid"><div class="card"><span>Net profit</span><b>₹${r.netProfit.toFixed(2)}</b></div><div class="card"><span>Trades</span><b>${r.trades}</b></div><div class="card"><span>Wins / losses</span><b>${r.wins} / ${r.losses}</b></div><div class="card"><span>Missed opportunities</span><b>${r.missed}</b></div><div class="card"><span>Missed profit</span><b>₹${r.missedProfit.toFixed(2)}</b></div><div class="card"><span>Avoidable losses</span><b>${r.avoidableLosses}</b></div><div class="card"><span>Best entry</span><b>₹${r.bestEntry.toFixed(2)}</b></div><div class="card"><span>Best exit</span><b>₹${r.bestExit.toFixed(2)}</b></div></div><h2>Conclusion</h2><p>${esc(r.recommendation)}</p>${explanation ? `<h2>Entry explanation</h2><div class="explain">${explanation}</div>` : ''}<h2>Issues</h2><table><thead><tr><th>Type</th><th>Title</th><th>Evidence</th></tr></thead><tbody>${rows || '<tr><td colspan="3">No issues recorded.</td></tr>'}</tbody></table><p class="meta">All timestamps in this report are IST (Asia/Kolkata).</p><script>window.onload=()=>setTimeout(()=>window.print(),250);</script></body></html>`;
-    const win = window.open('', '_blank', 'width=1100,height=800'); if(!win){ this.error.set('Unable to open the PDF report window. Please allow pop-ups for this site.'); return; }
-    win.document.open(); win.document.write(html); win.document.close(); this.actionStatus.set('PDF report opened. Choose “Save as PDF” in the print dialog.');
+    const s = this.stock();
+    if (!s) return;
+
+    this.error.set('');
+    this.actionBusy.set(true);
+    this.busyAction.set('export-pdf');
+    this.actionStatus.set('Preparing complete PDF report…');
+
+    // Build the report asynchronously so the loading state can render before
+    // the potentially large HTML document is assembled.
+    setTimeout(() => {
+      try {
+        const r = this.simulation();
+        const esc = (v: unknown): string =>
+          String(v ?? '').replace(/[&<>"']/g, ch =>
+            ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] as string)
+          );
+        const json = (v: unknown): string => {
+          try {
+            return JSON.stringify(v ?? null);
+          } catch {
+            return String(v ?? '');
+          }
+        };
+        const cell = (v: unknown): string => `<td>${esc(v)}</td>`;
+        const header = (cols: string[]): string => `<tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr>`;
+
+        const summaryRows = [
+          ['Symbol', s.symbol], ['Token', s.token], ['Exchange', s.exchange],
+          ['Net Profit', r.netProfit], ['Trades', r.trades], ['Wins', r.wins],
+          ['Losses', r.losses], ['Missed Opportunities', r.missed],
+          ['Missed Profit', r.missedProfit], ['Avoidable Losses', r.avoidableLosses],
+          ['Actual Losses', r.actualLosses], ['Opportunity %', r.opportunityPercent],
+          ['Best Entry', r.bestEntry], ['Best Exit', r.bestExit],
+          ['Best Entry Time IST', this.istTime(r.bestEntryTime)],
+          ['Best Exit Time IST', this.istTime(r.bestExitTime)],
+          ['Recommendation', r.recommendation],
+        ].map(([k, v]) => `<tr>${cell(k)}${cell(v)}</tr>`).join('');
+
+        const issues = (r.issues ?? []).map(i =>
+          `<tr>${cell(i.kind)}${cell(i.timestamp ? this.istTime(i.timestamp) : '')}${cell(i.severity)}${cell(i.title)}${cell(i.detail)}</tr>`
+        ).join('');
+
+        const recommendations = (r.recommendations ?? []).map(x =>
+          `<tr>${cell(x.parameter)}${cell(x.current)}${cell(x.suggested)}${cell(x.reason)}${cell(x.evidenceCount)}${cell(x.expectedImprovement)}</tr>`
+        ).join('');
+
+        const futurePaths = (r.futurePaths ?? (r.futurePath ? [r.futurePath] : [])).map(x =>
+          `<tr>${cell(this.istTime(x.entryTime))}${cell(x.exitTime ? this.istTime(x.exitTime) : '')}${cell(x.entryPrice)}${cell(x.actualExitPrice)}${cell(x.maxPrice)}${cell(x.minPrice)}${cell(x.bestExitPrice)}${cell(this.istTime(x.bestExitTime))}${cell(x.maxFavorablePercent)}${cell(x.maxAdversePercent)}${cell(x.realizedPercent)}${cell(x.leftOnTablePercent)}${cell(x.diagnosis)}</tr>`
+        ).join('');
+
+        const replay = r.replay;
+        const replayRows = replay ? [
+          ['Signal', replay.signal], ['Should Buy', replay.shouldBuy], ['First Blocking Gate', replay.firstBlockingGate],
+          ['Entry Mistake', replay.entryMistake], ['Exit Mistake', replay.exitMistake],
+          ['Future Best Price', replay.futureBestPrice], ['Future Worst Price', replay.futureWorstPrice],
+          ['Production Parity', replay.productionParity], ['Production Parity Notes', replay.parityNotes?.join(' | ')],
+          ['Regime', replay.regime], ['Policy Source', replay.policySource], ['Policy Impact', replay.policyImpact],
+        ].map(([k,v]) => `<tr>${cell(k)}${cell(v)}</tr>`).join('') : '';
+
+        // Every captured candle is printed, including its indicators, decision,
+        // virtual/actual trade and every tick. This deliberately does not use
+        // a top-N/first-N limit.
+        const candleSections = s.candles.map((c, i) => {
+          const tickRows = c.ticks.map(t =>
+            `<tr>${cell(t.n)}${cell(t.sequence)}${cell(this.istTime(t.exchangeTime || t.utc))}${cell(t.stage)}${cell(t.status)}${cell(t.decision)}${cell(t.ltp)}${cell(t.bid)}${cell(t.ask)}${cell(t.spreadPct)}${cell(t.dayVolume)}${cell(t.movementScore)}${cell(t.trendStrength)}${cell(t.trendStability)}${cell(t.recoveryScore)}${cell(t.breakoutStrength)}${cell(t.noiseScore)}${cell(t.tickQualityScore)}${cell(t.confidence)}${cell(t.adaptiveExpectedNetValue)}${cell(t.adaptiveEdgeScore)}${cell(t.adaptiveRiskReward)}${cell(t.entryPrice)}${cell(t.exitPrice)}${cell(t.stopLoss)}${cell(t.targetPrice)}${cell(t.exitReason)}${cell(t.decisionReason)}${cell(json(t.indicators))}</tr>`
+          ).join('');
+          return `<section class="data-section">
+            <h3>Candle ${i + 1} — ${esc(this.istTime(c.timestamp))}</h3>
+            <table><tbody>
+              <tr>${cell('Timestamp IST')}${cell(this.istTime(c.timestamp))}</tr>
+              <tr>${cell('OHLCV')}${cell(`${c.candle.open} / ${c.candle.high} / ${c.candle.low} / ${c.candle.close} / ${c.candle.volume}`)}</tr>
+              <tr>${cell('Indicators')}${cell(json(c.indicators))}</tr>
+              <tr>${cell('Decision')}${cell(json(c.decision))}</tr>
+              <tr>${cell('Loaded Decision Fields')}${cell((c.loadedDecisionFields ?? []).join(', '))}</tr>
+              <tr>${cell('Virtual Trade')}${cell(json(c.virtualTrade))}</tr>
+              <tr>${cell('Actual Trade')}${cell(json(c.actualTrade))}</tr>
+            </tbody></table>
+            <h4>Ticks (${c.ticks.length})</h4>
+            <table class="wide"><thead>${header(['Tick','Sequence','Time IST','Stage','Status','Decision','Price','Bid','Ask','Spread %','Day Volume','Movement','Trend','Stability','Recovery','Breakout','Noise','Quality','Confidence','Expected Net','Edge','Risk/Reward','Entry','Exit','Stop Loss','Target','Exit Reason','Decision Reason','Indicators'])}</thead>
+            <tbody>${tickRows || `<tr><td colspan="29">No ticks captured.</td></tr>`}</tbody></table>
+          </section>`;
+        }).join('');
+
+        const html = `<!doctype html><html><head><title>${esc(s.symbol)} complete simulation report</title>
+          <style>
+            body{font-family:Arial,sans-serif;color:#172033;margin:25px;font-size:10px}
+            h1{font-size:22px;margin-bottom:4px}h2{margin-top:24px;font-size:16px;border-bottom:1px solid #bfc8d6;padding-bottom:5px}
+            h3{margin:14px 0 7px;font-size:13px}h4{margin:10px 0 5px;font-size:11px}
+            .meta{color:#657086;font-size:9px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+            .card{border:1px solid #d7deea;padding:8px;border-radius:6px}.card span{display:block;color:#68758a;font-size:8px}.card b{display:block;margin-top:3px}
+            table{width:100%;border-collapse:collapse;margin:5px 0 10px;table-layout:fixed}
+            th,td{border:1px solid #d7deea;padding:4px;text-align:left;vertical-align:top;overflow-wrap:anywhere;word-break:break-word}
+            th{background:#eef2f7;font-size:8px}td{font-size:8px}
+            .wide{font-size:7px}.wide th,.wide td{font-size:6.5px;padding:2px}
+            .data-section{break-inside:auto;border-top:2px solid #cbd4e1;margin-top:18px;padding-top:3px}
+            .data-section h3{break-after:avoid}.explain{white-space:pre-wrap;background:#f5f7fa;border-left:3px solid #4f6ff0;padding:10px;line-height:1.4}
+            .page-break{break-before:page}
+            @media print{body{margin:10mm} .data-section{break-inside:auto} thead{display:table-header-group} tr{break-inside:avoid}}
+          </style></head><body>
+          <h1>${esc(s.symbol)} — Complete Simulation Report</h1>
+          <div class="meta">Generated ${esc(this.istTime(new Date().toISOString()))} IST · Source ${esc(this.sourceMode())} · All timestamps are Asia/Kolkata (IST)</div>
+
+          <h2>Overall result</h2>
+          <div class="grid">
+            <div class="card"><span>Net profit</span><b>₹${r.netProfit.toFixed(2)}</b></div>
+            <div class="card"><span>Trades</span><b>${r.trades}</b></div>
+            <div class="card"><span>Wins / losses</span><b>${r.wins} / ${r.losses}</b></div>
+            <div class="card"><span>Missed opportunities</span><b>${r.missed}</b></div>
+            <div class="card"><span>Missed profit</span><b>₹${r.missedProfit.toFixed(2)}</b></div>
+            <div class="card"><span>Avoidable losses</span><b>${r.avoidableLosses}</b></div>
+            <div class="card"><span>Best entry</span><b>₹${r.bestEntry.toFixed(2)}</b></div>
+            <div class="card"><span>Best exit</span><b>₹${r.bestExit.toFixed(2)}</b></div>
+          </div>
+
+          <h2>Complete summary</h2><table><thead>${header(['Metric','Value'])}</thead><tbody>${summaryRows}</tbody></table>
+          <h2>Conclusion</h2><p>${esc(r.recommendation)}</p>
+          ${this.entryExplanation() ? `<h2>Entry explanation</h2><div class="explain">${esc(this.entryExplanation())}</div>` : ''}
+          ${replayRows ? `<h2>Replay decision</h2><table><thead>${header(['Field','Value'])}</thead><tbody>${replayRows}</tbody></table>` : ''}
+
+          <h2>All issues (${(r.issues ?? []).length})</h2>
+          <table><thead>${header(['Type','Time IST','Severity','Title','Evidence'])}</thead><tbody>${issues || '<tr><td colspan="5">No issues recorded.</td></tr>'}</tbody></table>
+
+          <h2>All recommendations (${(r.recommendations ?? []).length})</h2>
+          <table><thead>${header(['Parameter','Current','Suggested','Reason','Evidence Count','Expected Improvement'])}</thead><tbody>${recommendations || '<tr><td colspan="6">No recommendations recorded.</td></tr>'}</tbody></table>
+
+          <h2>Future path analysis (${(r.futurePaths ?? (r.futurePath ? [r.futurePath] : [])).length})</h2>
+          <table><thead>${header(['Entry IST','Exit IST','Entry','Actual Exit','Max','Min','Best Exit','Best Exit IST','MFE %','MAE %','Realized %','Left on Table %','Diagnosis'])}</thead>
+          <tbody>${futurePaths || '<tr><td colspan="13">No future path analysis recorded.</td></tr>'}</tbody></table>
+
+          <div class="page-break"></div>
+          <h2>Complete captured market data (${s.candles.length} candles)</h2>
+          <p class="meta">This section contains every captured candle and every tick. No rows are intentionally omitted.</p>
+          ${candleSections}
+          </body></html>`;
+
+        const win = window.open('', '_blank', 'width=1200,height=900');
+        if (!win) {
+          this.error.set('Unable to open the PDF report window. Please allow pop-ups for this site.');
+          this.actionStatus.set('PDF export failed.');
+          return;
+        }
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+        this.actionStatus.set(`Complete PDF report opened — ${s.candles.length} candles and ${s.candles.reduce((n, c) => n + c.ticks.length, 0)} ticks.`);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        this.error.set(`PDF export failed: ${message}`);
+        this.actionStatus.set('PDF export failed.');
+      } finally {
+        this.actionBusy.set(false);
+        this.busyAction.set('');
+      }
+    }, 0);
   }
   private fileStamp(): string { return this.istTime(new Date().toISOString()).replace(/[^0-9]/g, '').slice(0,14); }
 
@@ -1540,86 +1740,120 @@ export class TradingSimulationComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // AI handoff format: self-contained, chronological, machine-readable and
-    // explicit about the fact that displayed timestamps are IST. Keep the
-    // original domain field names; this export is intended to be fed directly
-    // into an AI model for analysis.
-    const payload = {
-      schemaVersion: '1.0',
-      exportType: 'trading-simulation-ai-context',
-      generatedAtIST: this.istTime(new Date().toISOString()),
-      timezone: 'Asia/Kolkata',
-      timezoneOffset: '+05:30',
-      source: {
-        symbol: s.symbol,
-        token: s.token,
-        exchange: s.exchange,
-        configurationSource: s.configurationSource ?? '',
-        configurationCapturedAt: s.configurationCapturedAt ?? '',
-      },
-      simulationSummary: this.simulation(),
-      parameters: { ...this.params },
-      indicatorToggles: { ...this.toggles },
-      configuration: s.configuration,
-      candles: s.candles.map((c, index) => ({
-        index,
-        timestamp: c.timestamp,
-        candle: c.candle,
-        indicators: c.indicators,
-        decision: c.decision,
-        virtualTrade: c.virtualTrade,
-        actualTrade: c.actualTrade,
-        loadedDecisionFields: c.loadedDecisionFields ?? [],
-        ticks: c.ticks,
-      })),
-      replayContext: {
-        selectedCandle: this.selectedCandle(),
-        replayCursor: this.replayCursor(),
-        replaySpeedMs: this.replaySpeedMs(),
-        replayStatus: this.replayStatus(),
-        replayTick: this.replayTick(),
-        replayDecision: this.simulation().replay,
-      },
-      analysis: {
-        issues: this.simulation().issues,
-        recommendations: this.simulation().recommendations,
-        reasons: this.simulation().reasons,
-        futurePath: this.simulation().futurePath,
-        futurePaths: this.simulation().futurePaths,
-        globalConfiguration: this.simulation().globalConfiguration,
-        overallRecommendation: this.simulation().recommendation,
-      },
-      aiInstructions: [
-        'Analyze the simulation chronologically using only the supplied data.',
-        'Treat timestamps as Indian Standard Time (Asia/Kolkata, UTC+05:30).',
-        'Distinguish captured decisions from replay/counterfactual decisions.',
-        'Identify missed entries, avoidable losses, premature exits, indicator failures, and adaptive-policy effects.',
-        'Explain evidence for each conclusion and avoid inventing missing data.',
-      ],
-    };
+    this.error.set('');
+    this.actionBusy.set(true);
+    this.busyAction.set('ai-export');
+    this.actionStatus.set('Preparing AI export…');
 
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${s.symbol}-simulation-ai-context-${this.istTime(new Date().toISOString()).replace(/[^0-9]/g, '').slice(0, 14)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    this.actionStatus.set('AI-ready simulation context exported.');
+    // Defer serialization so Angular has a chance to render the loader before
+    // the potentially large JSON payload is built.
+    setTimeout(() => {
+      try {
+        const simulation = this.simulation();
+        const payload = {
+          schemaVersion: '1.0',
+          exportType: 'trading-simulation-ai-context',
+          generatedAtIST: this.istTime(new Date().toISOString()),
+          timezone: 'Asia/Kolkata',
+          timezoneOffset: '+05:30',
+          source: {
+            symbol: s.symbol,
+            token: s.token,
+            exchange: s.exchange,
+            configurationSource: s.configurationSource ?? '',
+            configurationCapturedAt: s.configurationCapturedAt ?? '',
+          },
+          simulationSummary: simulation,
+          parameters: { ...this.params },
+          indicatorToggles: { ...this.toggles },
+          configuration: s.configuration,
+          candles: s.candles.map((c, index) => ({
+            index,
+            timestamp: c.timestamp,
+            candle: c.candle,
+            indicators: c.indicators,
+            decision: c.decision,
+            virtualTrade: c.virtualTrade,
+            actualTrade: c.actualTrade,
+            loadedDecisionFields: c.loadedDecisionFields ?? [],
+            ticks: c.ticks,
+          })),
+          replayContext: {
+            selectedCandle: this.selectedCandle(),
+            replayCursor: this.replayCursor(),
+            replaySpeedMs: this.replaySpeedMs(),
+            replayStatus: this.replayStatus(),
+            replayTick: this.replayTick(),
+            replayDecision: simulation.replay,
+          },
+          analysis: {
+            issues: simulation.issues,
+            recommendations: simulation.recommendations,
+            reasons: simulation.reasons,
+            futurePath: simulation.futurePath,
+            futurePaths: simulation.futurePaths,
+            globalConfiguration: simulation.globalConfiguration,
+            overallRecommendation: simulation.recommendation,
+          },
+          aiInstructions: [
+            'Analyze the simulation chronologically using only the supplied data.',
+            'Treat timestamps as Indian Standard Time (Asia/Kolkata, UTC+05:30).',
+            'Distinguish captured decisions from replay/counterfactual decisions.',
+            'Identify missed entries, avoidable losses, premature exits, indicator failures, and adaptive-policy effects.',
+            'Explain evidence for each conclusion and avoid inventing missing data.',
+          ],
+        };
+
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${s.symbol}-simulation-ai-context-${this.fileStamp()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        this.actionStatus.set('AI-ready simulation context exported.');
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        this.error.set(`AI export failed: ${message}`);
+        this.actionStatus.set('AI export failed.');
+      } finally {
+        this.actionBusy.set(false);
+        this.busyAction.set('');
+      }
+    }, 0);
   }
 
   downloadConfigurationProposal(): void {
     const p = this.configurationProposal();
     if (!p) return;
-    const blob = new Blob([JSON.stringify(p, null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${p.proposalId}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+
+    this.error.set('');
+    this.actionBusy.set(true);
+    this.busyAction.set('export-proposal');
+    this.actionStatus.set('Preparing configuration proposal export…');
+
+    // Defer serialization so the button spinner is visible even for large proposals.
+    setTimeout(() => {
+      try {
+        const blob = new Blob([JSON.stringify(p, null, 2)], {
+          type: 'application/json',
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${p.proposalId}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        this.actionStatus.set('Configuration proposal exported.');
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        this.error.set(`Proposal export failed: ${message}`);
+        this.actionStatus.set('Proposal export failed.');
+      } finally {
+        this.actionBusy.set(false);
+        this.busyAction.set('');
+      }
+    }, 0);
   }
 
   learnGlobalDynamics(): void {
