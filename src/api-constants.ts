@@ -107,6 +107,20 @@ export class ApiConstants {
   readonly dashboardSummary =
     '/dashboard';
 
+  // ---------------- Simulation ----------------
+
+  readonly getLiveSimulation =
+    '/api/simulation/live';
+
+  readonly saveSimulation =
+    '/api/simulation/saved';
+
+  readonly getSavedSimulations =
+    '/api/simulation/saved';
+
+  readonly getSavedSimulation =
+    '/api/simulation/saved';
+
   // ---------------- Trading Configuration ----------------
 
   readonly getConfiguration =
