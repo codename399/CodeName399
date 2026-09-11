@@ -63,7 +63,10 @@
         <div class="chart" *ngIf="stock()?.candles?.length; else noChart">
           <div class="replay-toolbar">
             <button type="button" class="ghost replay-button" [disabled]="!stock()" (click)="runLive()"><span>{{ playing() ? '⏸ Pause' : '▶ Play' }}</span></button>
-            <label class="speed-control"><span>Speed</span><input type="range" min="20" max="500" step="10" [value]="replaySpeedMs()" (input)="setReplaySpeed($any($event.target).value)"><b>{{ replaySpeedLabel() }}</b></label>
+            <label class="speed-control"><span>Replay speed</span><select [value]="replaySpeedMs()" (change)="setReplaySpeed($any($event.target).value)" aria-label="Replay speed">
+              <option value="160">0.5×</option><option value="80">1×</option><option value="40">2×</option>
+              <option value="20">4×</option><option value="10">8×</option><option value="5">16×</option>
+            </select></label>
             <span class="replay-position" *ngIf="replayTicksCount()">Tick {{ replayPosition() }} / {{ replayTicksCount() }}</span>
           </div>
           <input *ngIf="replayTicksCount()" class="timeline-scrubber" type="range" min="0" [max]="replayTicksCount()-1" step="1" [value]="replayCursor()" (input)="seekReplay($any($event.target).value)" aria-label="Jump to timestamp">
@@ -164,7 +167,7 @@
     </section>
 
     <section *ngIf="activeTab()==='simulation'" class="simulation-layout">
-      <div class="panel full-width save-simulation-panel"><div class="save-simulation-bar"><div><strong>Store / export this simulation</strong><small>Save the current simulation so it can be reopened later.</small></div><input type="text" placeholder="Simulation name (optional)" [value]="saveName()" (input)="saveName.set($any($event.target).value)"><button type="button" class="accent" [disabled]="actionBusy() || !stock()" (click)="saveCurrentSimulation()">Save simulation</button><button type="button" class="secondary" [disabled]="!stock()" (click)="exportSimulationToExcel()">Export Excel</button><button type="button" class="secondary" [disabled]="!stock()" (click)="exportSimulationToPdf()">Export PDF</button></div></div>
+      <div class="panel full-width save-simulation-panel"><div class="save-simulation-bar"><div><strong>Store / export this simulation</strong><small>Save the current simulation so it can be reopened later.</small></div><input type="text" placeholder="Simulation name (optional)" [value]="saveName()" (input)="saveName.set($any($event.target).value)"><button type="button" class="accent" [disabled]="actionBusy() || !stock()" (click)="saveCurrentSimulation()">Save simulation</button><button type="button" class="secondary" [disabled]="actionBusy() || !stock()" (click)="exportSimulationToExcel()"><span *ngIf="busyAction() === 'excel-export'" class="button-spinner"></span>Export Excel</button><button type="button" class="secondary" [disabled]="actionBusy() || !stock()" (click)="exportSimulationToPdf()"><span *ngIf="busyAction() === 'pdf-export'" class="button-spinner"></span>Export PDF</button></div></div>
       <div class="panel">
         <div class="panel-head"><div><strong>Live replay controls</strong><small>Change parameters and rerun without touching production configuration</small></div></div>
         <div class="form-grid">
@@ -176,13 +179,19 @@
           <label>Maximum spread %<input type="number" step="0.1" [(ngModel)]="params.maximumSpreadPercent" (change)="runSimulation()"></label>
         </div>
         <div class="buttons" [attr.aria-busy]="actionBusy()">
-          <button class="primary" [disabled]="actionBusy() || !stock()" (click)="runSimulationFromUi()"><span *ngIf="busyAction() === 'simulation'" class="button-spinner"></span><span>Run simulation</span></button>
-          <button class="accent" [disabled]="actionBusy() || !stock()" (click)="optimizeFromUi()"><span *ngIf="busyAction() === 'stock-config'" class="button-spinner"></span><span>Find stock best config</span></button>
-          <button class="accent" [disabled]="actionBusy() || !stock()" (click)="optimizeGlobalFromUi()"><span *ngIf="busyAction() === 'global-config'" class="button-spinner"></span><span>Find GLOBAL config</span></button>
-          <button class="accent" [disabled]="actionBusy() || !stock()" (click)="learnGlobalFromUi()"><span *ngIf="busyAction() === 'global-learning'" class="button-spinner"></span><span>Learn GLOBAL dynamics</span></button>
-          <button class="accent" [disabled]="actionBusy() || !stock()" (click)="learnRegimeFromUi()"><span *ngIf="busyAction() === 'regime-learning'" class="button-spinner"></span><span>Learn REGIME policies</span></button>
-          <button class="ghost" [disabled]="actionBusy() || !stock()" (click)="runLive()"><span *ngIf="playing()" class="button-spinner"></span><span>{{playing()?'Pause':'▶ Play replay'}}</span></button>
-          <button class="secondary" [disabled]="actionBusy() || !stock()" (click)="exportSimulationForAi()">Export for AI</button>
+          <button class="primary" [disabled]="actionBusy() || !stock()" (click)="runSimulationFromUi()" title="Run the replay simulation using the current thresholds. This does not change production configuration."><span *ngIf="busyAction() === 'simulation'" class="button-spinner"></span><span>Run simulation</span></button>
+          <button class="accent" [disabled]="actionBusy() || !stock()" (click)="optimizeFromUi()" title="Search thresholds for the selected stock only and apply the best replay configuration."><span *ngIf="busyAction() === 'stock-config'" class="button-spinner"></span><span>Find stock best config</span></button>
+          <button class="accent" [disabled]="actionBusy() || !stock()" (click)="optimizeGlobalFromUi()" title="Search one common configuration across all uploaded stocks and validate the result."><span *ngIf="busyAction() === 'global-config'" class="button-spinner"></span><span>Find GLOBAL config</span></button>
+          <button class="accent" [disabled]="actionBusy() || !stock()" (click)="learnGlobalFromUi()" title="Learn cross-stock dynamics and produce a proposal from captured decision evidence. It is not auto-promoted to production."><span *ngIf="busyAction() === 'global-learning'" class="button-spinner"></span><span>Learn GLOBAL dynamics</span></button>
+          <button class="accent" [disabled]="actionBusy() || !stock()" (click)="learnRegimeFromUi()" title="Learn separate counterfactual policies for market regimes such as trending, ranging, volatility, breakout and recovery."><span *ngIf="busyAction() === 'regime-learning'" class="button-spinner"></span><span>Learn REGIME policies</span></button>
+          <button class="ghost" [disabled]="actionBusy() || !stock()" (click)="runLive()" title="Replay captured ticks from the current position. Select 0.5× to 16× playback speed above the chart."><span *ngIf="playing()" class="button-spinner"></span><span>{{playing()?'Pause':'▶ Play replay'}}</span></button>
+          <button class="secondary" [disabled]="actionBusy() || !stock()" (click)="exportSimulationForAi()" title="Export the complete simulation context as JSON for AI analysis."><span *ngIf="busyAction() === 'ai-export'" class="button-spinner"></span><span>Export for AI</span></button>
+        </div>
+        <div class="action-help">
+          <div><strong>Find stock best config</strong><span>Optimizes the selected stock's replay thresholds.</span></div>
+          <div><strong>Find GLOBAL config</strong><span>Searches for one configuration across all uploaded stocks.</span></div>
+          <div><strong>Learn GLOBAL dynamics</strong><span>Finds cross-stock patterns and creates a validated proposal only.</span></div>
+          <div><strong>Learn REGIME policies</strong><span>Creates regime-specific proposals without changing production settings.</span></div>
         </div>
         <div class="action-status" *ngIf="actionStatus() || replayStatus() || actionBusy()" [class.loading]="actionBusy()">
           <span *ngIf="actionBusy()" class="busy-spinner"></span>

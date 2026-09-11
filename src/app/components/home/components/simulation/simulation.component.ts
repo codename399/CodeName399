@@ -1286,12 +1286,241 @@ export class TradingSimulationComponent implements OnInit, OnDestroy {
   clearEntryExplanation(): void { this.entryExplanation.set(''); }
 
   exportSimulationToExcel(): void {
-    const s = this.stock(); if (!s) return; const r = this.simulation();
-    const summary = [{Metric:'Symbol',Value:s.symbol},{Metric:'Net Profit',Value:r.netProfit},{Metric:'Trades',Value:r.trades},{Metric:'Wins',Value:r.wins},{Metric:'Losses',Value:r.losses},{Metric:'Missed Opportunities',Value:r.missed},{Metric:'Missed Profit',Value:r.missedProfit},{Metric:'Avoidable Losses',Value:r.avoidableLosses},{Metric:'Best Entry',Value:r.bestEntry},{Metric:'Best Exit',Value:r.bestExit},{Metric:'Best Entry Time IST',Value:this.istTime(r.bestEntryTime)},{Metric:'Best Exit Time IST',Value:this.istTime(r.bestExitTime)},{Metric:'Recommendation',Value:r.recommendation}];
-    const candles = s.candles.map((c,i) => ({Index:i,TimestampIST:this.istTime(c.timestamp),Open:c.candle.open,High:c.candle.high,Low:c.candle.low,Close:c.candle.close,Volume:c.candle.volume,Signal:String(c.decision?.['signal'] ?? ''),Score:this.num(c.decision?.['score']),Confidence:this.num(c.decision?.['adaptiveConfidence']),Edge:this.num(c.decision?.['adaptiveEdgeScore']),RiskReward:this.num(c.decision?.['adaptiveRiskReward']),Reason:String(c.decision?.['reason'] ?? '')}));
-    const ticks = s.candles.flatMap(c => c.ticks).map(t => ({Tick:t.n,TimeIST:this.istTime(t.exchangeTime || t.utc),Stage:t.stage ?? '',Decision:t.decision ?? '',Price:t.ltp,Bid:t.bid,Ask:t.ask,SpreadPct:t.spreadPct,Score:this.tickScore(t),Confidence:t.confidence ?? 0,Recovery:t.recoveryScore ?? 0,Reason:t.decisionReason || t.exitReason || t.status || ''}));
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(summary),'Summary'); XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(candles),'Candles'); XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ticks),'Ticks'); if(r.issues?.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(r.issues),'Issues');
-    XLSX.writeFile(wb,`${s.symbol}-simulation-${this.fileStamp()}.xlsx`); this.actionStatus.set('Simulation Excel exported.');
+    const s = this.stock();
+    if (!s) {
+      this.error.set('Upload a lifecycle workbook before exporting simulation data.');
+      return;
+    }
+
+    this.error.set('');
+    this.actionBusy.set(true);
+    this.busyAction.set('export-excel');
+    this.actionStatus.set('Preparing Excel export…');
+
+    // Defer the heavy workbook construction so Angular can render the loader first.
+    setTimeout(() => {
+      try {
+        const r = this.simulation();
+        const wb = XLSX.utils.book_new();
+
+        const addSheet = (name: string, rows: unknown[]): void => {
+          const safeName = this.excelSheetName(name, wb);
+          const data = Array.isArray(rows) && rows.length ? rows : [{ Info: 'No data available' }];
+          const ws = XLSX.utils.json_to_sheet(data as Record<string, unknown>[]);
+          XLSX.utils.book_append_sheet(wb, ws, safeName);
+        };
+
+        addSheet('Summary', [
+          { Metric: 'Symbol', Value: s.symbol },
+          { Metric: 'Token', Value: s.token },
+          { Metric: 'Exchange', Value: s.exchange },
+          { Metric: 'Net Profit', Value: r.netProfit },
+          { Metric: 'Trades', Value: r.trades },
+          { Metric: 'Wins', Value: r.wins },
+          { Metric: 'Losses', Value: r.losses },
+          { Metric: 'Missed Opportunities', Value: r.missed },
+          { Metric: 'Missed Profit', Value: r.missedProfit },
+          { Metric: 'Avoidable Losses', Value: r.avoidableLosses },
+          { Metric: 'Actual Losses', Value: r.actualLosses },
+          { Metric: 'Opportunity %', Value: r.opportunityPercent },
+          { Metric: 'Best Entry', Value: r.bestEntry },
+          { Metric: 'Best Exit', Value: r.bestExit },
+          { Metric: 'Best Entry Time IST', Value: this.istTime(r.bestEntryTime) },
+          { Metric: 'Best Exit Time IST', Value: this.istTime(r.bestExitTime) },
+          { Metric: 'Recommendation', Value: r.recommendation },
+        ]);
+
+        addSheet('Parameters', Object.entries(this.params).map(([Key, Value]) => ({ Key, Value })));
+        addSheet('Configuration', Object.entries(s.configuration ?? {}).map(([Key, Value]) => ({ Key, Value: this.exportExcelValue(Value) })));
+
+        addSheet('Candles', s.candles.map((c, i) => ({
+          Index: i,
+          TimestampIST: this.istTime(c.timestamp),
+          Open: c.candle.open,
+          High: c.candle.high,
+          Low: c.candle.low,
+          Close: c.candle.close,
+          Volume: c.candle.volume,
+          Signal: String(c.decision?.['signal'] ?? ''),
+          Score: this.num(c.decision?.['score']),
+          Confidence: this.num(c.decision?.['adaptiveConfidence']),
+          Edge: this.num(c.decision?.['adaptiveEdgeScore']),
+          RiskReward: this.num(c.decision?.['adaptiveRiskReward']),
+          Reason: String(c.decision?.['reason'] ?? ''),
+        })));
+
+        const indicatorRows = s.candles.flatMap((c, candleIndex) => {
+          const values = c.indicators ?? {};
+          return Object.entries(values).map(([Indicator, Value]) => ({
+            CandleIndex: candleIndex,
+            TimestampIST: this.istTime(c.timestamp),
+            Indicator,
+            Value: this.exportExcelValue(Value),
+          }));
+        });
+        addSheet('Indicators', indicatorRows);
+
+        const decisionRows = s.candles.map((c, i) => ({
+          CandleIndex: i,
+          TimestampIST: this.istTime(c.timestamp),
+          Decision: this.exportExcelValue(c.decision),
+          LoadedDecisionFields: (c.loadedDecisionFields ?? []).join(', '),
+        }));
+        addSheet('Decisions', decisionRows);
+
+        addSheet('Virtual Trades', s.candles.map((c, i) => ({
+          CandleIndex: i,
+          TimestampIST: this.istTime(c.timestamp),
+          VirtualTrade: this.exportExcelValue(c.virtualTrade),
+        })));
+
+        addSheet('Actual Trades', s.candles.map((c, i) => ({
+          CandleIndex: i,
+          TimestampIST: this.istTime(c.timestamp),
+          ActualTrade: this.exportExcelValue(c.actualTrade),
+        })));
+
+        // Keep one row per tick. JSON-stringify nested/optional fields so every
+        // captured value remains exportable without creating invalid worksheet cells.
+        const ticks = s.candles.flatMap((c, candleIndex) => c.ticks.map(t => ({
+          CandleIndex: candleIndex,
+          Tick: t.n,
+          Sequence: t.sequence,
+          TimeIST: this.istTime(t.exchangeTime || t.utc),
+          UTC: t.utc,
+          ExchangeTime: t.exchangeTime,
+          Stage: t.stage ?? '',
+          Decision: t.decision ?? '',
+          Status: t.status ?? '',
+          Price: t.ltp,
+          Bid: t.bid,
+          Ask: t.ask,
+          Spread: t.spread,
+          SpreadPct: t.spreadPct,
+          Open: t.open,
+          High: t.high,
+          Low: t.low,
+          Close: t.close,
+          LTQ: t.ltq,
+          AveragePrice: t.avgPrice,
+          DayVolume: t.dayVolume,
+          BuyQty: t.buyQty,
+          SellQty: t.sellQty,
+          MovementScore: t.movementScore ?? '',
+          TrendStrength: t.trendStrength ?? '',
+          TrendStability: t.trendStability ?? '',
+          RecoveryScore: t.recoveryScore ?? '',
+          BreakoutStrength: t.breakoutStrength ?? '',
+          NoiseScore: t.noiseScore ?? '',
+          TickQualityScore: t.tickQualityScore ?? '',
+          Confidence: t.confidence ?? '',
+          AdaptiveExpectedNetValue: t.adaptiveExpectedNetValue ?? '',
+          AdaptiveEdgeScore: t.adaptiveEdgeScore ?? '',
+          AdaptiveRiskReward: t.adaptiveRiskReward ?? '',
+          EntryPrice: t.entryPrice ?? '',
+          ExitPrice: t.exitPrice ?? '',
+          StopLoss: t.stopLoss ?? '',
+          TargetPrice: t.targetPrice ?? '',
+          ExitReason: t.exitReason ?? '',
+          DecisionReason: t.decisionReason ?? '',
+        })));
+
+        // Split very large tick exports across sheets to avoid Excel's worksheet
+        // row limit while keeping every tick.
+        const chunkSize = 50000;
+        for (let offset = 0, part = 1; offset < ticks.length || part === 1; offset += chunkSize, part++) {
+          const chunk = ticks.slice(offset, offset + chunkSize);
+          addSheet(`Ticks ${part}`, chunk);
+          if (offset >= ticks.length) break;
+        }
+
+        const tickIndicatorRows = s.candles.flatMap((c, candleIndex) =>
+          c.ticks.flatMap(t => Object.entries(t.indicators ?? {}).map(([Indicator, Value]) => ({
+            CandleIndex: candleIndex,
+            Tick: t.n,
+            TimeIST: this.istTime(t.exchangeTime || t.utc),
+            Indicator,
+            Value: this.exportExcelValue(Value),
+          })))
+        );
+        addSheet('Tick Indicators', tickIndicatorRows);
+        addSheet('Issues', r.issues ?? []);
+        addSheet('Recommendations', r.recommendations ?? []);
+
+        const rawPayload = {
+          schemaVersion: '1.0',
+          exportType: 'trading-simulation-complete',
+          generatedAtIST: this.istTime(new Date().toISOString()),
+          timezone: 'Asia/Kolkata',
+          source: {
+            symbol: s.symbol,
+            token: s.token,
+            exchange: s.exchange,
+            configurationSource: s.configurationSource ?? '',
+            configurationCapturedAt: s.configurationCapturedAt ?? '',
+          },
+          simulation: r,
+          parameters: this.params,
+          indicatorToggles: this.toggles,
+          stock: s,
+          replay: {
+            selectedCandle: this.selectedCandle(),
+            replayCursor: this.replayCursor(),
+            replaySpeedMs: this.replaySpeedMs(),
+            replayStatus: this.replayStatus(),
+            replayTick: this.replayTick(),
+          },
+          globalOptimization: this.globalOptimization(),
+          globalLearning: this.globalLearning(),
+          regimeLearning: this.regimeLearning(),
+          configurationProposal: this.configurationProposal(),
+        };
+
+        const raw = JSON.stringify(rawPayload, (_key, value) => {
+          if (value === undefined) return null;
+          if (typeof value === 'bigint') return value.toString();
+          return value;
+        });
+        const rawChunkSize = 30000;
+        const rawRows: Array<{ Chunk: number; Data: string }> = [];
+        for (let i = 0, chunk = 1; i < raw.length; i += rawChunkSize, chunk++) {
+          rawRows.push({ Chunk: chunk, Data: raw.slice(i, i + rawChunkSize) });
+        }
+        addSheet('Raw Complete', rawRows);
+
+        XLSX.writeFile(wb, `${s.symbol}-simulation-${this.fileStamp()}.xlsx`, { compression: true });
+        this.actionStatus.set(`Simulation Excel exported — ${s.candles.length} candles, ${ticks.length} ticks.`);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        this.error.set(`Excel export failed: ${message}`);
+        this.actionStatus.set('Excel export failed.');
+      } finally {
+        this.actionBusy.set(false);
+        this.busyAction.set('');
+      }
+    }, 0);
+  }
+
+  private exportExcelValue(value: unknown): string | number | boolean {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+
+  private excelSheetName(requested: string, wb: XLSX.WorkBook): string {
+    const base = requested.replace(/[\\/?*\[\]:]/g, ' ').trim().slice(0, 31) || 'Sheet';
+    const existing = new Set(wb.SheetNames.map(n => n.toLowerCase()));
+    if (!existing.has(base.toLowerCase())) return base;
+    for (let i = 2; i < 10000; i++) {
+      const suffix = ` ${i}`;
+      const candidate = `${base.slice(0, 31 - suffix.length)}${suffix}`;
+      if (!existing.has(candidate.toLowerCase())) return candidate;
+    }
+    return `Sheet${wb.SheetNames.length + 1}`.slice(0, 31);
   }
 
   exportSimulationToPdf(): void {
