@@ -119,6 +119,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   };
 
   readonly columnDefinitions = [
+    { key: 'simulation', label: 'Simulation', defaultVisible: true },
     { key: 'star', label: '⭐', defaultVisible: true },
     { key: 'symbol', label: 'Symbol', defaultVisible: true },
     { key: 'instrumentType', label: 'Type', defaultVisible: true },
@@ -370,6 +371,22 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
 
   openSimulation(): void {
     void this.#router.navigate(['/home/simulation']);
+  }
+
+  isSimulationAvailable(stock: Gainer): boolean {
+    return stock.isSubscribed === true && stock.historicalLoaded === true;
+  }
+
+  openSimulationForStock(stock: Gainer): void {
+    if (!this.isSimulationAvailable(stock)) {
+      this.#toast.error('Simulation is available only when indicators are loaded.');
+      return;
+    }
+    const confirmed = window.confirm(`Start simulation for ${stock.symbol}? The simulation page will load the currently available live data for this stock.`);
+    if (!confirmed) return;
+    void this.#router.navigate(['/home/simulation'], {
+      queryParams: { source: 'live', symbol: stock.symbol, autoRun: '1' },
+    });
   }
 
   openSettings(): void {

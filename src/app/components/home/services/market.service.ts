@@ -30,6 +30,10 @@ export class MarketService {
   private readonly stockIndex = new Map<string, number>();
   private tickFlushScheduled = false;
 
+  getCurrentGainers(): any[] {
+    return this.gainersSubject.value;
+  }
+
   async startConnection(): Promise<void> {
     if (this.hub?.state === signalR.HubConnectionState.Connected) {
       return;

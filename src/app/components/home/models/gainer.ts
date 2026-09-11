@@ -158,6 +158,8 @@ export interface Gainer {
   reason: string;
   suggestion: string;
   isSubscribed: boolean;
+  /** True when the backend has completed the historical/indicator warm-up for this symbol. */
+  historicalLoaded?: boolean;
 
   // =========================
   // Trade Levels
@@ -200,4 +202,6 @@ export interface Gainer {
   setupTime?: string | null;
   setupPrice: number;
   setupConfirmed: boolean;
+
+  [key: string]: unknown;
 }

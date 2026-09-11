@@ -203,6 +203,7 @@
             <table>
             <thead>
               <tr>
+                <th *ngIf="visibleColumnSet().has('simulation')">▶</th>
                 <th *ngIf="visibleColumnSet().has('star')">⭐</th>
                 <th *ngIf="visibleColumnSet().has('symbol')">
                   Symbol
@@ -274,6 +275,12 @@
                   'signal-row-setup': stock.signal === 'SETUP',
                 }"
               >
+                <td class="center-cell simulation-cell" *ngIf="visibleColumnSet().has('simulation')">
+                  <button type="button" class="row-simulation-button" [disabled]="!isSimulationAvailable(stock)" (click)="openSimulationForStock(stock); $event.stopPropagation()" [title]="isSimulationAvailable(stock) ? 'Simulate this stock' : 'Indicators are not loaded'" [attr.aria-label]="isSimulationAvailable(stock) ? 'Simulate ' + stock.symbol : 'Simulation unavailable for ' + stock.symbol">
+                    <span class="material-icons">play_arrow</span>
+                  </button>
+                </td>
+
                 <td class="center-cell" *ngIf="visibleColumnSet().has('star')">
                   <span *ngIf="stock.isOwned">★</span>
                 </td>

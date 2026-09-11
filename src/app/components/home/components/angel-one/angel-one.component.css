@@ -3228,3 +3228,10 @@ body > .sidebar-float-button {
   font-size: 1rem;
   opacity: 0.72;
 }
+
+/* Per-row simulation launch */
+.simulation-cell{width:44px;min-width:44px;padding-left:5px!important;padding-right:5px!important}
+.row-simulation-button{width:32px;height:32px;display:inline-grid;place-items:center;border:1px solid #355487;border-radius:8px;background:#142442;color:#9fb7ff;cursor:pointer;padding:0}
+.row-simulation-button:hover:not(:disabled){background:#1d3760;color:#fff;border-color:#577ac0;transform:translateY(-1px)}
+.row-simulation-button:disabled{cursor:not-allowed;opacity:.28;background:#0d1522;border-color:#243148}
+.row-simulation-button .material-icons{font-size:18px}

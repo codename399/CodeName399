@@ -41,7 +41,7 @@ export interface CandleCapture {
   loadedDecisionFields?: string[];
 }
 
-export interface StockCapture { symbol: string; token: string; exchange: string; candles: CandleCapture[]; configuration: Record<string, unknown>; configurationSource?: string; configurationCapturedAt?: string; }
+export interface StockCapture { symbol: string; token: string; exchange: string; candles: CandleCapture[]; configuration: Record<string, unknown>; configurationSource?: string; configurationCapturedAt?: string; sourceName?: string; captureId?: string; }
 
 export interface DiagnosticIssue {
   kind: 'MISSED_ENTRY'|'LOSING_TRADE'|'EXIT'|'THRESHOLD';
@@ -83,7 +83,7 @@ export interface ReplayDecision {
   policyImpact?: string;
 }
 export interface ExitReplay {
-  status: 'OPEN'|'EXITED'|'NO_EXIT_DATA'; direction: string; entryPrice: number; observedExitPrice?: number;
+  status: 'OPEN'|'EXITED'|'NO_EXIT_DATA'|'NO_POSITION'; direction: string; entryPrice: number; observedExitPrice?: number;
   observedExitReason?: string; gates: GateEvaluation[]; firstBlockingGate?: string;
   bestFutureExitPrice?: number; bestFutureExitTime?: string; worstFuturePrice?: number;
   prematureExit: boolean; stopWouldHaveTriggered?: boolean; targetWouldHaveTriggered?: boolean;
