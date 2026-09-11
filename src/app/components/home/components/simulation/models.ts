@@ -41,7 +41,7 @@ export interface CandleCapture {
   loadedDecisionFields?: string[];
 }
 
-export interface StockCapture { symbol: string; token: string; exchange: string; candles: CandleCapture[]; configuration: Record<string, unknown>; configurationSource?: string; configurationCapturedAt?: string; sourceName?: string; captureId?: string; }
+export interface StockCapture { symbol: string; token: string; exchange: string; candles: CandleCapture[]; configuration: Record<string, unknown>; configurationSource?: string; configurationCapturedAt?: string; }
 
 export interface DiagnosticIssue {
   kind: 'MISSED_ENTRY'|'LOSING_TRADE'|'EXIT'|'THRESHOLD';

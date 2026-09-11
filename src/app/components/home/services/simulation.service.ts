@@ -41,4 +41,8 @@ export class SimulationService {
   loadSaved(id: string): Observable<StockCapture> {
     return this.http.get<StockCapture>(`${this.#apiConstants.getUrl(this.#apiConstants.simulationSavedById, true)}/${encodeURIComponent(id)}`);
   }
+
+  deleteSaved(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.#apiConstants.getUrl(this.#apiConstants.simulationDeleteSaved, true)}/${encodeURIComponent(id)}`);
+  }
 }

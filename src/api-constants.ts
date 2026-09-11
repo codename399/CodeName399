@@ -108,6 +108,9 @@ export class ApiConstants {
   readonly simulationSavedById =
     '/api/simulation/saved';
 
+  readonly simulationDeleteSaved =
+    '/api/simulation/saved';
+
   // ---------------- Trading ----------------
 
   readonly marketHub =

@@ -6,35 +6,16 @@
       <button type="button" [class.active]="sourceMode()==='live'" (click)="sourceMode.set('live'); loadLiveStocks()">Live feed</button>
       <button type="button" [class.active]="sourceMode()==='saved'" (click)="sourceMode.set('saved'); loadSavedList()">Saved</button>
     </div>
-
     <label class="upload" *ngIf="sourceMode()==='excel'"><input type="file" multiple accept=".xlsx" (change)="upload($any($event.target).files)"><span>＋ Upload Excel files</span><small>Load lifecycle workbooks</small></label>
-    
-
+    <div class="upload-loader" *ngIf="actionBusy() && busyAction()==='upload'" role="status" aria-live="polite"><span class="loader-ring"></span><div><strong>Reading Excel workbook…</strong><small>{{ actionStatus() || 'Parsing ticks, indicators and decisions.' }}</small></div></div>
     <ng-container *ngIf="sourceMode()==='live'">
-      <div class="live-toolbar">
-        <input type="search" placeholder="Search stock" [value]="liveSearch()" (input)="liveSearch.set($any($event.target).value)" />
-        <select [value]="liveSignalFilter()" (change)="liveSignalFilter.set($any($event.target).value)"><option value="ALL">All signals</option><option value="BUY">BUY</option><option value="SETUP">SETUP</option><option value="HOLD">HOLD</option><option value="SELL">SELL</option></select>
-        <select [value]="liveOwnedFilter()" (change)="liveOwnedFilter.set($any($event.target).value)"><option value="ALL">All ownership</option><option value="OWNED">Owned</option><option value="NOT_OWNED">Not owned</option></select>
-        <input type="number" min="0" step="1" placeholder="Min ticks" [value]="liveMinTicks()" (input)="setLiveMinTicks($any($event.target).value)" />
-        <button type="button" class="ghost small-action" (click)="refreshLiveStocks()" [disabled]="liveLoading()">↻ Stocks</button>
-      </div>
+      <div class="live-toolbar"><input type="search" placeholder="Search stock" [value]="liveSearch()" (input)="liveSearch.set($any($event.target).value)" /><select [value]="liveSignalFilter()" (change)="liveSignalFilter.set($any($event.target).value)"><option value="ALL">All signals</option><option value="BUY">BUY</option><option value="SETUP">SETUP</option><option value="HOLD">HOLD</option><option value="SELL">SELL</option></select><select [value]="liveOwnedFilter()" (change)="liveOwnedFilter.set($any($event.target).value)"><option value="ALL">All ownership</option><option value="OWNED">Owned</option><option value="NOT_OWNED">Not owned</option></select><input type="number" min="0" step="1" placeholder="Min ticks" [value]="liveMinTicks()" (input)="setLiveMinTicks($any($event.target).value)" /><button type="button" class="ghost small-action" (click)="refreshLiveStocks()" [disabled]="liveLoading()">↻ Stocks</button></div>
       <div class="side-title">LIVE STOCKS <span>{{ filteredLiveStocks().length }}</span></div>
-      <div class="stock-list live-stock-list">
-        <button *ngFor="let s of filteredLiveStocks()" [class.active]="s.symbol === selectedSymbol()" (click)="selectLiveStock(s.symbol)"><span>{{ s.symbol }} <em [class]="'signal-mini signal-' + s.signal.toLowerCase()">{{ s.signal || '—' }}</em></span><small>{{ s.tickCount }} ticks · ₹{{ s.currentPrice | number:'1.2-2' }} · {{ s.isOwned ? 'Owned' : 'Not owned' }}</small></button>
-      </div>
+      <div class="stock-list live-stock-list"><button *ngFor="let s of filteredLiveStocks()" [class.active]="s.symbol === selectedSymbol()" (click)="selectLiveStock(s.symbol)"><span>{{ s.symbol }} <em [class]="'signal-mini signal-' + s.signal.toLowerCase()">{{ s.signal || '—' }}</em></span><small>{{ s.tickCount }} ticks · ₹{{ s.currentPrice | number:'1.2-2' }} · {{ s.isOwned ? 'Owned' : 'Not owned' }}</small></button></div>
     </ng-container>
-
-    <ng-container *ngIf="sourceMode()==='saved'">
-      <div class="saved-toolbar"><button type="button" class="ghost small-action" (click)="loadSavedList()" [disabled]="savedLoading()">↻ Saved</button></div>
-      <div class="side-title">SAVED SIMULATIONS <span>{{ savedSimulations().length }}</span></div>
-      <div class="stock-list"><button *ngFor="let s of savedSimulations()" [class.active]="s.id === selectedSavedId()" (click)="loadSavedSimulation(s.id)"><span>{{ s.name }}</span><small>{{ s.symbol }} · {{ s.source }} · {{ s.sizeBytes | number }} bytes</small></button></div>
-    </ng-container>
-
-    <ng-container *ngIf="sourceMode()==='excel'">
-      <div class="side-title">STOCKS <span>{{ stocks().length }}</span></div>
-      <div class="stock-list"><button *ngFor="let s of stocks()" [class.active]="s.symbol === selectedSymbol()" (click)="selectStock(s.symbol)"><span>{{ s.symbol }}</span><small>{{ s.candles.length }} tick stages</small></button></div>
-    </ng-container>
-    <div class="side-foot">Live stocks are filtered to those with indicators loaded. The stock list and live ticks come from the existing SignalR market stream. Detailed simulation data is fetched only for the selected stock.</div>
+    <ng-container *ngIf="sourceMode()==='saved'"><div class="saved-toolbar"><button type="button" class="ghost small-action" (click)="loadSavedList()" [disabled]="savedLoading()">↻ Saved</button></div><div class="side-title">SAVED SIMULATIONS <span>{{ savedSimulations().length }}</span></div><div class="stock-list saved-stock-list"><div class="saved-item" *ngFor="let s of savedSimulations()"><button type="button" class="saved-load" [class.active]="s.id === selectedSavedId()" (click)="loadSavedSimulation(s.id)"><span>{{ s.name }}</span><small>{{ s.symbol }} · {{ s.source }} · {{ s.sizeBytes | number }} bytes</small></button><button type="button" class="saved-delete" title="Delete saved simulation" (click)="deleteSavedSimulation(s.id, s.name)">🗑</button></div></div></ng-container>
+    <ng-container *ngIf="sourceMode()==='excel'"><div class="side-title">STOCKS <span>{{ stocks().length }}</span></div><div class="stock-list"><button *ngFor="let s of stocks()" [class.active]="s.symbol === selectedSymbol()" (click)="selectStock(s.symbol)"><span>{{ s.symbol }}</span><small>{{ s.candles.length }} tick stages</small></button></div></ng-container>
+    <div class="side-foot">Live stocks and ticks come from the existing SignalR market stream. Saved simulations are stored server-side. Workbook replay remains local to this page.</div>
   </aside>
 
   <main class="main">
@@ -53,7 +34,7 @@
     </section>
 
     <section class="stats" *ngIf="stock() as s">
-      <div class="stat"><span>Last close</span><b>₹{{ candle()?.candle?.close | number:'1.2-2' }}</b><small>{{ candle()?.timestamp | date:'HH:mm':'+0530' }}</small></div>
+      <div class="stat"><span>Last close</span><b>₹{{ candle()?.candle?.close | number:'1.2-2' }}</b><small>{{ istTime(candle()?.timestamp) }}</small></div>
       <div class="stat"><span>Score</span><b>{{ decision()['score'] || 0 }}</b><small>{{ decision()['signal'] || 'HOLD' }}</small></div>
       <div class="stat"><span>Adaptive edge</span><b>{{ num(decision()['adaptiveEdgeScore']) | number:'1.1-1' }}</b><small>{{ decision()['adaptiveTier'] || '—' }}</small></div>
       <div class="stat"><span>Ticks</span><b>{{ ticks().length }}</b><small>Selected minute</small></div>
@@ -78,9 +59,16 @@
 
     <section *ngIf="activeTab()==='overview'" class="workspace">
       <div class="panel chart-panel">
-        <div class="panel-head"><div><strong>Price action</strong><small>Captured tick lifecycle</small></div><div class="legend">{{ candle()?.timestamp | date:'medium':'+0530' }}</div></div>
+        <div class="panel-head"><div><strong>Price action</strong><small>Captured tick lifecycle</small></div><div class="legend">{{ istTime(candle()?.timestamp) }}</div></div>
         <div class="chart" *ngIf="stock()?.candles?.length; else noChart">
-          <svg class="native-chart" viewBox="0 0 1100 420" preserveAspectRatio="none" role="img" aria-label="Captured price replay chart">
+          <div class="replay-toolbar">
+            <button type="button" class="ghost replay-button" [disabled]="!stock()" (click)="runLive()"><span>{{ playing() ? '⏸ Pause' : '▶ Play' }}</span></button>
+            <label class="speed-control"><span>Speed</span><input type="range" min="20" max="500" step="10" [value]="replaySpeedMs()" (input)="setReplaySpeed($any($event.target).value)"><b>{{ replaySpeedLabel() }}</b></label>
+            <span class="replay-position" *ngIf="replayTicksCount()">Tick {{ replayPosition() }} / {{ replayTicksCount() }}</span>
+          </div>
+          <input *ngIf="replayTicksCount()" class="timeline-scrubber" type="range" min="0" [max]="replayTicksCount()-1" step="1" [value]="replayCursor()" (input)="seekReplay($any($event.target).value)" aria-label="Jump to timestamp">
+
+          <svg class="native-chart replay-tappable" [class.replay-playing]="playing()" viewBox="0 0 1100 420" preserveAspectRatio="none" role="button" tabindex="0" aria-label="Captured price replay chart. Tap to play or pause replay." title="{{ playing() ? 'Tap chart to pause replay' : 'Tap chart to play replay' }}" (click)="toggleReplayFromChart()" (keydown.enter)="toggleReplayFromChart()" (keydown.space)="toggleReplayFromChart(); $event.preventDefault()">
             <rect x="0" y="0" width="1100" height="420" class="chart-bg"></rect>
             <line x1="42" y1="42" x2="1058" y2="42" class="chart-grid"></line>
             <line x1="42" y1="210" x2="1058" y2="210" class="chart-grid"></line>
@@ -94,30 +82,38 @@
               <line [attr.x1]="chartXForTick(rt)" y1="20" [attr.x2]="chartXForTick(rt)" y2="400" class="replay-cursor"></line>
               <circle [attr.cx]="chartXForTick(rt)" [attr.cy]="chartYForTick(rt)" r="6" class="replay-dot"></circle>
             </g>
+            <g class="chart-time-axis">
+              <text *ngFor="let label of chartTimeLabels()" [attr.x]="label.x" y="412" text-anchor="middle">{{ label.text }}</text>
+            </g>
           </svg>
-          <div class="chart-caption"><span>{{ replayStatus() }}</span><b *ngIf="replayTick() as rt">Tick {{ rt.n }} · ₹{{ rt.ltp | number:'1.2-2' }} · {{ rt.stage || 'VIRTUAL' }}</b></div>
-          <div class="chart-legend"><span class="price-key">Price</span><span *ngFor="let key of chartOverlayKeys()" [class]="'key-' + key">{{ key }}</span><span *ngIf="!chartOverlayKeys().length">No loaded price overlays for this workbook.</span></div>
+          <div class="chart-caption"><span>{{ replayStatus() }}</span><b class="chart-play-hint">{{ playing() ? 'Tap chart to pause' : 'Tap chart to play' }}</b><small class="timezone-label">All times IST (Asia/Kolkata)</small><b *ngIf="replayTick() as rt">Tick {{ rt.n }} · ₹{{ rt.ltp | number:'1.2-2' }} · {{ rt.stage || 'VIRTUAL' }}</b></div>
+          <div class="chart-price-strip"><div><span>Live price</span><b>₹{{ livePrice() | number:'1.2-2' }}</b></div><div><span>Entry price</span><b>₹{{ num(candle()?.actualTrade?.['EntryPrice']) | number:'1.2-2' }}</b></div><div><span>Exit price</span><b>₹{{ num(candle()?.actualTrade?.['ExitPrice']) | number:'1.2-2' }}</b></div></div>
+           <div class="chart-legend"><span class="price-key">Price</span><span *ngFor="let key of chartOverlayKeys()" [class]="'key-' + key">{{ key }}</span><span *ngIf="!chartOverlayKeys().length">No loaded price overlays for this workbook.</span></div>
+          <div class="indicator-readout" *ngIf="selectedIndicatorEntries().length">
+            <div class="indicator-readout-head"><strong>Indicators at selected timestamp</strong><small>{{ istTime(candle()?.timestamp) }} IST</small></div>
+            <div class="indicator-readout-grid"><div class="indicator-readout-item" *ngFor="let item of selectedIndicatorEntries()"><span>{{ item.label }}</span><b>{{ item.value }}</b></div></div>
+          </div>
           <div class="oscillator-charts" *ngIf="chartOscillatorKeys().length">
             <div class="oscillator" *ngFor="let key of chartOscillatorKeys()">
-              <div class="oscillator-head"><strong>{{ key }}</strong><span>{{ indicatorValue(key) }}</span></div>
+              <div class="oscillator-head"><strong>{{ readableIndicatorLabel(key) }}</strong><span>{{ indicatorValue(key) }}</span></div>
               <svg viewBox="0 0 1100 160" preserveAspectRatio="none" aria-hidden="true"><line x1="22" y1="22" x2="1078" y2="22" class="chart-grid"></line><line x1="22" y1="80" x2="1078" y2="80" class="chart-grid"></line><line x1="22" y1="138" x2="1078" y2="138" class="chart-grid"></line><polyline [attr.points]="chartSeriesPoints(key)" class="oscillator-line"></polyline></svg>
             </div>
           </div>
         </div>
         <ng-template #noChart><div class="chart-placeholder">Upload a lifecycle workbook with tick rows to render the price chart.</div></ng-template>
-        <div class="candle-strip"><button *ngFor="let c of candles(); let i=index" [class.selected]="i===selectedCandle()" (click)="selectCandle(i)">{{ c.timestamp | date:'HH:mm':'+0530' }}</button></div>
+        <div class="candle-selector"><label for="simulation-candle-select">Candle</label><select id="simulation-candle-select" [value]="selectedCandle()" (change)="selectCandle(+$any($event.target).value)"><option *ngFor="let c of candles(); let i=index" [value]="i">{{ i + 1 }} · {{ istTime(c.timestamp) }} · ₹{{ c.candle.close | number:'1.2-2' }}</option></select><span>{{ candles().length ? (selectedCandle()+1) + ' / ' + candles().length : 'No candles' }}</span></div>
       </div>
       <div class="panel indicator-panel">
         <div class="panel-head"><div><strong>Indicators</strong><small>Toggle overlays and inspect exact values</small></div></div>
         <div class="toggle-grid">
-          <button *ngFor="let key of ['EMA9','EMA21','EMA50','EMA200','VWAP','AnchoredVWAP','Bollinger','RSI','MACD','ADX','SuperTrend']" [class.on]="toggles[key]" (click)="toggle(key)"><i></i>{{ key }}</button>
+          <button *ngFor="let key of ['EMA9','EMA21','EMA50','EMA200','VWAP','AnchoredVWAP','Bollinger','RSI','MACD','ADX','SuperTrend']" [class.on]="toggles[key]" [class]="'indicator-toggle indicator-toggle-' + key" [style.--indicator-color]="indicatorColor(key)" (click)="toggle(key)"><i class="indicator-dot"></i><span>{{ key }}</span><small>{{ indicatorValue(key) }}</small></button>
         </div>
         <div class="indicator-grid">
           <div *ngFor="let key of ['EMA9','EMA21','EMA50','EMA200','VWAP','AnchoredVWAP','RSI','ADX','RelativeVolume','ATR','MACD','MACDSignal','MACDHistogram','BollingerUpper','BollingerMiddle','BollingerLower','Choppiness','EMASlope9','EMASlope21','PullbackDistance','DistanceFromEMA','DistanceFromVWAP']" class="metric"><span>{{key}}</span><b>{{ indicatorValue(key) }}</b></div>
         </div>
       </div>
       <div class="panel current-config">
-        <div class="panel-head"><div><strong>Current Configuration Used by Replay</strong><small>Loaded from the workbook snapshot generated with the virtual-tick email</small></div><span class="config-source" *ngIf="configurationCapturedAt()">v{{ configurationVersion() || '—' }} · Captured {{ configurationCapturedAt() | date:'medium':'+0530' }}</span></div>
+        <div class="panel-head"><div><strong>Current Configuration Used by Replay</strong><small>Loaded from the workbook snapshot generated with the virtual-tick email</small></div><span class="config-source" *ngIf="configurationCapturedAt()">v{{ configurationVersion() || '—' }} · Captured {{ istTime(configurationCapturedAt()) }}</span></div>
         <div *ngIf="configurationCount(); else noConfiguration" class="config-table-wrap">
           <table class="config-table"><thead><tr><th>Setting</th><th>Current value</th></tr></thead><tbody><tr *ngFor="let item of configurationEntries()"><td>{{item[0]}}</td><td>{{formatConfigurationValue(item[1])}}</td></tr></tbody></table>
         </div>
@@ -130,8 +126,8 @@
         <div class="audit-grid"><div *ngFor="let a of indicatorAudit()" class="audit-item"><strong>{{a.name}}</strong><span>{{a.available}}/{{candles().length}} observations</span><small>{{a.usage}}</small></div></div>
       </div>
       <div class="panel decision-card">
-        <div class="panel-head"><div><strong>Why did the engine decide this?</strong><small>{{ decision()['reason'] || 'No decision captured' }}</small></div><span class="badge" [class.good]="decision()['signal']==='BUY'">{{ decision()['signal'] || 'HOLD' }}</span></div>
-        <div class="decision-grid"><div><span>Score</span><b>{{ decision()['score'] || 0 }}</b></div><div><span>Adaptive required</span><b>{{ decision()['adaptiveRequiredEntryScore'] || 0 }}</b></div><div><span>Confidence</span><b>{{ num(decision()['adaptiveConfidence']) | number:'1.1-1' }}</b></div><div><span>Risk / reward</span><b>{{ num(decision()['adaptiveRiskReward']) | number:'1.2-2' }}</b></div><div><span>Expected value</span><b>{{ num(decision()['adaptiveExpectedNetValue']) | number:'1.2-2' }}</b></div><div><span>Gate failures</span><b>{{ decision()['gateFailures'] || 'None recorded' }}</b></div></div>
+        <div class="panel-head"><div><strong>Why did the engine decide this?</strong><small>{{ decisionDisplay().reason }}</small></div><span class="badge" [class.good]="decisionDisplay().signal==='BUY'">{{ decisionDisplay().signal }}</span></div>
+        <div class="decision-grid"><div><span>Score</span><b>{{ decisionDisplay().score }}</b></div><div><span>Adaptive required</span><b>{{ decisionDisplay().adaptiveRequiredEntryScore }}</b></div><div><span>Confidence</span><b>{{ displayNumber(decisionDisplay().adaptiveConfidence, 1) }}</b></div><div><span>Risk / reward</span><b>{{ displayNumber(decisionDisplay().adaptiveRiskReward, 2) }}</b></div><div><span>Expected value</span><b>{{ displayNumber(decisionDisplay().adaptiveExpectedNetValue, 2) }}</b></div><div><span>Gate failures</span><b>{{ decisionDisplay().gateFailures || 'None recorded' }}</b></div></div>
       </div>
       <div class="panel learning-panel">
         <div class="panel-head"><div><strong>Learn the simulation flow</strong><small>This page is a diagnostic lab, not a live trading engine</small></div></div>
@@ -159,15 +155,16 @@
 
     <section *ngIf="activeTab()==='ticks'" class="panel full">
       <div class="panel-head"><div><strong>Tick-by-tick tape</strong><small>{{ ticks().length }} ticks across the selected stock</small></div></div>
-      <div class="table-wrap"><table><thead><tr><th>#</th><th>Time</th><th>Stage</th><th>Decision</th><th>Price</th><th>Bid</th><th>Ask</th><th>Spread</th><th>Score</th><th>Confidence</th><th>Recovery</th><th>Reason</th></tr></thead><tbody><tr *ngFor="let t of ticks()"><td>{{t.n}}</td><td>{{t.exchangeTime | date:'HH:mm:ss.SSS':'+0530'}}</td><td><span class="badge">{{t.stage || 'VIRTUAL'}}</span></td><td>{{t.decision || '—'}}</td><td class="price">₹{{t.ltp|number:'1.2-2'}}</td><td>{{t.bid|number:'1.2-2'}}</td><td>{{t.ask|number:'1.2-2'}}</td><td>{{t.spreadPct|number:'1.2-2'}}%</td><td>{{t.indicators?.['Score'] || 0}}</td><td>{{(t.confidence || 0) | number:'1.1-1'}}</td><td>{{(t.recoveryScore || 0) | number:'1.1-1'}}</td><td>{{t.decisionReason || t.exitReason || t.status || '—'}}</td></tr></tbody></table></div>
+      <div class="table-toolbar"><span>Showing {{ tickPageLabel() }}</span><div><button class="ghost" type="button" (click)="previousTickPage()" [disabled]="tickPage()===0">← Previous</button><button class="ghost" type="button" (click)="nextTickPage()" [disabled]="tickPage()>=tickPageCount()-1">Next →</button></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Time</th><th>Stage</th><th>Decision</th><th>Price</th><th>Bid</th><th>Ask</th><th>Spread</th><th>Score</th><th>Confidence</th><th>Recovery</th><th>Reason</th></tr></thead><tbody><tr *ngFor="let t of pagedTicks()"><td>{{t.n}}</td><td>{{ istTime(t.exchangeTime || t.utc) }}</td><td><span class="badge">{{t.stage || 'VIRTUAL'}}</span></td><td>{{displayText(t.decision, '—')}}</td><td class="price">₹{{t.ltp|number:'1.2-2'}}</td><td>{{displayNumber(t.bid, 2)}}</td><td>{{displayNumber(t.ask, 2)}}</td><td>{{displayNumber(t.spreadPct, 2, '%')}}</td><td>{{displayNumber(tickScore(t), 1)}}</td><td>{{displayNumber(t.confidence, 1)}}</td><td>{{displayNumber(t.recoveryScore, 1)}}</td><td>{{displayText(t.decisionReason || t.exitReason || t.status, '—')}}</td></tr></tbody></table></div>
     </section>
 
     <section *ngIf="activeTab()==='decisions'" class="panel full">
       <div class="panel-head"><div><strong>Decision timeline</strong><small>One row per captured tick/stage</small></div></div>
-      <div class="timeline"><button *ngFor="let c of candles(); let i=index" (click)="selectCandle(i)" [class.selected]="i===selectedCandle()"><span>{{c.timestamp| date:'HH:mm':'+0530'}}</span><b>{{c.decision['signal']||'HOLD'}}</b><small>Score {{c.decision['score']||0}} · Edge {{c.decision['adaptiveEdgeScore']||0}}</small></button></div>
+      <div class="timeline"><button *ngFor="let c of candles(); let i=index" (click)="selectCandle(i)" [class.selected]="i===selectedCandle()"><span>{{ istTime(c.timestamp) }}</span><b>{{displayText(candleSignal(c), 'HOLD')}}</b><small>Score {{displayNumber(candleScore(c), 1)}} · Edge {{displayNumber(candleAdaptiveEdge(c), 1)}}</small></button></div>
     </section>
 
     <section *ngIf="activeTab()==='simulation'" class="simulation-layout">
+      <div class="panel full-width save-simulation-panel"><div class="save-simulation-bar"><div><strong>Store / export this simulation</strong><small>Save the current simulation so it can be reopened later.</small></div><input type="text" placeholder="Simulation name (optional)" [value]="saveName()" (input)="saveName.set($any($event.target).value)"><button type="button" class="accent" [disabled]="actionBusy() || !stock()" (click)="saveCurrentSimulation()">Save simulation</button><button type="button" class="secondary" [disabled]="!stock()" (click)="exportSimulationToExcel()">Export Excel</button><button type="button" class="secondary" [disabled]="!stock()" (click)="exportSimulationToPdf()">Export PDF</button></div></div>
       <div class="panel">
         <div class="panel-head"><div><strong>Live replay controls</strong><small>Change parameters and rerun without touching production configuration</small></div></div>
         <div class="form-grid">
@@ -178,7 +175,27 @@
           <label>Minimum profit %<input type="number" step="0.05" [(ngModel)]="params.minimumProfitPercent" (change)="runSimulation()"></label>
           <label>Maximum spread %<input type="number" step="0.1" [(ngModel)]="params.maximumSpreadPercent" (change)="runSimulation()"></label>
         </div>
-        <div class="buttons"><button class="primary" [disabled]="actionBusy() || !stock()" (click)="runSimulationFromUi()">Run simulation</button><button class="accent" [disabled]="actionBusy() || !stock()" (click)="optimizeFromUi()">Find stock best config</button><button class="accent" [disabled]="actionBusy() || !stock()" (click)="optimizeGlobalFromUi()">Find GLOBAL config</button><button class="accent" [disabled]="actionBusy() || !stock()" (click)="learnGlobalFromUi()">Learn GLOBAL dynamics</button><button class="accent" [disabled]="actionBusy() || !stock()" (click)="learnRegimeFromUi()">Learn REGIME policies</button><button class="ghost" [disabled]="!stock()" (click)="runLive()">{{playing()?'Pause':'▶ Play replay'}}</button></div><div class="action-status" *ngIf="actionStatus() || replayStatus()"><span *ngIf="actionBusy()" class="busy-dot"></span>{{ actionStatus() || replayStatus() }}</div>
+        <div class="buttons" [attr.aria-busy]="actionBusy()">
+          <button class="primary" [disabled]="actionBusy() || !stock()" (click)="runSimulationFromUi()"><span *ngIf="busyAction() === 'simulation'" class="button-spinner"></span><span>Run simulation</span></button>
+          <button class="accent" [disabled]="actionBusy() || !stock()" (click)="optimizeFromUi()"><span *ngIf="busyAction() === 'stock-config'" class="button-spinner"></span><span>Find stock best config</span></button>
+          <button class="accent" [disabled]="actionBusy() || !stock()" (click)="optimizeGlobalFromUi()"><span *ngIf="busyAction() === 'global-config'" class="button-spinner"></span><span>Find GLOBAL config</span></button>
+          <button class="accent" [disabled]="actionBusy() || !stock()" (click)="learnGlobalFromUi()"><span *ngIf="busyAction() === 'global-learning'" class="button-spinner"></span><span>Learn GLOBAL dynamics</span></button>
+          <button class="accent" [disabled]="actionBusy() || !stock()" (click)="learnRegimeFromUi()"><span *ngIf="busyAction() === 'regime-learning'" class="button-spinner"></span><span>Learn REGIME policies</span></button>
+          <button class="ghost" [disabled]="actionBusy() || !stock()" (click)="runLive()"><span *ngIf="playing()" class="button-spinner"></span><span>{{playing()?'Pause':'▶ Play replay'}}</span></button>
+          <button class="secondary" [disabled]="actionBusy() || !stock()" (click)="exportSimulationForAi()">Export for AI</button>
+        </div>
+        <div class="action-status" *ngIf="actionStatus() || replayStatus() || actionBusy()" [class.loading]="actionBusy()">
+          <span *ngIf="actionBusy()" class="busy-spinner"></span>
+          <span>{{ actionStatus() || replayStatus() }}</span>
+        </div>
+        <div class="simulation-loader" *ngIf="actionBusy()" role="status" aria-live="polite">
+          <span class="loader-ring"></span><div><strong>Working…</strong><small>{{ actionStatus() || 'Processing simulation data.' }}</small></div>
+        </div>
+      </div>
+      <div class="panel analysis-summary" *ngIf="simulationCompleted()">
+        <div class="panel-head"><div><strong>Overall analysis summary</strong><small>Consolidated result after the simulation completes</small></div></div>
+        <div class="summary-grid"><div class="summary-card" *ngFor="let item of analysisSummary()"><span>{{ item.label }}</span><b>{{ item.value }}</b><small>{{ item.detail }}</small></div></div>
+        <div class="summary-recommendation"><strong>Overall conclusion</strong><p>{{ simulation().recommendation }}</p></div>
       </div>
       <div class="panel result">
         <div class="panel-head"><div><strong>Diagnostic result</strong><small>Evidence from the uploaded window</small></div></div>
@@ -208,39 +225,21 @@
           <h3>Production-parity BUY replay</h3>
           <div class="parity-summary"><span>Replay signal <b>{{rp.signal}}</b></span><span>Decision <b>{{rp.shouldBuy ? 'BUY' : 'BLOCKED'}}</b></span><span>First blocker <b>{{rp.firstBlockingGate || 'None'}}</b></span></div>
           <div class="policy-banner"><span>Decision-time regime <b>{{rp.regime || 'UNKNOWN'}}</b></span><span>Policy source <b>{{rp.policySource || 'BASELINE'}}</b></span><span *ngIf="rp.appliedPolicy">Score ≥ <b>{{rp.appliedPolicy.minimumScore}}</b> · Conf ≥ <b>{{rp.appliedPolicy.minimumConfidence}}</b> · R/R ≥ <b>{{rp.appliedPolicy.minimumRiskReward}}</b> · Edge ≥ <b>{{rp.appliedPolicy.minimumEdgeScore}}</b> · Spread ≤ <b>{{rp.appliedPolicy.maximumSpreadPercent}}%</b></span></div>
-          <div class="gate-list"><div *ngFor="let g of rp.gates" class="gate" [class.fail]="g.status==='FAIL'" [class.unknown]="g.status==='UNKNOWN'"><span>{{g.status}}</span><strong>{{g.name}}</strong><small *ngIf="g.actual!==undefined">{{g.actual|number:'1.2-3'}} vs {{g.required|number:'1.2-3'}} · margin {{g.margin|number:'1.2-3'}}</small><small>{{g.reason}}</small></div></div>
-          <div class="replay-diagnosis" [class.entry-missed]="!rp.shouldBuy" [class.entry-accepted]="rp.shouldBuy">
-            <div class="diagnosis-head">
-              <strong>{{rp.shouldBuy ? 'Entry decision' : 'Missed entry'}}</strong>
-              <button type="button" class="secondary" (click)="explainEntryDecision()">{{entryExplanation() ? 'Refresh explanation' : 'Explain entry decision'}}</button>
-            </div>
-            <p>{{rp.entryMistake}}</p>
-            <div class="entry-explanation" *ngIf="entryExplanation()">
-              <strong>Why this entry was {{rp.shouldBuy ? 'accepted' : 'blocked'}}</strong>
-              <p>{{entryExplanation()}}</p>
-              <button type="button" class="ghost" (click)="clearEntryExplanation()">Hide explanation</button>
-            </div>
-          </div>
-          <div class="replay-diagnosis exit-diagnosis" *ngIf="rp.shouldBuy || rp.exitReplay?.status !== 'NO_POSITION'">
-            <strong>Exit diagnosis</strong>
-            <p>{{rp.exitMistake}}</p>
-          </div>
-          <div class="replay-diagnosis exit-not-applicable" *ngIf="!rp.shouldBuy && rp.exitReplay?.status === 'NO_POSITION'">
-            <strong>Exit analysis</strong>
-            <p>No exit analysis is shown because this observation never entered a position. The blocker above is the reason the entry was missed.</p>
-          </div>
+          <div class="gate-list"><div *ngFor="let g of rp.gates" class="gate" [class.fail]="g.status==='FAIL'" [class.unknown]="g.status==='UNKNOWN'"><span>{{g.status}}</span><strong>{{g.name}}</strong><small *ngIf="g.actual!==undefined">{{displayNumber(g.actual, 2)}} vs {{displayNumber(g.required, 2)}} · margin {{displayNumber(g.margin, 2)}}</small><small>{{g.reason}}</small></div></div>
+          <div class="replay-diagnosis" [class.entry-missed]="!rp.shouldBuy" [class.entry-accepted]="rp.shouldBuy"><div class="diagnosis-head"><strong>{{rp.shouldBuy ? 'Entry decision accepted' : 'Entry decision blocked'}}</strong><button type="button" class="secondary" (click)="explainEntryDecision()">{{entryExplanation() ? 'Refresh explanation' : 'Explain entry decision'}}</button></div><p>{{rp.entryMistake || (rp.shouldBuy ? 'All required entry gates passed in the replay.' : 'The entry was blocked by the first failed gate shown above.')}}</p><div class="entry-explanation" *ngIf="entryExplanation()"><strong>Detailed explanation</strong><pre>{{entryExplanation()}}</pre><button type="button" class="ghost" (click)="clearEntryExplanation()">Hide explanation</button></div></div>
+          <p><b>Exit:</b> {{rp.exitMistake}}</p>
           <div class="parity-notes"><span *ngFor="let n of rp.parityNotes">• {{n}}</span></div>
-          <div class="exit-replay" *ngIf="rp.exitReplay as er"><ng-container *ngIf="er.status !== 'NO_POSITION'">
+          <div class="exit-replay" *ngIf="rp.exitReplay as er">
             <h3>Production-parity SELL / exit replay</h3>
             <div class="parity-summary"><span>Status <b>{{er.status}}</b></span><span>Stop hit <b>{{er.stopWouldHaveTriggered ? 'YES' : 'NO'}}</b></span><span>Target hit <b>{{er.targetWouldHaveTriggered ? 'YES' : 'NO'}}</b></span><span>Trailing <b>{{er.trailingWouldHaveActivated ? 'ACTIVATED' : 'NOT ACTIVATED'}}</b></span></div>
-            <div class="gate-list"><div *ngFor="let g of er.gates" class="gate" [class.fail]="g.status==='FAIL'" [class.unknown]="g.status==='UNKNOWN'"><span>{{g.status}}</span><strong>{{g.name}}</strong><small *ngIf="g.actual!==undefined">{{g.actual|number:'1.2-3'}}<span *ngIf="g.required!==undefined"> · required {{g.required|number:'1.2-3'}}</span></small><small>{{g.reason}}</small></div></div>
+            <div class="gate-list"><div *ngFor="let g of er.gates" class="gate" [class.fail]="g.status==='FAIL'" [class.unknown]="g.status==='UNKNOWN'"><span>{{g.status}}</span><strong>{{g.name}}</strong><small *ngIf="g.actual!==undefined">{{displayNumber(g.actual, 2)}}<span *ngIf="g.required!==undefined"> · required {{displayNumber(g.required, 2)}}</span></small><small>{{g.reason}}</small></div></div>
             <p><b>Exit diagnosis:</b> {{er.diagnosis}}</p>
-          </ng-container></div>
+          </div>
         </div>
         <div class="panel debugger-panel">
           <div class="panel-head"><div><strong>Decision Debugger</strong><small>Chronological execution tree for the selected decision</small></div></div>
           <div class="debugger-summary">
-            <div><span>Observation</span><b>{{ candle()?.timestamp | date:'HH:mm:ss':'+0530' }}</b></div>
+            <div><span>Observation</span><b>{{ istTime(candle()?.timestamp) }}</b></div>
             <div><span>Replay result</span><b>{{ simulation().replay?.shouldBuy ? 'BUY' : 'BLOCKED' }}</b></div>
             <div><span>First blocker</span><b>{{ simulation().replay?.firstBlockingGate || 'None' }}</b></div>
             <div><span>Parity</span><b>{{ simulation().replay?.productionParity || 'UNKNOWN' }}</b></div>
@@ -248,7 +247,7 @@
           <div class="decision-debugger">
             <div *ngFor="let s of decisionDebugSteps()" class="debug-row" [class.fail]="s.status==='FAIL'" [class.pass]="s.status==='PASS'" [class.unknown]="s.status==='UNKNOWN'">
               <span class="debug-order">{{s.order}}</span><span class="debug-phase">{{s.phase}}</span><span class="debug-status">{{s.status}}</span>
-              <div class="debug-content"><strong>{{s.title}}</strong><small>{{s.time | date:'HH:mm:ss.SSS':'+0530'}}</small><small>{{s.detail}}</small><small *ngIf="s.parameter" class="debug-param">Parameter: {{s.parameter}} · current {{s.current ?? '—'}} · threshold {{s.suggested ?? '—'}}</small><small *ngIf="s.impact" class="debug-impact">{{s.impact}}</small></div>
+              <div class="debug-content"><strong>{{s.title}}</strong><small>{{ istTime(s.time) }}</small><small>{{s.detail}}</small><small *ngIf="s.parameter" class="debug-param">Parameter: {{s.parameter}} · current {{s.current ?? '—'}} · threshold {{s.suggested ?? '—'}}</small><small *ngIf="s.impact" class="debug-impact">{{s.impact}}</small></div>
             </div>
           </div>
         </div>
@@ -285,17 +284,17 @@
         <div class="future-path" *ngIf="simulation().futurePath as f">
           <h3>Full future-price path analysis ({{simulation().futurePaths?.length || 0}} trade paths)</h3>
           <div class="global-grid">
-            <div><span>Entry</span><b>₹{{f.entryPrice|number:'1.2-2'}}</b><small>{{f.entryTime| date:'HH:mm:ss':'+0530'}}</small></div>
-            <div><span>Recorded exit</span><b>₹{{(f.actualExitPrice || 0)|number:'1.2-2'}}</b><small>{{f.exitTime| date:'HH:mm:ss':'+0530'}}</small></div>
+            <div><span>Entry</span><b>₹{{f.entryPrice|number:'1.2-2'}}</b><small>{{ istTime(f.entryTime) }}</small></div>
+            <div><span>Recorded exit</span><b>₹{{displayNumber(f.actualExitPrice, 2)}}</b><small>{{ istTime(f.exitTime) }}</small></div>
             <div><span>Future max</span><b>₹{{f.maxPrice|number:'1.2-2'}}</b><small>+{{f.maxFavorablePercent|number:'1.2-2'}}%</small></div>
             <div><span>Future min</span><b>₹{{f.minPrice|number:'1.2-2'}}</b><small>{{f.maxAdversePercent|number:'1.2-2'}}%</small></div>
-            <div><span>Best exit</span><b>₹{{f.bestExitPrice|number:'1.2-2'}}</b><small>{{f.bestExitTime| date:'HH:mm:ss':'+0530'}}</small></div>
+            <div><span>Best exit</span><b>₹{{f.bestExitPrice|number:'1.2-2'}}</b><small>{{ istTime(f.bestExitTime) }}</small></div>
             <div><span>Profit left</span><b>{{f.leftOnTablePercent|number:'1.2-2'}}%</b></div>
           </div>
           <p>{{f.diagnosis}}</p>
         </div>
       </div>
-      <div class="panel full-width"><div class="panel-head"><div><strong>Selected candle diagnostics</strong><small>What would have been visible at this point in time</small></div></div><div class="diagnostic-grid"><div><span>Signal</span><b>{{decision()['signal']}}</b></div><div><span>Gate failures</span><b>{{decision()['gateFailures']||'None'}}</b></div><div><span>Best entry</span><b>₹{{simulation().bestEntry|number:'1.2-2'}}</b><small>{{simulation().bestEntryTime| date:'HH:mm:ss':'+0530'}}</small></div><div><span>Stop</span><b>₹{{num(decision()['stopLoss'])|number:'1.2-2'}}</b></div><div><span>Target</span><b>₹{{num(decision()['targetPrice'])|number:'1.2-2'}}</b></div><div><span>Best observed exit</span><b>₹{{simulation().bestExit|number:'1.2-2'}}</b><small>{{simulation().bestExitTime| date:'HH:mm:ss':'+0530'}}</small></div></div></div>
+      <div class="panel full-width"><div class="panel-head"><div><strong>Selected candle diagnostics</strong><small>What would have been visible at this point in time</small></div></div><div class="diagnostic-grid"><div><span>Signal</span><b>{{decision()['signal']}}</b></div><div><span>Gate failures</span><b>{{decision()['gateFailures']||'None'}}</b></div><div><span>Best entry</span><b>₹{{simulation().bestEntry|number:'1.2-2'}}</b><small>{{ istTime(simulation().bestEntryTime) }}</small></div><div><span>Stop</span><b>₹{{displayNumber(num(decision()['stopLoss']), 2)}}</b></div><div><span>Target</span><b>₹{{displayNumber(num(decision()['targetPrice']), 2)}}</b></div><div><span>Best observed exit</span><b>₹{{simulation().bestExit|number:'1.2-2'}}</b><small>{{ istTime(simulation().bestExitTime) }}</small></div></div></div>
     </section>
   </main>
 </div>
