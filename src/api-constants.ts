@@ -97,6 +97,17 @@ export class ApiConstants {
   readonly updateUserProjectMappings =
     '/updateUserProjectMappings';
 
+  // ---------------- Simulation ----------------
+
+  readonly simulationLive =
+    '/api/simulation/live';
+
+  readonly simulationSaved =
+    '/api/simulation/saved';
+
+  readonly simulationSavedById =
+    '/api/simulation/saved';
+
   // ---------------- Trading ----------------
 
   readonly marketHub =
@@ -106,20 +117,6 @@ export class ApiConstants {
 
   readonly dashboardSummary =
     '/dashboard';
-
-  // ---------------- Simulation ----------------
-
-  readonly getLiveSimulation =
-    '/api/simulation/live';
-
-  readonly saveSimulation =
-    '/api/simulation/saved';
-
-  readonly getSavedSimulations =
-    '/api/simulation/saved';
-
-  readonly getSavedSimulation =
-    '/api/simulation/saved';
 
   // ---------------- Trading Configuration ----------------
 
