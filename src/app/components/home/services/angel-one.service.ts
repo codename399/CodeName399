@@ -76,7 +76,7 @@ export class AngelOneService {
 
   downloadTradeAnalysis() {
     return this.#http.get<Blob>(
-      this.#api.getUrl('download-trade-analysis', true),
+      this.#api.getUrl('/download-trade-analysis', true),
       { responseType: 'blob' as 'json' },
     );
   }
