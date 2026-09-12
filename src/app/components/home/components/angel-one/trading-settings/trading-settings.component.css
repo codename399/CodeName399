@@ -1353,8 +1353,45 @@ textarea {
   padding: 9px 12px;
 }
 
+.reporting-settings-body {
+  gap: 18px;
+}
+
+.reporting-threshold-grid,
+.reporting-toggle-grid,
+.reporting-email-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.reporting-settings-body > .setting-field-wide {
+  grid-column: 1 / -1;
+}
+
+.reporting-email-grid > .setting-field-wide {
+  min-width: 0;
+}
+
+.reporting-settings-body .setting-field-wide {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reporting-settings-body .field-help {
+  line-height: 1.45;
+}
+
 @media (max-width: 768px) {
   .stage-filter-list {
+    grid-template-columns: 1fr;
+  }
+
+  .reporting-threshold-grid,
+  .reporting-toggle-grid,
+  .reporting-email-grid {
     grid-template-columns: 1fr;
   }
 }

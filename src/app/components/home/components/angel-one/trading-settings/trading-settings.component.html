@@ -3853,7 +3853,8 @@
               </div>
             </summary>
 
-            <div class="card-body grid-2" formGroupName="reporting">
+            <div class="card-body reporting-settings-body" formGroupName="reporting">
+              <div class="reporting-threshold-grid">
               <div class="field-row">
                 <label class="field-label" for="strongBuyConfidence"
                   >Strong Buy Confidence</label
@@ -3914,6 +3915,9 @@
                   class="field-input"
                 />
               </div>
+              </div>
+
+              <div class="reporting-toggle-grid">
               <label class="toggle-field"
                 ><input
                   type="checkbox"
@@ -3926,6 +3930,8 @@
                   formControlName="enableTradeAnalysisArchive"
                 /><span>Enable AI Trade Analysis Archive</span></label
               >
+              </div>
+
               <div class="field-row setting-field-wide">
                 <label class="field-label">Trade Analysis Stages</label>
                 <div class="checkbox-group stage-filter-list">
@@ -3951,6 +3957,7 @@
                   ZIP.</small
                 >
               </div>
+              <div class="reporting-email-grid">
               <div class="field-row">
                 <label
                   class="field-label"
@@ -3969,6 +3976,7 @@
                   >A virtual candidate must contain at least this many received
                   ticks before its terminal tick email is sent.</small
                 >
+              </div>
                 <div class="field-row setting-field-wide">
                   <label class="field-label">Virtual Trade Email Stages</label>
                   <div class="checkbox-group stage-filter-list">
