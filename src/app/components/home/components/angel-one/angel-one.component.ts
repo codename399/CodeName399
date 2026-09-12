@@ -431,11 +431,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
     this.simulationRunning.update((set) => new Set(set).add(key));
     this.simulationExplanations.update((x) => ({ ...x, [key]: 'Loading captured market data…' }));
     try {
-      // Grid simulations are independent per stock. Do not activate the application's
-      // global HTTP loader, otherwise one running stock blocks the other simulation rows.
-      const response = await firstValueFrom(
-        this.#simulation.getLive(stock.symbolToken || stock.symbol, true),
-      );
+      const response = await firstValueFrom(this.#simulation.getLive(stock.symbolToken || stock.symbol));
       if (!this.simulationRunning().has(key)) return;
       const capture: any = response?.capture;
       const ticks = (capture?.candles ?? []).flatMap((c: any) => c.ticks ?? []).filter((t: any) => Number(t.ltp) > 0).sort((a: any,b: any) => this.gridTime(a)-this.gridTime(b));

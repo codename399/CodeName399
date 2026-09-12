@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpBackend, HttpClient, HttpHeaders, HttpParams, HttpRequest } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { StockCapture } from '../components/simulation/models';
@@ -23,16 +23,31 @@ interface LiveSimulationResponse {
 @Injectable({ providedIn: 'root' })
 export class SimulationService {
   private readonly http = inject(HttpClient);
+  private readonly backend = inject(HttpBackend);
   #apiConstants = inject(API_CONSTANTS);
 
 
-  getLive(symbolOrToken: string, suppressGlobalLoader = false): Observable<LiveSimulationResponse> {
-    return this.http.get<LiveSimulationResponse>(
-      `${this.#apiConstants.getUrl(this.#apiConstants.simulationLive, true)}/${encodeURIComponent(symbolOrToken)}`,
-      suppressGlobalLoader
-        ? { headers: { 'X-Skip-Global-Loader': 'true' } }
-        : undefined,
-    );
+  getLive(symbolOrToken: string): Observable<LiveSimulationResponse> {
+    return this.http.get<LiveSimulationResponse>(`${this.#apiConstants.getUrl(this.#apiConstants.simulationLive, true)}/${encodeURIComponent(symbolOrToken)}`);
+  }
+
+  private findBrowserAuthorization(): string | null {
+    const read = (storage: Storage): string | null => {
+      for (let i = 0; i < storage.length; i++) {
+        const key = storage.key(i);
+        if (!key) continue;
+        const value = storage.getItem(key);
+        if (!value) continue;
+        const candidate = value.replace(/^Bearer\s+/i, '').trim();
+        if (candidate.split('.').length === 3 && candidate.length > 40) return candidate;
+      }
+      return null;
+    };
+    try {
+      return read(localStorage) || read(sessionStorage);
+    } catch {
+      return null;
+    }
   }
 
   save(request: { name: string; symbol: string; source: string; data: StockCapture }): Observable<SavedSimulationSummary> {
