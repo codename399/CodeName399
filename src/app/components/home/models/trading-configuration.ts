@@ -574,6 +574,7 @@ export interface ReportingSettings {
   virtualTradeEmailStages?: string[];
   enableTradeAnalysisArchive?: boolean;
   tradeAnalysisArchiveStages?: string[];
+  minimumTradeAnalysisTicks?: number;
 }
 
 export interface ConfidenceSettings {

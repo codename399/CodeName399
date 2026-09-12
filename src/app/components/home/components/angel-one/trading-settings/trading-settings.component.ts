@@ -928,6 +928,7 @@ dynamicVirtualTrading: this.#fb.group({
       virtualTradeEmailStages: [["REJECTED", "EXPIRED", "ENTRY", "EXIT"]],
       enableTradeAnalysisArchive: [false],
       tradeAnalysisArchiveStages: [["REJECTED", "EXPIRED", "SOLD", "CLOSED", "CANCELLED", "EXIT"]],
+      minimumTradeAnalysisTicks: [3, [Validators.min(0)]],
     }),
 
     exit: this.#fb.group({
@@ -1961,6 +1962,8 @@ dynamicVirtualTrading: this.#fb.group({
             configuration.reporting?.tradeAnalysisArchiveStages?.length
               ? configuration.reporting.tradeAnalysisArchiveStages
               : ["REJECTED", "EXPIRED", "SOLD", "CLOSED", "CANCELLED", "EXIT"],
+          minimumTradeAnalysisTicks:
+            configuration.reporting?.minimumTradeAnalysisTicks ?? 3,
         },
       },
       {
@@ -3330,6 +3333,7 @@ dynamicVirtualTrading: {
         tradeAnalysisArchiveStages: Array.isArray(value.reporting?.tradeAnalysisArchiveStages)
           ? value.reporting.tradeAnalysisArchiveStages
           : ["REJECTED", "EXPIRED", "SOLD", "CLOSED", "CANCELLED", "EXIT"],
+        minimumTradeAnalysisTicks: Number(value.reporting?.minimumTradeAnalysisTicks ?? 3),
       },
     };
 

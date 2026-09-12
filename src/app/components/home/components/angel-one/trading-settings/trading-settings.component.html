@@ -3952,9 +3952,27 @@
                   }
                 </div>
                 <small class="field-help"
-                  >Compact terminal trade records are written in the background.
-                  Files rotate at 25 MB and are downloaded together as a
-                  ZIP.</small
+                  >Only terminal trades that meet the minimum tick count and an
+                  enabled lifecycle stage are included. Files rotate at 25 MB and
+                  are downloaded together as a ZIP.</small
+                >
+              </div>
+
+              <div class="field-row">
+                <label class="field-label" for="minimumTradeAnalysisTicks"
+                  >Minimum AI Trade Analysis Ticks</label
+                >
+                <input
+                  id="minimumTradeAnalysisTicks"
+                  type="number"
+                  formControlName="minimumTradeAnalysisTicks"
+                  class="field-input"
+                  min="0"
+                  step="1"
+                />
+                <small class="field-help"
+                  >A terminal trade is archived only when it has at least this
+                  many captured market ticks and its stage is selected above.</small
                 >
               </div>
               <div class="reporting-email-grid">

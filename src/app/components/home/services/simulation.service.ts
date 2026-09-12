@@ -26,8 +26,13 @@ export class SimulationService {
   #apiConstants = inject(API_CONSTANTS);
 
 
-  getLive(symbolOrToken: string): Observable<LiveSimulationResponse> {
-    return this.http.get<LiveSimulationResponse>(`${this.#apiConstants.getUrl(this.#apiConstants.simulationLive, true)}/${encodeURIComponent(symbolOrToken)}`);
+  getLive(symbolOrToken: string, suppressGlobalLoader = false): Observable<LiveSimulationResponse> {
+    return this.http.get<LiveSimulationResponse>(
+      `${this.#apiConstants.getUrl(this.#apiConstants.simulationLive, true)}/${encodeURIComponent(symbolOrToken)}`,
+      suppressGlobalLoader
+        ? { headers: { 'X-Skip-Global-Loader': 'true' } }
+        : undefined,
+    );
   }
 
   save(request: { name: string; symbol: string; source: string; data: StockCapture }): Observable<SavedSimulationSummary> {
