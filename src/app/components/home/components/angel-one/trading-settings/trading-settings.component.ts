@@ -926,6 +926,9 @@ dynamicVirtualTrading: this.#fb.group({
         enableVirtualTradeTickEmails: [true],
       minimumVirtualTradeTicksForEmail: [3, [Validators.min(0)]],
       virtualTradeEmailStages: [["REJECTED", "EXPIRED", "ENTRY", "EXIT"]],
+      enableTradeAnalysisArchive: [false],
+      tradeAnalysisStages: [["REJECTED", "EXPIRED", "SOLD", "CLOSED", "EXIT"]],
+      maximumTradeAnalysisFileSizeMb: [25, [Validators.min(1), Validators.max(100)]],
     }),
 
     exit: this.#fb.group({
@@ -958,6 +961,7 @@ dynamicVirtualTrading: this.#fb.group({
   settingsSearch = '';
 
   readonly virtualTradeEmailStageOptions = ['REJECTED', 'EXPIRED', 'ENTRY', 'EXIT'] as const;
+  readonly tradeAnalysisStageOptions = ['REJECTED', 'EXPIRED', 'SOLD', 'CLOSED', 'EXIT'] as const;
 
   isVirtualTradeEmailStageSelected(stage: string): boolean {
     const stages = this.form.get('reporting.virtualTradeEmailStages')?.value as string[] | null;
@@ -974,6 +978,37 @@ dynamicVirtualTrading: this.#fb.group({
       : current.filter(value => value !== stage);
     control.setValue(next);
     control.markAsDirty();
+  }
+
+  isTradeAnalysisStageSelected(stage: string): boolean {
+    const stages = this.form.get('reporting.tradeAnalysisStages')?.value as string[] | null;
+    return Array.isArray(stages) && stages.includes(stage);
+  }
+
+  toggleTradeAnalysisStage(stage: string, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const control = this.form.get('reporting.tradeAnalysisStages');
+    if (!control) return;
+    const current = Array.isArray(control.value) ? [...control.value] : [];
+    const next = input.checked
+      ? Array.from(new Set([...current, stage]))
+      : current.filter(value => value !== stage);
+    control.setValue(next);
+    control.markAsDirty();
+  }
+
+  downloadTradeAnalysisArchive(): void {
+    this.#angel.downloadTradeAnalysisArchive().subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'trade-analysis.jsonl';
+        anchor.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => this.#toastService.error('Unable to download trade analysis data.'),
+    });
   }
 
   filterSettings(event: Event): void {
@@ -1918,6 +1953,14 @@ dynamicVirtualTrading: this.#fb.group({
             configuration.reporting?.virtualTradeEmailStages?.length
               ? configuration.reporting.virtualTradeEmailStages
               : ["REJECTED", "EXPIRED", "ENTRY", "EXIT"],
+          enableTradeAnalysisArchive:
+            configuration.reporting?.enableTradeAnalysisArchive ?? false,
+          tradeAnalysisStages:
+            configuration.reporting?.tradeAnalysisStages?.length
+              ? configuration.reporting.tradeAnalysisStages
+              : ["REJECTED", "EXPIRED", "SOLD", "CLOSED", "EXIT"],
+          maximumTradeAnalysisFileSizeMb:
+            configuration.reporting?.maximumTradeAnalysisFileSizeMb ?? 25,
         },
       },
       {
@@ -3283,6 +3326,13 @@ dynamicVirtualTrading: {
         virtualTradeEmailStages: Array.isArray(value.reporting?.virtualTradeEmailStages)
           ? value.reporting.virtualTradeEmailStages
           : ["REJECTED", "EXPIRED", "ENTRY", "EXIT"],
+        enableTradeAnalysisArchive: value.reporting?.enableTradeAnalysisArchive ?? false,
+        tradeAnalysisStages: Array.isArray(value.reporting?.tradeAnalysisStages)
+          ? value.reporting.tradeAnalysisStages
+          : ["REJECTED", "EXPIRED", "SOLD", "CLOSED", "EXIT"],
+        maximumTradeAnalysisFileSizeMb: Number(
+          value.reporting?.maximumTradeAnalysisFileSizeMb ?? 25,
+        ),
       },
     };
 

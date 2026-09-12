@@ -74,6 +74,13 @@ export class AngelOneService {
       );
   }
 
+  downloadTradeAnalysisArchive() {
+    return this.#http.get(
+      this.#api.getUrl('/download-trade-analysis', true),
+      { responseType: 'blob' },
+    );
+  }
+
   saveTradingConfiguration(configuration: TradingConfiguration) {
     return this.#http
 

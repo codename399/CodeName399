@@ -2562,6 +2562,45 @@
               </div>
               <small class="field-help">Select one or more lifecycle stages. An empty selection means all supported stages.</small>
             </div>
+
+            <div class="field-row setting-field-wide">
+              <label class="toggle-field">
+                <input type="checkbox" formControlName="enableTradeAnalysisArchive" />
+                <span>Enable AI Trade Analysis Archive</span>
+              </label>
+              <small class="field-help">Runs in the background and stores one compact record for each selected terminal trade stage.</small>
+            </div>
+
+            <div class="field-row setting-field-wide">
+              <label class="field-label">AI Trade Analysis Stages</label>
+              <div class="checkbox-group stage-filter-list">
+                @for (stage of tradeAnalysisStageOptions; track stage) {
+                  <label class="toggle-field">
+                    <input
+                      type="checkbox"
+                      [checked]="isTradeAnalysisStageSelected(stage)"
+                      (change)="toggleTradeAnalysisStage(stage, $event)"
+                    />
+                    <span>{{ stage }}</span>
+                  </label>
+                }
+              </div>
+              <small class="field-help">Select the stages to retain. Unchecked stages are excluded; if none are selected, no lifecycle records are stored.</small>
+            </div>
+
+            <div class="field-row">
+              <label class="field-label" for="maximumTradeAnalysisFileSizeMb">Maximum AI Analysis File Size</label>
+              <div class="input-with-suffix">
+                <input id="maximumTradeAnalysisFileSizeMb" type="number" formControlName="maximumTradeAnalysisFileSizeMb" class="field-input" min="1" max="100" step="1" />
+                <span class="suffix">MB</span>
+              </div>
+              <small class="field-help">Oldest records are compacted when this limit is reached. Only one server-side file is maintained.</small>
+            </div>
+
+            <div class="field-row setting-field-wide">
+              <button type="button" class="secondary-button" (click)="downloadTradeAnalysisArchive()" [disabled]="loading || saving || !form.get('reporting.enableTradeAnalysisArchive')?.value">↓ Download AI Trade Analysis</button>
+              <small class="field-help">Download the compact JSONL file and feed it directly to an AI model for entry/exit diagnosis.</small>
+            </div>
           </div>
           </div>
         </details>

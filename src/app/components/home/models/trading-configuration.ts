@@ -572,6 +572,9 @@ export interface ReportingSettings {
   enableVirtualTradeTickEmails?: boolean;
   minimumVirtualTradeTicksForEmail?: number;
   virtualTradeEmailStages?: string[];
+  enableTradeAnalysisArchive?: boolean;
+  tradeAnalysisStages?: string[];
+  maximumTradeAnalysisFileSizeMb?: number;
 }
 
 export interface ConfidenceSettings {
