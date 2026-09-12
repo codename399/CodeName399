@@ -74,10 +74,10 @@ export class AngelOneService {
       );
   }
 
-  downloadTradeAnalysisArchive() {
-    return this.#http.get(
-      this.#api.getUrl('/download-trade-analysis', true),
-      { responseType: 'blob' },
+  downloadTradeAnalysis() {
+    return this.#http.get<Blob>(
+      this.#api.getUrl('download-trade-analysis', true),
+      { responseType: 'blob' as 'json' },
     );
   }
 

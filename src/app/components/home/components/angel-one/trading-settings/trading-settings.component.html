@@ -19,6 +19,9 @@
 >
   ↓ Download JSON
 </button>
+<button type="button" class="text-link-button" [disabled]="downloadingTradeAnalysis || !form.get('reporting.enableTradeAnalysisArchive')?.value" (click)="downloadTradeAnalysis()">
+    {{ downloadingTradeAnalysis ? 'Downloading…' : '↓ Download AI Trade Analysis' }}
+</button>
 
       <button
         class="secondary-button"
@@ -2542,6 +2545,19 @@
               />
             </div>
             <label class="toggle-field"><input type="checkbox" formControlName="enableVirtualTradeTickEmails" /><span>Enable Virtual Trade Tick Emails</span></label>
+            <label class="toggle-field"><input type="checkbox" formControlName="enableTradeAnalysisArchive" /><span>Enable AI Trade Analysis Archive</span></label>
+            <div class="field-row setting-field-wide">
+              <label class="field-label">Trade Analysis Stages</label>
+              <div class="checkbox-group stage-filter-list">
+                @for (stage of tradeAnalysisArchiveStageOptions; track stage) {
+                  <label class="toggle-field">
+                    <input type="checkbox" [checked]="isTradeAnalysisArchiveStageSelected(stage)" (change)="toggleTradeAnalysisArchiveStage(stage, $event)" />
+                    <span>{{ stage }}</span>
+                  </label>
+                }
+              </div>
+              <small class="field-help">Compact terminal trade records are written in the background. Files rotate at 25 MB and are downloaded together as a ZIP.</small>
+            </div>
             <div class="field-row">
               <label class="field-label" for="minimumVirtualTradeTicksForEmail">Minimum Virtual Trade Ticks For Email</label>
               <input id="minimumVirtualTradeTicksForEmail" type="number" formControlName="minimumVirtualTradeTicksForEmail" class="field-input" min="1" step="1" />
@@ -2561,45 +2577,6 @@
                 }
               </div>
               <small class="field-help">Select one or more lifecycle stages. An empty selection means all supported stages.</small>
-            </div>
-
-            <div class="field-row setting-field-wide">
-              <label class="toggle-field">
-                <input type="checkbox" formControlName="enableTradeAnalysisArchive" />
-                <span>Enable AI Trade Analysis Archive</span>
-              </label>
-              <small class="field-help">Runs in the background and stores one compact record for each selected terminal trade stage.</small>
-            </div>
-
-            <div class="field-row setting-field-wide">
-              <label class="field-label">AI Trade Analysis Stages</label>
-              <div class="checkbox-group stage-filter-list">
-                @for (stage of tradeAnalysisStageOptions; track stage) {
-                  <label class="toggle-field">
-                    <input
-                      type="checkbox"
-                      [checked]="isTradeAnalysisStageSelected(stage)"
-                      (change)="toggleTradeAnalysisStage(stage, $event)"
-                    />
-                    <span>{{ stage }}</span>
-                  </label>
-                }
-              </div>
-              <small class="field-help">Select the stages to retain. Unchecked stages are excluded; if none are selected, no lifecycle records are stored.</small>
-            </div>
-
-            <div class="field-row">
-              <label class="field-label" for="maximumTradeAnalysisFileSizeMb">Maximum AI Analysis File Size</label>
-              <div class="input-with-suffix">
-                <input id="maximumTradeAnalysisFileSizeMb" type="number" formControlName="maximumTradeAnalysisFileSizeMb" class="field-input" min="1" max="100" step="1" />
-                <span class="suffix">MB</span>
-              </div>
-              <small class="field-help">Oldest records are compacted when this limit is reached. Only one server-side file is maintained.</small>
-            </div>
-
-            <div class="field-row setting-field-wide">
-              <button type="button" class="secondary-button" (click)="downloadTradeAnalysisArchive()" [disabled]="loading || saving || !form.get('reporting.enableTradeAnalysisArchive')?.value">↓ Download AI Trade Analysis</button>
-              <small class="field-help">Download the compact JSONL file and feed it directly to an AI model for entry/exit diagnosis.</small>
             </div>
           </div>
           </div>
@@ -3976,6 +3953,9 @@
   [disabled]="loading || saving"
 >
   ↓ Download JSON
+</button>
+<button type="button" class="text-link-button" [disabled]="downloadingTradeAnalysis || !form.get('reporting.enableTradeAnalysisArchive')?.value" (click)="downloadTradeAnalysis()">
+    {{ downloadingTradeAnalysis ? 'Downloading…' : '↓ Download AI Trade Analysis' }}
 </button>
 
         <div class="footer-right">
