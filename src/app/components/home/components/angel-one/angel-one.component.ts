@@ -21,9 +21,10 @@ import { MarketService } from '../../services/market.service';
 import { Gainer } from '../../models/gainer';
 import { TradingConfiguration } from '../../models/trading-configuration';
 import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TooltipDirective } from '../../../../directives/tooltip.directive';
+import { SimulationService } from '../../services/simulation.service';
 
 @Component({
   selector: 'app-angel-one',
@@ -43,6 +44,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly #market = inject(MarketService);
 
   readonly #toast = inject(ToastService);
+  readonly #simulation = inject(SimulationService);
 
   readonly #router = inject(Router);
 
@@ -77,6 +79,15 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   showPortfolio = signal(false);
 
   showLogs = signal(false);
+
+  // Dashboard simulations run in-place with a fixed pool of up to five stocks.
+  readonly simulationConcurrency = 5;
+  simulationRunning = signal<Set<string>>(new Set());
+  simulationCursors = signal<Record<string, number>>({});
+  simulationExplanations = signal<Record<string, string>>({});
+  simulationResults = signal<Record<string, any>>({});
+  private simulationTimers = new Map<string, number>();
+  private simulationQueue: Gainer[] = [];
 
   @ViewChild('floatingToggle', { static: true })
   private floatingToggle?: ElementRef<HTMLButtonElement>;
@@ -120,6 +131,8 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
 
   readonly columnDefinitions = [
     { key: 'simulation', label: 'Simulation', defaultVisible: true },
+    { key: 'explanation', label: 'Explanation', defaultVisible: true },
+    { key: 'aiExport', label: 'AI', defaultVisible: true },
     { key: 'star', label: '⭐', defaultVisible: true },
     { key: 'symbol', label: 'Symbol', defaultVisible: true },
     { key: 'instrumentType', label: 'Type', defaultVisible: true },
@@ -298,6 +311,8 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.simulationTimers.forEach((timer) => window.clearTimeout(timer));
+    this.simulationTimers.clear();
     window.removeEventListener('resize', this.#positionFloatingToggle);
     this.#footerResizeObserver?.disconnect();
 
@@ -382,12 +397,124 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
       this.#toast.error('Simulation is available only when indicators are loaded.');
       return;
     }
-    const confirmed = window.confirm(`Start simulation for ${stock.symbol}? The simulation page will load the currently available live data for this stock.`);
-    if (!confirmed) return;
-    void this.#router.navigate(['/home/simulation'], {
-      queryParams: { source: 'live', symbol: stock.symbol, autoRun: '1' },
-    });
+    const key = this.simulationKey(stock);
+    if (this.simulationRunning().has(key)) {
+      this.cancelStockSimulation(stock);
+      return;
+    }
+    this.simulationQueue.push(stock);
+    this.pumpSimulationQueue();
   }
+
+  simulationKey(stock: Gainer): string {
+    return String(stock.symbolToken ?? stock.symbol);
+  }
+
+  isStockSimulationRunning(stock: Gainer): boolean {
+    return this.simulationRunning().has(this.simulationKey(stock));
+  }
+
+  stockSimulationExplanation(stock: Gainer): string {
+    return this.simulationExplanations()[this.simulationKey(stock)] || 'Not simulated yet.';
+  }
+
+  private pumpSimulationQueue(): void {
+    while (this.simulationQueue.length && this.simulationRunning().size < this.simulationConcurrency) {
+      const stock = this.simulationQueue.shift()!;
+      if (!this.isSimulationAvailable(stock) || this.isStockSimulationRunning(stock)) continue;
+      void this.startStockSimulation(stock);
+    }
+  }
+
+  private async startStockSimulation(stock: Gainer): Promise<void> {
+    const key = this.simulationKey(stock);
+    this.simulationRunning.update((set) => new Set(set).add(key));
+    this.simulationExplanations.update((x) => ({ ...x, [key]: 'Loading captured market data…' }));
+    try {
+      const response = await firstValueFrom(this.#simulation.getLive(stock.symbolToken || stock.symbol));
+      if (!this.simulationRunning().has(key)) return;
+      const capture: any = response?.capture;
+      const ticks = (capture?.candles ?? []).flatMap((c: any) => c.ticks ?? []).filter((t: any) => Number(t.ltp) > 0).sort((a: any,b: any) => this.gridTime(a)-this.gridTime(b));
+      if (!ticks.length) {
+        this.simulationExplanations.update((x) => ({ ...x, [key]: 'Simulation could not start because no valid ticks were captured.' }));
+        return;
+      }
+      this.simulationCursors.update((x) => ({ ...x, [key]: 0 }));
+      this.simulationExplanations.update((x) => ({ ...x, [key]: this.explainGridTick(ticks[0], stock) }));
+      await new Promise<void>((resolve) => {
+        const step = (i: number) => {
+          if (!this.simulationRunning().has(key)) { resolve(); return; }
+          if (i >= ticks.length) {
+            const result = this.buildGridSimulationResult(stock, ticks);
+            this.simulationResults.update((x) => ({ ...x, [key]: { ...result, capture } }));
+            this.simulationExplanations.update((x) => ({ ...x, [key]: result.explanation }));
+            resolve(); return;
+          }
+          const tick = ticks[i];
+          this.simulationCursors.update((x) => ({ ...x, [key]: i + 1 }));
+          this.simulationExplanations.update((x) => ({ ...x, [key]: this.explainGridTick(tick, stock) }));
+          this.simulationTimers.set(key, window.setTimeout(() => step(i + 1), 80));
+        };
+        step(0);
+      });
+    } catch (e) {
+      this.simulationExplanations.update((x) => ({ ...x, [key]: e instanceof Error ? `Simulation failed: ${e.message}` : 'Simulation failed.' }));
+    } finally {
+      const timer = this.simulationTimers.get(key);
+      if (timer) window.clearTimeout(timer);
+      this.simulationTimers.delete(key);
+      this.simulationRunning.update((set) => { const next = new Set(set); next.delete(key); return next; });
+      this.pumpSimulationQueue();
+    }
+  }
+
+  cancelStockSimulation(stock: Gainer): void {
+    const key = this.simulationKey(stock);
+    const timer = this.simulationTimers.get(key);
+    if (timer) window.clearTimeout(timer);
+    this.simulationTimers.delete(key);
+    this.simulationQueue = this.simulationQueue.filter(x => this.simulationKey(x) !== key);
+    this.simulationRunning.update((set) => { const next = new Set(set); next.delete(key); return next; });
+    this.simulationExplanations.update((x) => ({ ...x, [key]: 'Simulation cancelled.' }));
+    this.pumpSimulationQueue();
+  }
+
+  private gridTime(t: any): number { return new Date(t?.exchangeTime || t?.utc || 0).getTime(); }
+
+  private explainGridTick(tick: any, stock: Gainer): string {
+    const decision = String(tick?.decision || stock.signal || 'HOLD').toUpperCase();
+    const reason = String(tick?.decisionReason || stock.reason || stock.suggestion || '').trim();
+    const stage = String(tick?.stage || tick?.status || 'OBSERVING').toUpperCase();
+    const price = Number(tick?.ltp || stock.currentPrice || 0);
+    return `${stage}: ${decision} at ₹${price.toFixed(2)}${reason ? ` — ${reason}` : ' — replaying the captured decision inputs.'}`;
+  }
+
+  private buildGridSimulationResult(stock: Gainer, ticks: any[]): any {
+    const entries = ticks.filter(t => String(t.stage || '').toUpperCase() === 'ENTRY' || String(t.status || '').toUpperCase() === 'ENTRY');
+    const exits = ticks.filter(t => String(t.stage || '').toUpperCase() === 'EXIT' || String(t.status || '').toUpperCase() === 'EXIT');
+    const rejected = ticks.filter(t => ['REJECTED','EXPIRED'].includes(String(t.stage || t.status || '').toUpperCase()));
+    const entry = entries[0]?.ltp;
+    const exit = exits.at(-1)?.ltp;
+    const pnl = Number.isFinite(Number(entry)) && Number.isFinite(Number(exit)) ? Number(exit) - Number(entry) : 0;
+    const last = ticks.at(-1);
+    const explanation = `${entries.length ? `Captured ${entries.length} entry event(s)` : 'No accepted entry was captured'}; ${exits.length ? `${exits.length} exit event(s)` : 'no exit event'}; ${rejected.length} blocked/expired observation(s). ${this.explainGridTick(last, stock)}`;
+    return { symbol: stock.symbol, trades: entries.length, exits: exits.length, rejected: rejected.length, entryPrice: entry ?? 0, exitPrice: exit ?? 0, netProfit: pnl, explanation, generatedAtIST: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) };
+  }
+
+  exportStockSimulationForAi(stock: Gainer): void {
+    const key = this.simulationKey(stock);
+    const result = this.simulationResults()[key];
+    if (!result) { this.#toast.error('Run the stock simulation before exporting it for AI.'); return; }
+    const payload = { schemaVersion: '2.0', exportType: 'trading-simulation-ai-context', timezone: 'Asia/Kolkata', stock: stock.symbol, simulation: result, capturedContext: result.capture, aiInstructions: ['Analyze this stock chronologically.', 'Identify every missed entry, avoidable loss and exit problem supported by the data.', 'Explain the evidence and propose concrete threshold/logic changes.', 'Do not invent unavailable market data.'] };
+    this.downloadJson(payload, `${stock.symbol}-simulation-ai-context-${this.fileStamp()}.json`);
+  }
+
+  private downloadJson(payload: unknown, fileName: string): void {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = fileName; a.click(); URL.revokeObjectURL(url);
+  }
+
+  private fileStamp(): string { return new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14); }
 
   openSettings(): void {
     this.#router.navigate(['/home/trading-settings']);

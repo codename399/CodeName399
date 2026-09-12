@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, signal, inject, OnDestroy, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 import { MarketService } from '../../services/market.service';
 import { Gainer } from '../../models/gainer';
 import { SimulationService } from '../../services/simulation.service';
@@ -149,6 +149,7 @@ export class TradingSimulationComponent implements OnInit, OnDestroy {
   globalLearning = signal<GlobalLearningResult | null>(null);
   regimeLearning = signal<RegimeLearningResult | null>(null);
   configurationProposal = signal<ConfigurationProposal | null>(null);
+  combinedSimulation = signal<any | null>(null);
   filteredLiveStocks = computed(() => {
     const search = this.liveSearch().trim().toLowerCase();
     const signalFilter = this.liveSignalFilter();
@@ -340,6 +341,136 @@ export class TradingSimulationComponent implements OnInit, OnDestroy {
     if (!id) return; this.savedLoading.set(true);
     this.simulationService.loadSaved(id).subscribe({ next: capture => { this.sourceMode.set('saved'); this.stocks.set([capture]); this.selectedSavedId.set(id); this.selectedSymbol.set(capture.symbol); this.selectedCandle.set(this.firstDecisionCandleIndex(capture)); this.playIndex.set(0); this.replayTick.set(null); this.loadParametersFromConfiguration(capture.configuration); this.runSimulation(); this.scrollSelectedStockIntoView(); }, error: e => this.error.set(e instanceof Error ? e.message : 'Unable to load saved simulation.'), complete: () => this.savedLoading.set(false) });
   }
+  async simulateAllFromUi(): Promise<void> {
+    this.error.set('');
+    this.actionBusy.set(true);
+    this.busyAction.set('combined-simulation');
+    this.actionStatus.set('Preparing combined simulation…');
+    try {
+      let captures: StockCapture[] = [];
+      if (this.sourceMode() === 'excel') {
+        captures = [...this.stocks()];
+      } else if (this.sourceMode() === 'live') {
+        const selected = this.filteredLiveStocks().length ? this.filteredLiveStocks() : this.liveStocks();
+        const responses = await Promise.all(selected.map(s => firstValueFrom(this.simulationService.getLive(String(s.symbolToken || s.symbol)))));
+        captures = responses.map(r => r.capture).filter(Boolean);
+      } else {
+        const list = this.savedSimulations();
+        const loaded = await Promise.all(list.map(s => firstValueFrom(this.simulationService.loadSaved(String(s.id)))));
+        captures = loaded.filter(Boolean);
+      }
+      if (!captures.length) {
+        this.error.set('There are no simulations available for the selected source.');
+        this.actionStatus.set('Combined simulation could not start.');
+        return;
+      }
+
+      // Fast path: combined simulation is intentionally a computation-only pass.
+      // Do not animate/replay each stock and do not yield between stocks; those UI
+      // updates make large combined runs dramatically slower. Live/saved capture
+      // loading is already parallelized above.
+      const results: any[] = [];
+      for (let i = 0; i < captures.length; i++) {
+        const capture = captures[i];
+        if (i === 0 || i === captures.length - 1 || i % 10 === 0) {
+          this.actionStatus.set(`Simulating ${i + 1} of ${captures.length}: ${capture.symbol}…`);
+        }
+        const result = this.runSimulationForCapture(capture);
+        results.push({
+          symbol: capture.symbol,
+          token: capture.token,
+          exchange: capture.exchange,
+          simulation: result,
+          configuration: capture.configuration,
+          dataQuality: {
+            candleCount: capture.candles?.length ?? 0,
+            tickCount: capture.candles?.reduce((n, c) => n + (c.ticks?.length ?? 0), 0) ?? 0,
+            firstTimestamp: capture.candles?.[0]?.timestamp ?? '',
+            lastTimestamp: capture.candles?.at(-1)?.timestamp ?? '',
+          },
+          // Keep the complete evidence needed to diagnose entry and exit behavior.
+          // This is deliberately not reduced to summary metrics.
+          candles: capture.candles,
+        });
+      }
+      const totals = results.reduce((a, x) => {
+        const r = x.simulation;
+        a.netProfit += Number(r.netProfit || 0); a.trades += Number(r.trades || 0); a.wins += Number(r.wins || 0);
+        a.losses += Number(r.losses || 0); a.missed += Number(r.missed || 0); a.missedProfit += Number(r.missedProfit || 0); a.avoidableLosses += Number(r.avoidableLosses || 0); return a;
+      }, { netProfit: 0, trades: 0, wins: 0, losses: 0, missed: 0, missedProfit: 0, avoidableLosses: 0 });
+      const combined = {
+        schemaVersion: '2.0',
+        exportType: 'combined-trading-simulation-ai-context',
+        generatedAtIST: this.istTime(new Date().toISOString()),
+        timezone: 'Asia/Kolkata',
+        source: this.sourceMode().toUpperCase(),
+        portfolioSummary: { stocks: results.length, ...totals },
+        stocks: results,
+        aiInstructions: [
+          'Act as a trading-system diagnostic analyst, not a trade executor.',
+          'Analyze every stock chronologically and then analyze the portfolio-wide pattern.',
+          'Identify EVERY entry problem and EVERY exit problem: missed entries, blocked/rejected entries, late entries, losing entries, premature exits, late exits, stop/target failures, trailing-exit failures, and positions with no valid exit.',
+          'For every problem, cite the exact stock, timestamp, price, signal, score/confidence/edge, relevant indicators, failed gate, actual trade state and supporting candle/tick evidence when available.',
+          'Use the supplied candles and ticks as the source of truth. Reconstruct the chronological decision path instead of relying only on aggregate totals.',
+          'Compare captured behavior with replay/counterfactual behavior and clearly separate what actually happened from what could have happened.',
+          'Infer common root causes across stocks and separate them from stock-specific issues.',
+          'Propose concrete changes to entry gates, exit logic, thresholds, risk/reward, spread handling, stop/target/trailing behavior and regime handling.',
+          'For each proposed fix, state exactly which trades/problems it fixes, which profitable trades it might affect, the evidence supporting it, and the expected trade-off.',
+          'Produce a prioritized implementation plan that fixes the maximum number of entry and exit problems while protecting profitable trades.',
+          'Do not invent missing ticks, indicators, configuration values or market events. If evidence is missing, explicitly mark the conclusion as uncertain.',
+          'The final answer must contain actionable code/configuration-level recommendations for the trading logic, grouped into entry fixes, exit fixes, risk fixes and validation/rollback steps.',
+          'Distinguish original captured decisions from replay/counterfactual conclusions.',
+        ],
+      };
+      this.combinedSimulation.set(combined);
+      this.activeTab.set('simulation');
+      this.simulationCompleted.set(true);
+      this.actionStatus.set(`Combined simulation complete — ${results.length} stock(s), ${totals.trades} trade(s), ${totals.missed} missed opportunity(ies).`);
+    } catch (e) {
+      this.error.set(e instanceof Error ? e.message : 'Combined simulation failed.');
+      this.actionStatus.set('Combined simulation failed.');
+    } finally {
+      this.actionBusy.set(false);
+      this.busyAction.set('');
+    }
+  }
+
+  private runSimulationForCapture(capture: StockCapture): SimulationResult {
+    const previousStocks = this.stocks();
+    const previousSymbol = this.selectedSymbol();
+    this.stocks.set([capture]);
+    this.selectedSymbol.set(capture.symbol);
+    this.loadParametersFromConfiguration(capture.configuration);
+    this.runSimulation();
+    const result = structuredClone(this.simulation());
+    this.stocks.set(previousStocks);
+    this.selectedSymbol.set(previousSymbol);
+    return result;
+  }
+
+  exportCombinedSimulationForAi(): void {
+    const payload = this.combinedSimulation();
+    if (!payload) {
+      this.error.set('Run Simulate all before exporting the combined AI context.');
+      return;
+    }
+    this.error.set('');
+    this.actionBusy.set(true);
+    this.busyAction.set('combined-ai-export');
+    this.actionStatus.set('Preparing combined AI export…');
+    setTimeout(() => {
+      try {
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `combined-simulation-ai-context-${this.fileStamp()}.json`; a.click(); URL.revokeObjectURL(url);
+        this.actionStatus.set('Combined AI-ready simulation context exported.');
+      } catch (e) {
+        this.error.set(e instanceof Error ? e.message : 'Combined AI export failed.');
+        this.actionStatus.set('Combined AI export failed.');
+      } finally { this.actionBusy.set(false); this.busyAction.set(''); }
+    }, 0);
+  }
+
   saveCurrentSimulation(): void {
     const current = this.stock(); if (!current) return;
     this.actionBusy.set(true); this.busyAction.set('save'); this.actionStatus.set('Saving simulation…');

@@ -204,6 +204,8 @@
             <thead>
               <tr>
                 <th *ngIf="visibleColumnSet().has('simulation')">▶</th>
+                <th *ngIf="visibleColumnSet().has('explanation')">Explanation</th>
+                <th *ngIf="visibleColumnSet().has('aiExport')">AI</th>
                 <th *ngIf="visibleColumnSet().has('star')">⭐</th>
                 <th *ngIf="visibleColumnSet().has('symbol')">
                   Symbol
@@ -276,8 +278,17 @@
                 }"
               >
                 <td class="center-cell simulation-cell" *ngIf="visibleColumnSet().has('simulation')">
-                  <button type="button" class="row-simulation-button" [disabled]="!isSimulationAvailable(stock)" (click)="openSimulationForStock(stock); $event.stopPropagation()" [title]="isSimulationAvailable(stock) ? 'Simulate this stock' : 'Indicators are not loaded'" [attr.aria-label]="isSimulationAvailable(stock) ? 'Simulate ' + stock.symbol : 'Simulation unavailable for ' + stock.symbol">
-                    <span class="material-icons">play_arrow</span>
+                  <button type="button" class="row-simulation-button" [disabled]="!isSimulationAvailable(stock)" (click)="openSimulationForStock(stock); $event.stopPropagation()" [title]="isStockSimulationRunning(stock) ? 'Cancel simulation' : (isSimulationAvailable(stock) ? 'Simulate this stock in place' : 'Indicators are not loaded')" [attr.aria-label]="isStockSimulationRunning(stock) ? 'Cancel simulation for ' + stock.symbol : 'Simulate ' + stock.symbol">
+                    <span class="material-icons">{{ isStockSimulationRunning(stock) ? 'cancel' : 'play_arrow' }}</span>
+                  </button>
+                </td>
+
+                <td class="simulation-explanation" *ngIf="visibleColumnSet().has('explanation')" [title]="stockSimulationExplanation(stock)">
+                  <span *ngIf="isStockSimulationRunning(stock)" class="inline-loader"></span>{{ stockSimulationExplanation(stock) }}
+                </td>
+                <td class="center-cell" *ngIf="visibleColumnSet().has('aiExport')">
+                  <button type="button" class="row-ai-button" [disabled]="!simulationResults()[simulationKey(stock)] || isStockSimulationRunning(stock)" (click)="exportStockSimulationForAi(stock); $event.stopPropagation()" title="Export simulated result for AI" aria-label="Export simulated result for AI">
+                    <span class="material-icons">smart_toy</span>
                   </button>
                 </td>
 

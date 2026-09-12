@@ -14,6 +14,7 @@ export interface SavedSimulationSummary {
   sizeBytes: number;
 }
 
+
 interface LiveSimulationResponse {
   generatedAtUtc: string;
   capture: StockCapture;
@@ -23,6 +24,7 @@ interface LiveSimulationResponse {
 export class SimulationService {
   private readonly http = inject(HttpClient);
   #apiConstants = inject(API_CONSTANTS);
+
 
   getLive(symbolOrToken: string): Observable<LiveSimulationResponse> {
     return this.http.get<LiveSimulationResponse>(`${this.#apiConstants.getUrl(this.#apiConstants.simulationLive, true)}/${encodeURIComponent(symbolOrToken)}`);

@@ -6,6 +6,8 @@
       <button type="button" [class.active]="sourceMode()==='live'" (click)="sourceMode.set('live'); loadLiveStocks()">Live feed</button>
       <button type="button" [class.active]="sourceMode()==='saved'" (click)="sourceMode.set('saved'); loadSavedList()">Saved</button>
     </div>
+    <div class="combined-actions"><button type="button" class="accent" [disabled]="actionBusy()" (click)="simulateAllFromUi()"><span *ngIf="busyAction()==='combined-simulation'" class="button-spinner"></span>▶ Simulate all</button><button type="button" class="secondary" [disabled]="actionBusy() || !combinedSimulation()" (click)="exportCombinedSimulationForAi()"><span *ngIf="busyAction()==='combined-ai-export'" class="button-spinner"></span>🤖 Export combined to AI</button></div>
+
     <label class="upload" *ngIf="sourceMode()==='excel'"><input type="file" multiple accept=".xlsx" (change)="upload($any($event.target).files)"><span>＋ Upload Excel files</span><small>Load lifecycle workbooks</small></label>
     <div class="upload-loader" *ngIf="actionBusy() && busyAction()==='upload'" role="status" aria-live="polite"><span class="loader-ring"></span><div><strong>Reading Excel workbook…</strong><small>{{ actionStatus() || 'Parsing ticks, indicators and decisions.' }}</small></div></div>
     <ng-container *ngIf="sourceMode()==='live'">
@@ -178,6 +180,7 @@
           <label>Minimum profit %<input type="number" step="0.05" [(ngModel)]="params.minimumProfitPercent" (change)="runSimulation()"></label>
           <label>Maximum spread %<input type="number" step="0.1" [(ngModel)]="params.maximumSpreadPercent" (change)="runSimulation()"></label>
         </div>
+        <div class="panel full-width combined-result-panel" *ngIf="combinedSimulation() as combined"><div class="panel-head"><div><strong>Combined simulation</strong><small>Cross-stock diagnosis ready</small></div><button type="button" class="secondary" [disabled]="actionBusy()" (click)="exportCombinedSimulationForAi()">🤖 Export combined to AI</button></div><div class="combined-summary"><div><span>Stocks</span><b>{{combined.portfolioSummary.stocks}}</b></div><div><span>Net profit</span><b>₹{{combined.portfolioSummary.netProfit|number:'1.2-2'}}</b></div><div><span>Trades</span><b>{{combined.portfolioSummary.trades}}</b></div><div><span>Wins / losses</span><b>{{combined.portfolioSummary.wins}} / {{combined.portfolioSummary.losses}}</b></div><div><span>Missed</span><b>{{combined.portfolioSummary.missed}}</b></div><div><span>Avoidable</span><b>{{combined.portfolioSummary.avoidableLosses}}</b></div></div></div>
         <div class="buttons" [attr.aria-busy]="actionBusy()">
           <button class="primary" [disabled]="actionBusy() || !stock()" (click)="runSimulationFromUi()" title="Run the replay simulation using the current thresholds. This does not change production configuration."><span *ngIf="busyAction() === 'simulation'" class="button-spinner"></span><span>Run simulation</span></button>
           <button class="accent" [disabled]="actionBusy() || !stock()" (click)="optimizeFromUi()" title="Search thresholds for the selected stock only and apply the best replay configuration."><span *ngIf="busyAction() === 'stock-config'" class="button-spinner"></span><span>Find stock best config</span></button>

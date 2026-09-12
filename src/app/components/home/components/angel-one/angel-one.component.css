@@ -3235,3 +3235,7 @@ body > .sidebar-float-button {
 .row-simulation-button:hover:not(:disabled){background:#1d3760;color:#fff;border-color:#577ac0;transform:translateY(-1px)}
 .row-simulation-button:disabled{cursor:not-allowed;opacity:.28;background:#0d1522;border-color:#243148}
 .row-simulation-button .material-icons{font-size:18px}
+
+.simulation-explanation{min-width:260px;max-width:480px;font-size:12px;line-height:1.35;color:#334e68;white-space:normal}.inline-loader{display:inline-block;width:10px;height:10px;margin-right:7px;border:2px solid #c9d6e8;border-top-color:#2563eb;border-radius:50%;animation:simulation-spin .8s linear infinite;vertical-align:-1px}
+.row-ai-button{width:32px;height:32px;display:inline-grid;place-items:center;border:1px solid #7c5cc4;border-radius:8px;background:#f4efff;color:#6842a8;cursor:pointer;padding:0}.row-ai-button:disabled{opacity:.28;cursor:not-allowed}.row-ai-button:hover:not(:disabled){background:#e9ddff}.row-ai-button .material-icons{font-size:18px}
+@keyframes simulation-spin{to{transform:rotate(360deg)}}

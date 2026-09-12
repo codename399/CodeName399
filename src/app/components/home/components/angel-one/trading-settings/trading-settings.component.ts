@@ -347,6 +347,10 @@ export class TradingSettingsComponent implements OnInit {
     maxDailyLoss: [3000, Validators.required],
 
     maxDailyTrades: [5, Validators.required],
+    maxConcurrentAngelOneSimulations: [
+      5,
+      [Validators.required, Validators.min(1), Validators.max(20)],
+    ],
 
     cooldownMinutes: [10, Validators.required],
 
@@ -1320,6 +1324,10 @@ dynamicVirtualTrading: this.#fb.group({
         maxDailyLoss: configuration.maxDailyLoss,
 
         maxDailyTrades: configuration.maxDailyTrades,
+        maxConcurrentAngelOneSimulations: Math.max(
+          1,
+          Math.min(20, Number(configuration.maxConcurrentAngelOneSimulations ?? 5)),
+        ),
 
         cooldownMinutes: configuration.cooldownMinutes,
 
@@ -2600,6 +2608,10 @@ dynamicVirtualTrading: this.#fb.group({
       maxDailyLoss: Number(value.maxDailyLoss),
 
       maxDailyTrades: Number(value.maxDailyTrades),
+      maxConcurrentAngelOneSimulations: Math.max(
+        1,
+        Math.min(20, Number(value.maxConcurrentAngelOneSimulations ?? 5)),
+      ),
 
       cooldownMinutes: Number(value.cooldownMinutes),
 

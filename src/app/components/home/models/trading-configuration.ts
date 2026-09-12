@@ -162,6 +162,8 @@ export interface TradingConfiguration {
   maxDailyLoss: number;
 
   maxDailyTrades: number;
+  /** Maximum number of Angel One grid simulations that may run concurrently. */
+  maxConcurrentAngelOneSimulations: number;
 
   cooldownMinutes: number;
 

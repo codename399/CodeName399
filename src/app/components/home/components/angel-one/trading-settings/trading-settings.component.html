@@ -640,6 +640,22 @@
                 class="field-input"
               />
             </div>
+
+            <div class="field-row">
+              <label class="field-label" for="maxConcurrentAngelOneSimulations"
+                >Maximum Concurrent Angel One Simulations</label
+              >
+              <input
+                id="maxConcurrentAngelOneSimulations"
+                type="number"
+                min="1"
+                max="20"
+                step="1"
+                formControlName="maxConcurrentAngelOneSimulations"
+                class="field-input"
+              />
+              <small class="field-help">Maximum number of Angel One stock simulations that can run at the same time. Default: 5.</small>
+            </div>
           </div>
         </details>
 
