@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
 
@@ -12,7 +12,7 @@ import {
 } from '@angular/forms';
 
 import { Router } from '@angular/router';
-import { Subscription, catchError, finalize, of } from 'rxjs';
+import { catchError, finalize, of } from 'rxjs';
 import { ToastService } from '../../../../../services/toast.service';
 import {
   TradingConfiguration,
@@ -20,14 +20,11 @@ import {
   InstrumentTradingSettings,
   FuturesTradingSettings,
   OptionsTradingSettings,
-  OptimizationSettings,
-  OptimizationMode,
   TradingStrictnessProfile,
+  AnalysisCaptureSettings,
 } from '../../../models/trading-configuration';
-import { TradingOptimizationStatus } from '../../../models/trading-optimization-status';
 import { TradingStrategy } from '../../../models/enum/trading-strategy';
 import { AngelOneService } from '../../../services/angel-one.service';
-import { MarketService } from '../../../services/market.service';
 
 @Component({
   selector: 'app-trading-settings',
@@ -40,7 +37,9 @@ import { MarketService } from '../../../services/market.service';
 
   styleUrl: './trading-settings.component.css',
 })
-export class TradingSettingsComponent implements OnInit, OnDestroy {
+export class TradingSettingsComponent implements OnInit {
+  @ViewChild('settingsGrid') settingsGrid?: ElementRef<HTMLElement>;
+
   readonly #fb = inject(FormBuilder);
 
   readonly #angel = inject(AngelOneService);
@@ -49,17 +48,11 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
 
   readonly #router = inject(Router);
 
-  readonly #market = inject(MarketService);
 
   loading = false;
 
   saving = false;
-  private loadedConfiguration: TradingConfiguration | null = null;
 
-  optimizationStatus: TradingOptimizationStatus | null = null;
-  optimizationStatusLoading = false;
-  #optimizationStatusSubscription?: Subscription;
-  #optimizationStatusSignalRSubscription?: Subscription;
 
   readonly tradingStrictnessProfiles: {
     value: TradingStrictnessProfile;
@@ -231,7 +224,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
 
     strategy: [1, Validators.required],
 
-    instrumentType: [this.#angel.selectedInstrumentType() as InstrumentType, Validators.required],
+    instrumentType: ['Equity' as InstrumentType, Validators.required],
 
     exchange: ['NSE', Validators.required],
     productType: ['INTRADAY', Validators.required],
@@ -472,6 +465,173 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
 
     enableBollinger: [true],
 
+    maxBrokerFailuresBeforeKillSwitch: [5],
+    brokerFailureWindowMinutes: [2],
+    futuresOptionsMarketCloseTime: ['15:40'],
+    intradayEntryCutoffTime: ['15:20'],
+    equityMisAutoSquareOffTime: ['15:10'],
+    futuresOptionsAutoSquareOffTime: ['15:20'],
+    roboAutoSquareOffTime: ['15:05'],
+    casTransitionStart: ['15:15'],
+    casOrderEntryStart: ['15:20'],
+    casMarketOnlyEnd: ['15:25'],
+    casLimitOnlyEnd: ['15:30'],
+    casRandomCloseSafetyCutoff: ['15:28'],
+    casEnd: ['15:40'],
+    casPostCloseEnd: ['16:00'],
+    casPriceBandPercent: [3],
+    maximumTotalOpenRisk: [10000],
+    maximumTotalUnderlyingDeltaExposure: [2000],
+    emergencyMarginUtilizationPercent: [85],
+    enableTradingKillSwitchPersistence: [true],
+    enableGlobalRiskLimits: [true],
+    riskReservationSeconds: [10],
+    includeUnrealizedPnlInDailyLoss: [true],
+    requireClosedHigherTimeframeCandles: [true],
+    enableOptionChainAnalytics: [true],
+    enablePutCallRatio: [true],
+    enableOIBuildup: [true],
+    enablePaperMarginSimulation: [true],
+    paperFuturesMarginRate: [0.15],
+    paperOptionsCapitalRate: [1],
+    paperNakedOptionMarginRate: [0.03],
+    paperNakedOptionMarginSafetyMultiplier: [1.2],
+    quoteMaxTokensPerRequest: [50],
+    quoteRequestsPerSecond: [1],
+    maximumSlippagePercent: [0.5],
+    rejectDuplicateOrderIntent: [true],
+    enableScripConsentForCashOrders: [true],
+    nakedRiskMonitorIntervalSeconds: [5],
+    orderIntentRecoveryIntervalSeconds: [5],
+    orderIntentRecoveryInitialDelaySeconds: [2],
+    orderIntentUnknownOrderExpiryMinutes: [2],
+    webSocketHeartbeatSeconds: [10],
+    webSocketPongTimeoutSeconds: [30],
+    webSocketRetryInitialSeconds: [10],
+    webSocketRetryMaxSeconds: [60],
+    brokerPositionConfirmationDelaySeconds: [1],
+    squareOffRetryDelaySeconds: [1],
+    stopLossConfirmationSeconds: [2],
+    capitalAllocationBaseMultiplier: [0.25],
+    capitalAllocationConfidenceMultiplier: [0.75],
+    eliteMovementScore: [95],
+    strongMovementScore: [90],
+    eliteCapitalBonus: [0.1],
+    strongCapitalBonus: [0.05],
+    maximumObservedDrawdownPercent: [0.25],
+    brokerBalanceRefreshSeconds: [30],
+    globalMaximumMarginUtilizationPercent: [70, [Validators.min(0), Validators.max(100)]],
+    marketTimeZoneId: ['Asia/Kolkata', Validators.required],
+    tradingHolidaysText: [''],
+    visibleColumnsText: [''],
+
+    dynamicEvaluation: this.#fb.group({
+      enabled: [true],
+      minimumCandleHistory: [30],
+      profileLookbackCandles: [20],
+      minimumEntryScore: [42],
+      minimumQuoteOnlyEntryScore: [32],
+      minimumQuoteOnlySubscriptionScore: [28],
+      maximumQuoteOnlyRiskPenalty: [8],
+      maximumAdaptiveSubscriptions: [150],
+      historicalWarmupCandidates: [100],
+      strongTrendThreshold: [68],
+      developingThreshold: [28],
+      maximumEntryScore: [100],
+      unknownStockRiskReward: [1.5],
+      minimumRiskReward: [1.25],
+      maximumRiskReward: [3.5],
+      minimumNetProfit: [5],
+      poorStockNetRewardMultiplier: [1],
+      goodStockNetRewardMultiplier: [1.35],
+      excellentStockNetRewardMultiplier: [1.75],
+      normalStopAtrMultiplier: [1.15],
+      recoveryStopAtrMultiplier: [1.8],
+      maximumStopAtrMultiplier: [2.5],
+      maximumStructuralStopAtrDistance: [2.5],
+      targetExtensionStepAtr: [0.5],
+      maximumTargetExtensionIterations: [4],
+      strongPerformanceScore: [70],
+      excellentPerformanceScore: [85],
+      recoveryScoreThreshold: [60],
+      minimumRiskMultiplier: [0.35],
+      maximumRiskMultiplier: [1.25],
+      trendWeight: [18],
+      momentumWeight: [16],
+      candleWeight: [14],
+      volumeWeight: [10],
+      priceActionWeight: [14],
+      recoveryWeight: [10],
+      regimeWeight: [8],
+      multiTimeframeWeight: [8],
+      spreadPenaltyWeight: [8],
+      exhaustionPenalty: [12],
+      minimumExpectedNetValue: [0],
+      minimumEdgeScore: [45],
+      minimumStatisticalConfidence: [20],
+      noTradePenaltyThreshold: [65],
+      maximumRiskWhenStatisticallyUncertain: [0.65],
+      recentPerformanceWeight: [0.35],
+      historicalPerformanceWeight: [0.65],
+      marketRegimeWeight: [0.10],
+      relativeStrengthWeight: [0.10],
+    }),
+
+    analysisCapture: this.#fb.group({
+      enabled: [false],
+      batchIntervalMinutes: [30],
+      captureWindowMinutes: [30],
+      stockCount: [100],
+      candleCount: [30],
+      instrumentType: ['Equity'],
+      outputDirectory: ['Data/TradingAnalysis'],
+      publicBaseUrl: [''],
+      downloadLinkLifetimeHours: [48],
+      downloadSigningKey: [''],
+      emailOnCompletion: [true],
+      includeTickData: [true],
+      includeConfiguration: [true],
+      includeActualVirtualTradeState: [true],
+    }),
+
+    dynamicVirtualTrading: this.#fb.group({
+      enabled: [true],
+      minimumObservationTicks: [3],
+      maximumObservationTicks: [40],
+      minimumObservationSeconds: [1],
+      maximumObservationSeconds: [30],
+      minimumFavorableTickRatio: [0.52],
+      maximumAdverseTickRatio: [0.6],
+      recoveryTickRatioBonus: [0.08],
+      maximumAdverseMoveAtr: [0.9],
+      recoveryMaximumAdverseMoveAtr: [1.5],
+      minimumTickMomentum: [0.05],
+      minimumTrendStability: [45],
+      minimumMovementScore: [35],
+      maximumNoiseScoreForEntry: [75],
+      minimumRecoveryScore: [45],
+      minimumBreakoutStrength: [35],
+      minimumPriceSlope: [-0.05],
+      minimumProfitAtrBeforeTrailing: [0.5],
+      baseTrailingAtrMultiplier: [1.2],
+      strongTrendTrailingAtrMultiplier: [1.5],
+      recoveryTrailingAtrMultiplier: [1.8],
+      weakTrendTrailingAtrMultiplier: [0.9],
+      minimumTrailingAtrMultiplier: [0.7],
+      maximumTrailingAtrMultiplier: [2.2],
+      minimumExecutionConfidence: [35],
+      peakProfitRetentionPercent: [60],
+      recoveryPeakProfitRetentionPercent: [40],
+      tickPriceMoveWeight: [30],
+      tickDirectionWeight: [25],
+      tickAccelerationWeight: [15],
+      tickVolumeWeight: [10],
+      tickSpreadWeight: [10],
+      tickRecoveryWeight: [10],
+      baseCapitalMultiplier: [0.35],
+      confidenceCapitalMultiplier: [0.65],
+    }),
+
     validation: this.#fb.group({
       minimumMovementScore: [
         45,
@@ -682,6 +842,12 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
       pullbackExhaustedMovePenalty: [-20],
       superTrendBearishPenalty: [-10],
       highChoppinessPenalty: [-10],
+      ema9BelowEma21Score: [10],
+      priceBelowVwapScore: [5],
+      superTrendBearishScore: [5],
+      minusDiAbovePlusDiScore: [5],
+      lastCandleBearishScore: [5],
+      lowerLowScore: [3],
     }),
 
     virtualTrading: this.#fb.group({
@@ -702,6 +868,20 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
       confidenceBonusAfterSeconds1: [20, [Validators.min(0)]],
       confidenceBonusAfterSeconds2: [35, [Validators.min(0)]],
       pullbackWarmupSeconds: [8, [Validators.min(0)]],
+      entryMinimumPriceRatio: [0],
+      maximumDrawdownPercent: [100],
+      highestPriceMinimumRatio: [0],
+      positiveRatioWeight: [40],
+      aboveEntryRatioWeight: [30],
+      maximumHigherHighBonus: [15],
+      maximumConsecutivePositiveBonus: [15],
+      volatilityVeryLowThreshold: [0.2],
+      volatilityLowThreshold: [0.5],
+      volatilityMediumThreshold: [0.8],
+      volatilityHighThreshold: [1.2],
+      volatilityVeryHighThreshold: [2],
+      fallbackAtrPercent: [0.5],
+      maximumPullbackGainPercent: [100],
     }),
 
     confidence: this.#fb.group({
@@ -758,94 +938,8 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
       ],
       volatilityScoreThreshold: [60, [Validators.min(0), Validators.max(100)]],
       riskRewardThreshold: [2, [Validators.min(0)]],
-    }),
-
-    optimization: this.#fb.group({
-      enabled: [true],
-      paperTradingOnly: [true],
-      mode: [0 as OptimizationMode],
-      timeBasedCandidateMinutes: [60, [Validators.required, Validators.min(1)]],
-      sendConfigurationEmail: [true],
-      sendDailyEmail: [true],
-      autoPromoteBestConfiguration: [false],
-
-      pollIntervalSeconds: [5, [Validators.required, Validators.min(1)]],
-      minimumCandidateMinutes: [5, [Validators.required, Validators.min(0)]],
-      noSignalTimeoutMinutes: [20, [Validators.required, Validators.min(0)]],
-      noVirtualConfirmationTimeoutMinutes: [
-        12,
-        [Validators.required, Validators.min(0)],
-      ],
-      noPaperTradeTimeoutMinutes: [
-        10,
-        [Validators.required, Validators.min(0)],
-      ],
-      maxVirtualTradeDurationMinutes: [
-        5,
-        [Validators.required, Validators.min(0)],
-      ],
-      maxPaperTradeDurationMinutes: [
-        20,
-        [Validators.required, Validators.min(0)],
-      ],
-      forceCloseTimedOutPaperTrades: [true],
-      maximumCandidateMinutes: [45, [Validators.required, Validators.min(0)]],
-
-      maximumCandidatesPerDay: [20, [Validators.required, Validators.min(1)]],
-      minimumCompletedTradesForAcceptance: [
-        10,
-        [Validators.required, Validators.min(0)],
-      ],
-      preferredCompletedTrades: [20, [Validators.required, Validators.min(0)]],
-      minimumVirtualCandidatesForAnalysis: [
-        5,
-        [Validators.required, Validators.min(0)],
-      ],
-
-      minimumNetProfit: [0, [Validators.required]],
-      minimumProfitFactor: [1.2, [Validators.required, Validators.min(0)]],
-      maximumDrawdownPercent: [10, [Validators.required, Validators.min(0)]],
-
-      // Multi-objective optimizer controls.
-      signalGenerationWeight: [
-        0.2,
-        [Validators.required, Validators.min(0), Validators.max(1)],
-      ],
-      virtualConfirmationWeight: [
-        0.3,
-        [Validators.required, Validators.min(0), Validators.max(1)],
-      ],
-      profitabilityWeight: [
-        0.5,
-        [Validators.required, Validators.min(0), Validators.max(1)],
-      ],
-      targetEvaluationSignalRatePercent: [
-        3,
-        [Validators.required, Validators.min(0), Validators.max(100)],
-      ],
-      targetVirtualConfirmationRatePercent: [
-        35,
-        [Validators.required, Validators.min(0), Validators.max(100)],
-      ],
-      explorationCandidateCount: [2, [Validators.required, Validators.min(1)]],
-      minimumLearningTrades: [10, [Validators.required, Validators.min(1)]],
-      minimumPatternSampleSize: [5, [Validators.required, Validators.min(1)]],
-      learningStrictnessStepPercent: [
-        2,
-        [Validators.required, Validators.min(0), Validators.max(100)],
-      ],
-      maximumLearningStrictnessPercent: [
-        50,
-        [Validators.required, Validators.min(0), Validators.max(100)],
-      ],
-      maximumLessonsPerCandidate: [3, [Validators.required, Validators.min(1)]],
-
-      dailyEmailDelayMinutes: [5, [Validators.required, Validators.min(0)]],
-      validationHistoryFile: [
-        'OptimizationRuns/validation-configuration-history.json',
-        [Validators.required],
-      ],
-      reportDirectory: ['OptimizationRuns', [Validators.required]],
+      enableVirtualTradeTickEmails: [true],
+      minimumVirtualTradeTicksForEmail: [10, [Validators.min(1)]],
     }),
 
     exit: this.#fb.group({
@@ -875,6 +969,25 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
   enableAutoTradingFormControl = this.form?.controls?.enableAutoTrading;
   enableAutoTradingPreviousValue = this.enableAutoTradingFormControl?.value;
 
+  settingsSearch = '';
+
+  filterSettings(event: Event): void {
+    this.settingsSearch = (event.target as HTMLInputElement).value;
+    const query = this.settingsSearch.trim().toLowerCase();
+    const cards = this.settingsGrid?.nativeElement.querySelectorAll<HTMLDetailsElement>(
+      'details.settings-card',
+    );
+
+    cards?.forEach((card) => {
+      const matches = !query || card.textContent?.toLowerCase().includes(query);
+      card.hidden = !matches;
+
+      if (query && matches) {
+        card.open = true;
+      }
+    });
+  }
+
   /** Keep the configuration page to one open accordion at a time. */
   onAccordionToggle(event: Event): void {
     const current = event.currentTarget as HTMLDetailsElement | null;
@@ -895,62 +1008,6 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
           accordion.open = false;
         }
       });
-  }
-
-  readonly columnDefinitions = [
-    { key: 'star', label: '⭐', defaultVisible: true },
-    { key: 'symbol', label: 'Symbol', defaultVisible: true },
-    { key: 'instrumentType', label: 'Type', defaultVisible: true },
-    { key: 'exchange', label: 'Exchange', defaultVisible: false },
-    { key: 'optionContract', label: 'Option Contract', defaultVisible: false },
-    { key: 'oi', label: 'OI', defaultVisible: false },
-    { key: 'oiChange', label: 'OI Change %', defaultVisible: false },
-    { key: 'pcr', label: 'PCR', defaultVisible: false },
-    { key: 'iv', label: 'IV', defaultVisible: false },
-    { key: 'delta', label: 'Delta', defaultVisible: false },
-    { key: 'gamma', label: 'Gamma', defaultVisible: false },
-    { key: 'theta', label: 'Theta', defaultVisible: false },
-    { key: 'vega', label: 'Vega', defaultVisible: false },
-    { key: 'token', label: 'Token', defaultVisible: false },
-    { key: 'prevClose', label: 'Prev Close', defaultVisible: true },
-    { key: 'vwap', label: 'VWAP', defaultVisible: false },
-    { key: 'ema9', label: 'EMA9', defaultVisible: false },
-    { key: 'ema21', label: 'EMA21', defaultVisible: false },
-    { key: 'ema50', label: 'EMA50', defaultVisible: false },
-    { key: 'ema200', label: 'EMA200', defaultVisible: false },
-    { key: 'anchoredVWAP', label: 'Anchored VWAP', defaultVisible: false },
-    { key: 'adx', label: 'ADX', defaultVisible: false },
-    { key: 'superTrend', label: 'SuperTrend', defaultVisible: false },
-    { key: 'rsi', label: 'RSI', defaultVisible: false },
-    { key: 'volumeMultiplier', label: 'Vol×', defaultVisible: false },
-    { key: 'pullbackDistance', label: 'PB%', defaultVisible: false },
-    { key: 'distanceFromEMA', label: 'Dist EMA%', defaultVisible: false },
-    { key: 'distanceFromVWAP', label: 'Dist VWAP%', defaultVisible: false },
-    { key: 'macd', label: 'MACD', defaultVisible: false },
-    { key: 'macdSignal', label: 'MACD Sig', defaultVisible: false },
-    { key: 'macdHistogram', label: 'MACD Hist', defaultVisible: false },
-    { key: 'bollingerBandwidth', label: 'Boll Bandwidth', defaultVisible: false },
-    { key: 'score', label: 'Score', defaultVisible: true },
-    { key: 'signal', label: 'Signal', defaultVisible: true },
-    { key: 'risk', label: 'Risk', defaultVisible: true },
-    { key: 'stopLoss', label: 'SL', defaultVisible: true },
-    { key: 'targetPrice', label: 'Target', defaultVisible: true },
-    { key: 'atr', label: 'ATR', defaultVisible: false },
-    { key: 'reason', label: 'Reason', defaultVisible: true },
-    { key: 'suggestion', label: 'Suggestion', defaultVisible: true }
-  ];
-
-  visibleColumns = new Set<string>();
-
-  isColumnVisible(key: string): boolean { return this.visibleColumns.has(key); }
-
-  toggleColumn(key: string): void {
-    if (this.visibleColumns.has(key)) this.visibleColumns.delete(key);
-    else this.visibleColumns.add(key);
-  }
-
-  resetColumns(): void {
-    this.visibleColumns = new Set(this.columnDefinitions.filter(x => x.defaultVisible).map(x => x.key));
   }
 
   // ======================================================
@@ -979,7 +1036,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
 
     this.form.controls.instrumentType.valueChanges.subscribe((value) => {
       if (value) {
-        this.switchInstrumentConfiguration(value as InstrumentType);
+        this.onInstrumentTypeChanged(value as InstrumentType);
       }
     });
 
@@ -1001,86 +1058,6 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
     );
 
     this.loadConfiguration();
-
-    // SignalR sends the current optimizer snapshot immediately after connection
-    // and sends subsequent snapshots whenever optimizer state changes. Do not
-    // make an initial REST status request here.
-    this.subscribeToOptimizationStatusUpdates();
-  }
-
-  optimizationRuntimeLabel(): string {
-    const state =
-      this.optimizationStatus?.state ||
-      this.optimizationStatus?.runtimeStateReason;
-    switch (state) {
-      case 'RUNNING':
-        return 'Running';
-      case 'READY':
-      case 'MARKET_OPEN':
-        return 'Ready';
-      case 'WAITING_FOR_MARKET':
-        return 'Waiting for Market';
-      case 'LIVE_TRADE_OPEN':
-        return 'Paused — Live Trade Open';
-      case 'AUTO_TRADING_ENABLED':
-        return 'Paused — Auto Trading Enabled';
-      case 'PAPER_TRADING_ONLY_REQUIRED':
-        return 'Paused — Paper-Only Required';
-      case 'VALIDATION_HISTORY_UNAVAILABLE':
-        return 'Paused — Validation History Unavailable';
-      case 'NO_UNIQUE_CONFIGURATION':
-        return 'No Unique Configuration Remaining';
-      case 'MAXIMUM_CANDIDATES_REACHED':
-        return 'Daily Candidate Limit Reached';
-      case 'OPTIMIZATION_DISABLED':
-      case 'DISABLED':
-        return 'Disabled';
-      case 'NON_TRADING_DAY':
-        return 'Non-Trading Day';
-      default:
-        return state ? state.replaceAll('_', ' ') : 'Checking';
-    }
-  }
-
-  private subscribeToOptimizationStatusUpdates(): void {
-    this.#optimizationStatusSignalRSubscription?.unsubscribe();
-    this.#optimizationStatusSignalRSubscription =
-      this.#market.optimizationStatusUpdated$.subscribe((status) => {
-        this.optimizationStatus = status;
-        this.optimizationStatusLoading = false;
-      });
-
-    // The SignalR connection is shared with the Kuber399 trading page. startConnection()
-    // is idempotent, so this is safe even when the parent already started it.
-    void this.#market.startConnection(this.selectedInstrumentType);
-  }
-
-  refreshOptimizationStatus(): void {
-    if (this.optimizationStatusLoading) {
-      return;
-    }
-
-    this.optimizationStatusLoading = true;
-
-    this.#optimizationStatusSubscription?.unsubscribe();
-    this.#optimizationStatusSubscription = this.#angel
-      .getTradingOptimizationStatus(this.selectedInstrumentType)
-      .pipe(
-        catchError(() => of(null)),
-        finalize(() => {
-          this.optimizationStatusLoading = false;
-        }),
-      )
-      .subscribe((status) => {
-        if (status) {
-          this.optimizationStatus = status;
-        }
-      });
-  }
-
-  ngOnDestroy(): void {
-    this.#optimizationStatusSubscription?.unsubscribe();
-    this.#optimizationStatusSignalRSubscription?.unsubscribe();
   }
 
   // ======================================================
@@ -1117,7 +1094,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
           confidenceBonusAfterSeconds2: 0,
           pullbackWarmupSeconds: 0,
         },
-        validation: {
+      validation: {
           minimumMovementScore: 10,
           minimumConfidence: 20,
           minimumRiskReward: 0.1,
@@ -1296,7 +1273,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
 
     this.#angel
 
-      .getTradingConfiguration(this.selectedInstrumentType)
+      .getTradingConfiguration()
 
       .pipe(
         finalize(() => {
@@ -1307,7 +1284,6 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (configuration) => {
           this.patchForm(configuration);
-          this.applyConfiguredColumns(configuration);
         },
 
         error: () => {
@@ -1321,10 +1297,9 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
   // ======================================================
 
   private patchForm(configuration: TradingConfiguration): void {
-    this.loadedConfiguration = configuration;
     this.form.patchValue(
       {
-        instrumentType: this.#angel.selectedInstrumentType(),
+        instrumentType: configuration.instrumentType ?? 'Equity',
 
         enableAutoTrading: configuration.enableAutoTrading,
 
@@ -1352,6 +1327,67 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
         marketOpenTime: this.toTimeInput(configuration.marketOpenTime),
 
         marketCloseTime: this.toTimeInput(configuration.marketCloseTime),
+
+        maxBrokerFailuresBeforeKillSwitch: configuration.maxBrokerFailuresBeforeKillSwitch ?? 5,
+        brokerFailureWindowMinutes: configuration.brokerFailureWindowMinutes ?? 2,
+        futuresOptionsMarketCloseTime: this.toTimeInput(this.toTimeInput(configuration.futuresOptionsMarketCloseTime)),
+        intradayEntryCutoffTime: this.toTimeInput(configuration.intradayEntryCutoffTime),
+        equityMisAutoSquareOffTime: this.toTimeInput(configuration.equityMisAutoSquareOffTime),
+        futuresOptionsAutoSquareOffTime: this.toTimeInput(configuration.futuresOptionsAutoSquareOffTime),
+        roboAutoSquareOffTime: this.toTimeInput(configuration.roboAutoSquareOffTime),
+        casTransitionStart: this.toTimeInput(configuration.casTransitionStart),
+        casOrderEntryStart: this.toTimeInput(configuration.casOrderEntryStart),
+        casMarketOnlyEnd: this.toTimeInput(configuration.casMarketOnlyEnd),
+        casLimitOnlyEnd: this.toTimeInput(configuration.casLimitOnlyEnd),
+        casRandomCloseSafetyCutoff: configuration.casRandomCloseSafetyCutoff ?? '15:28',
+        casEnd: this.toTimeInput(configuration.casEnd),
+        casPostCloseEnd: this.toTimeInput(configuration.casPostCloseEnd),
+        casPriceBandPercent: configuration.casPriceBandPercent ?? 3,
+        maximumTotalOpenRisk: configuration.maximumTotalOpenRisk ?? 10000,
+        maximumTotalUnderlyingDeltaExposure: configuration.maximumTotalUnderlyingDeltaExposure ?? 2000,
+        maximumMarginUtilizationPercent: configuration.maximumMarginUtilizationPercent ?? 70,
+        emergencyMarginUtilizationPercent: configuration.emergencyMarginUtilizationPercent ?? 85,
+        enableTradingKillSwitchPersistence: configuration.enableTradingKillSwitchPersistence ?? true,
+        enableGlobalRiskLimits: configuration.enableGlobalRiskLimits ?? true,
+        riskReservationSeconds: configuration.riskReservationSeconds ?? 10,
+        includeUnrealizedPnlInDailyLoss: configuration.includeUnrealizedPnlInDailyLoss ?? true,
+        requireClosedHigherTimeframeCandles: configuration.requireClosedHigherTimeframeCandles ?? true,
+        enableOptionChainAnalytics: configuration.enableOptionChainAnalytics ?? true,
+        enablePutCallRatio: configuration.enablePutCallRatio ?? true,
+        enableOIBuildup: configuration.enableOIBuildup ?? true,
+        enablePaperMarginSimulation: configuration.enablePaperMarginSimulation ?? true,
+        paperFuturesMarginRate: configuration.paperFuturesMarginRate ?? 0.15,
+        paperOptionsCapitalRate: configuration.paperOptionsCapitalRate ?? 1,
+        paperNakedOptionMarginRate: configuration.paperNakedOptionMarginRate ?? 0.03,
+        paperNakedOptionMarginSafetyMultiplier: configuration.paperNakedOptionMarginSafetyMultiplier ?? 1.2,
+        quoteMaxTokensPerRequest: configuration.quoteMaxTokensPerRequest ?? 50,
+        quoteRequestsPerSecond: configuration.quoteRequestsPerSecond ?? 1,
+        maximumSlippagePercent: configuration.maximumSlippagePercent ?? 0.5,
+        rejectDuplicateOrderIntent: configuration.rejectDuplicateOrderIntent ?? true,
+        enableScripConsentForCashOrders: configuration.enableScripConsentForCashOrders ?? true,
+        nakedRiskMonitorIntervalSeconds: configuration.nakedRiskMonitorIntervalSeconds ?? 5,
+        orderIntentRecoveryIntervalSeconds: configuration.orderIntentRecoveryIntervalSeconds ?? 5,
+        orderIntentRecoveryInitialDelaySeconds: configuration.orderIntentRecoveryInitialDelaySeconds ?? 2,
+        orderIntentUnknownOrderExpiryMinutes: configuration.orderIntentUnknownOrderExpiryMinutes ?? 2,
+        webSocketHeartbeatSeconds: configuration.webSocketHeartbeatSeconds ?? 10,
+        webSocketPongTimeoutSeconds: configuration.webSocketPongTimeoutSeconds ?? 30,
+        webSocketRetryInitialSeconds: configuration.webSocketRetryInitialSeconds ?? 10,
+        webSocketRetryMaxSeconds: configuration.webSocketRetryMaxSeconds ?? 60,
+        brokerPositionConfirmationDelaySeconds: configuration.brokerPositionConfirmationDelaySeconds ?? 1,
+        squareOffRetryDelaySeconds: configuration.squareOffRetryDelaySeconds ?? 1,
+        stopLossConfirmationSeconds: configuration.stopLossConfirmationSeconds ?? 2,
+        capitalAllocationBaseMultiplier: configuration.capitalAllocationBaseMultiplier ?? 0.25,
+        capitalAllocationConfidenceMultiplier: configuration.capitalAllocationConfidenceMultiplier ?? 0.75,
+        eliteMovementScore: configuration.eliteMovementScore ?? 95,
+        strongMovementScore: configuration.strongMovementScore ?? 90,
+        eliteCapitalBonus: configuration.eliteCapitalBonus ?? 0.1,
+        strongCapitalBonus: configuration.strongCapitalBonus ?? 0.05,
+        maximumObservedDrawdownPercent: configuration.maximumObservedDrawdownPercent ?? 0.25,
+        brokerBalanceRefreshSeconds: configuration.brokerBalanceRefreshSeconds ?? 30,
+        globalMaximumMarginUtilizationPercent: configuration.maximumMarginUtilizationPercent ?? 70,
+        marketTimeZoneId: configuration.marketTimeZoneId ?? 'Asia/Kolkata',
+        tradingHolidaysText: (configuration.tradingHolidays ?? []).join(', '),
+        visibleColumnsText: (configuration.visibleColumns ?? []).join(', '),
 
         excludedSymbolsText: (configuration.excludedSymbols ?? []).join(', '),
 
@@ -1463,6 +1499,87 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
 
         enableBollinger: configuration.enableBollinger,
 
+        dynamicEvaluation: {
+          enabled: configuration.dynamicEvaluation?.enabled ?? true,
+          minimumCandleHistory: configuration.dynamicEvaluation?.minimumCandleHistory ?? 30,
+          profileLookbackCandles: configuration.dynamicEvaluation?.profileLookbackCandles ?? 20,
+          minimumEntryScore: configuration.dynamicEvaluation?.minimumEntryScore ?? 42,
+          minimumQuoteOnlyEntryScore: configuration.dynamicEvaluation?.minimumQuoteOnlyEntryScore ?? 32,
+          minimumQuoteOnlySubscriptionScore: configuration.dynamicEvaluation?.minimumQuoteOnlySubscriptionScore ?? 28,
+          maximumQuoteOnlyRiskPenalty: configuration.dynamicEvaluation?.maximumQuoteOnlyRiskPenalty ?? 8,
+          maximumAdaptiveSubscriptions: configuration.dynamicEvaluation?.maximumAdaptiveSubscriptions ?? 150,
+          historicalWarmupCandidates: configuration.dynamicEvaluation?.historicalWarmupCandidates ?? 100,
+          strongTrendThreshold: configuration.dynamicEvaluation?.strongTrendThreshold ?? 68,
+          developingThreshold: configuration.dynamicEvaluation?.developingThreshold ?? 28,
+          maximumEntryScore: configuration.dynamicEvaluation?.maximumEntryScore ?? 100,
+          unknownStockRiskReward: configuration.dynamicEvaluation?.unknownStockRiskReward ?? 1.5,
+          minimumRiskReward: configuration.dynamicEvaluation?.minimumRiskReward ?? 1.25,
+          maximumRiskReward: configuration.dynamicEvaluation?.maximumRiskReward ?? 3.5,
+          minimumNetProfit: configuration.dynamicEvaluation?.minimumNetProfit ?? 5,
+          poorStockNetRewardMultiplier: configuration.dynamicEvaluation?.poorStockNetRewardMultiplier ?? 1,
+          goodStockNetRewardMultiplier: configuration.dynamicEvaluation?.goodStockNetRewardMultiplier ?? 1.35,
+          excellentStockNetRewardMultiplier: configuration.dynamicEvaluation?.excellentStockNetRewardMultiplier ?? 1.75,
+          normalStopAtrMultiplier: configuration.dynamicEvaluation?.normalStopAtrMultiplier ?? 1.15,
+          recoveryStopAtrMultiplier: configuration.dynamicEvaluation?.recoveryStopAtrMultiplier ?? 1.8,
+          maximumStopAtrMultiplier: configuration.dynamicEvaluation?.maximumStopAtrMultiplier ?? 2.5,
+          maximumStructuralStopAtrDistance: configuration.dynamicEvaluation?.maximumStructuralStopAtrDistance ?? 2.5,
+          targetExtensionStepAtr: configuration.dynamicEvaluation?.targetExtensionStepAtr ?? 0.5,
+          maximumTargetExtensionIterations: configuration.dynamicEvaluation?.maximumTargetExtensionIterations ?? 4,
+          strongPerformanceScore: configuration.dynamicEvaluation?.strongPerformanceScore ?? 70,
+          excellentPerformanceScore: configuration.dynamicEvaluation?.excellentPerformanceScore ?? 85,
+          recoveryScoreThreshold: configuration.dynamicEvaluation?.recoveryScoreThreshold ?? 60,
+          minimumRiskMultiplier: configuration.dynamicEvaluation?.minimumRiskMultiplier ?? 0.35,
+          maximumRiskMultiplier: configuration.dynamicEvaluation?.maximumRiskMultiplier ?? 1.25,
+          trendWeight: configuration.dynamicEvaluation?.trendWeight ?? 18,
+          momentumWeight: configuration.dynamicEvaluation?.momentumWeight ?? 16,
+          candleWeight: configuration.dynamicEvaluation?.candleWeight ?? 14,
+          volumeWeight: configuration.dynamicEvaluation?.volumeWeight ?? 10,
+          priceActionWeight: configuration.dynamicEvaluation?.priceActionWeight ?? 14,
+          recoveryWeight: configuration.dynamicEvaluation?.recoveryWeight ?? 10,
+          regimeWeight: configuration.dynamicEvaluation?.regimeWeight ?? 8,
+          multiTimeframeWeight: configuration.dynamicEvaluation?.multiTimeframeWeight ?? 8,
+          spreadPenaltyWeight: configuration.dynamicEvaluation?.spreadPenaltyWeight ?? 8,
+          exhaustionPenalty: configuration.dynamicEvaluation?.exhaustionPenalty ?? 12,
+        },
+
+        dynamicVirtualTrading: {
+          enabled: configuration.dynamicVirtualTrading?.enabled ?? true,
+          minimumObservationTicks: configuration.dynamicVirtualTrading?.minimumObservationTicks ?? 3,
+          maximumObservationTicks: configuration.dynamicVirtualTrading?.maximumObservationTicks ?? 40,
+          minimumObservationSeconds: configuration.dynamicVirtualTrading?.minimumObservationSeconds ?? 1,
+          maximumObservationSeconds: configuration.dynamicVirtualTrading?.maximumObservationSeconds ?? 30,
+          minimumFavorableTickRatio: configuration.dynamicVirtualTrading?.minimumFavorableTickRatio ?? 0.52,
+          maximumAdverseTickRatio: configuration.dynamicVirtualTrading?.maximumAdverseTickRatio ?? 0.6,
+          recoveryTickRatioBonus: configuration.dynamicVirtualTrading?.recoveryTickRatioBonus ?? 0.08,
+          maximumAdverseMoveAtr: configuration.dynamicVirtualTrading?.maximumAdverseMoveAtr ?? 0.9,
+          recoveryMaximumAdverseMoveAtr: configuration.dynamicVirtualTrading?.recoveryMaximumAdverseMoveAtr ?? 1.5,
+          minimumTickMomentum: configuration.dynamicVirtualTrading?.minimumTickMomentum ?? 0.05,
+          minimumTrendStability: configuration.dynamicVirtualTrading?.minimumTrendStability ?? 45,
+          minimumMovementScore: configuration.dynamicVirtualTrading?.minimumMovementScore ?? 35,
+          maximumNoiseScoreForEntry: configuration.dynamicVirtualTrading?.maximumNoiseScoreForEntry ?? 75,
+          minimumRecoveryScore: configuration.dynamicVirtualTrading?.minimumRecoveryScore ?? 45,
+          minimumBreakoutStrength: configuration.dynamicVirtualTrading?.minimumBreakoutStrength ?? 35,
+          minimumPriceSlope: configuration.dynamicVirtualTrading?.minimumPriceSlope ?? -0.05,
+          minimumProfitAtrBeforeTrailing: configuration.dynamicVirtualTrading?.minimumProfitAtrBeforeTrailing ?? 0.5,
+          baseTrailingAtrMultiplier: configuration.dynamicVirtualTrading?.baseTrailingAtrMultiplier ?? 1.2,
+          strongTrendTrailingAtrMultiplier: configuration.dynamicVirtualTrading?.strongTrendTrailingAtrMultiplier ?? 1.5,
+          recoveryTrailingAtrMultiplier: configuration.dynamicVirtualTrading?.recoveryTrailingAtrMultiplier ?? 1.8,
+          weakTrendTrailingAtrMultiplier: configuration.dynamicVirtualTrading?.weakTrendTrailingAtrMultiplier ?? 0.9,
+          minimumTrailingAtrMultiplier: configuration.dynamicVirtualTrading?.minimumTrailingAtrMultiplier ?? 0.7,
+          maximumTrailingAtrMultiplier: configuration.dynamicVirtualTrading?.maximumTrailingAtrMultiplier ?? 2.2,
+          minimumExecutionConfidence: configuration.dynamicVirtualTrading?.minimumExecutionConfidence ?? 35,
+          peakProfitRetentionPercent: configuration.dynamicVirtualTrading?.peakProfitRetentionPercent ?? 60,
+          recoveryPeakProfitRetentionPercent: configuration.dynamicVirtualTrading?.recoveryPeakProfitRetentionPercent ?? 40,
+          tickPriceMoveWeight: configuration.dynamicVirtualTrading?.tickPriceMoveWeight ?? 30,
+          tickDirectionWeight: configuration.dynamicVirtualTrading?.tickDirectionWeight ?? 25,
+          tickAccelerationWeight: configuration.dynamicVirtualTrading?.tickAccelerationWeight ?? 15,
+          tickVolumeWeight: configuration.dynamicVirtualTrading?.tickVolumeWeight ?? 10,
+          tickSpreadWeight: configuration.dynamicVirtualTrading?.tickSpreadWeight ?? 10,
+          tickRecoveryWeight: configuration.dynamicVirtualTrading?.tickRecoveryWeight ?? 10,
+          baseCapitalMultiplier: configuration.dynamicVirtualTrading?.baseCapitalMultiplier ?? 0.35,
+          confidenceCapitalMultiplier: configuration.dynamicVirtualTrading?.confidenceCapitalMultiplier ?? 0.65,
+        },
+
         validation: {
           minimumMovementScore:
             configuration.validation?.minimumMovementScore ?? 45,
@@ -1549,6 +1666,12 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
           priceAboveVwapScore:
             configuration.evaluation?.priceAboveVwapScore ?? 5,
           anchoredVwapScore: configuration.evaluation?.anchoredVwapScore ?? 5,
+          ema9BelowEma21Score: configuration.evaluation?.ema9BelowEma21Score ?? 10,
+          priceBelowVwapScore: configuration.evaluation?.priceBelowVwapScore ?? 5,
+          superTrendBearishScore: configuration.evaluation?.superTrendBearishScore ?? 5,
+          minusDiAbovePlusDiScore: configuration.evaluation?.minusDiAbovePlusDiScore ?? 5,
+          lastCandleBearishScore: configuration.evaluation?.lastCandleBearishScore ?? 5,
+          lowerLowScore: configuration.evaluation?.lowerLowScore ?? 3,
 
           strongAdxScore: configuration.evaluation?.strongAdxScore ?? 10,
           mediumAdxScore: configuration.evaluation?.mediumAdxScore ?? 6,
@@ -1677,85 +1800,20 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
             configuration.virtualTrading?.confidenceBonusAfterSeconds2 ?? 35,
           pullbackWarmupSeconds:
             configuration.virtualTrading?.pullbackWarmupSeconds ?? 8,
-        },
-
-        optimization: {
-          enabled: configuration.optimization?.enabled ?? true,
-          paperTradingOnly:
-            configuration.optimization?.paperTradingOnly ?? true,
-          mode: this.normalizeOptimizationMode(
-            configuration.optimization?.mode ?? 0,
-          ),
-          timeBasedCandidateMinutes: Number(
-            configuration.optimization?.timeBasedCandidateMinutes ?? 60,
-          ),
-          sendConfigurationEmail:
-            configuration.optimization?.sendConfigurationEmail ?? true,
-          sendDailyEmail: configuration.optimization?.sendDailyEmail ?? true,
-          autoPromoteBestConfiguration:
-            configuration.optimization?.autoPromoteBestConfiguration ?? false,
-
-          pollIntervalSeconds: Number(
-            configuration.optimization?.pollIntervalSeconds ?? 5,
-          ),
-          minimumCandidateMinutes: Number(
-            configuration.optimization?.minimumCandidateMinutes ?? 5,
-          ),
-          noSignalTimeoutMinutes: Number(
-            configuration.optimization?.noSignalTimeoutMinutes ?? 20,
-          ),
-          noVirtualConfirmationTimeoutMinutes: Number(
-            configuration.optimization?.noVirtualConfirmationTimeoutMinutes ??
-              12,
-          ),
-          noPaperTradeTimeoutMinutes: Number(
-            configuration.optimization?.noPaperTradeTimeoutMinutes ?? 10,
-          ),
-          maxVirtualTradeDurationMinutes: Number(
-            configuration.optimization?.maxVirtualTradeDurationMinutes ?? 5,
-          ),
-          maxPaperTradeDurationMinutes: Number(
-            configuration.optimization?.maxPaperTradeDurationMinutes ?? 20,
-          ),
-          forceCloseTimedOutPaperTrades:
-            configuration.optimization?.forceCloseTimedOutPaperTrades ?? true,
-          maximumCandidateMinutes: Number(
-            configuration.optimization?.maximumCandidateMinutes ?? 45,
-          ),
-
-          maximumCandidatesPerDay: Number(
-            configuration.optimization?.maximumCandidatesPerDay ?? 20,
-          ),
-          minimumCompletedTradesForAcceptance: Number(
-            configuration.optimization?.minimumCompletedTradesForAcceptance ??
-              10,
-          ),
-          preferredCompletedTrades: Number(
-            configuration.optimization?.preferredCompletedTrades ?? 20,
-          ),
-          minimumVirtualCandidatesForAnalysis: Number(
-            configuration.optimization?.minimumVirtualCandidatesForAnalysis ??
-              5,
-          ),
-
-          minimumNetProfit: Number(
-            configuration.optimization?.minimumNetProfit ?? 0,
-          ),
-          minimumProfitFactor: Number(
-            configuration.optimization?.minimumProfitFactor ?? 1.2,
-          ),
-          maximumDrawdownPercent: Number(
-            configuration.optimization?.maximumDrawdownPercent ?? 10,
-          ),
-
-          dailyEmailDelayMinutes: Number(
-            configuration.optimization?.dailyEmailDelayMinutes ?? 5,
-          ),
-          validationHistoryFile:
-            configuration.optimization?.validationHistoryFile ??
-            'OptimizationRuns/validation-configuration-history.json',
-          reportDirectory:
-            configuration.optimization?.reportDirectory ?? 'OptimizationRuns',
+          entryMinimumPriceRatio: configuration.virtualTrading?.entryMinimumPriceRatio ?? 0,
+          maximumDrawdownPercent: configuration.virtualTrading?.maximumDrawdownPercent ?? 100,
+          highestPriceMinimumRatio: configuration.virtualTrading?.highestPriceMinimumRatio ?? 0,
+          positiveRatioWeight: configuration.virtualTrading?.positiveRatioWeight ?? 40,
+          aboveEntryRatioWeight: configuration.virtualTrading?.aboveEntryRatioWeight ?? 30,
+          maximumHigherHighBonus: configuration.virtualTrading?.maximumHigherHighBonus ?? 15,
+          maximumConsecutivePositiveBonus: configuration.virtualTrading?.maximumConsecutivePositiveBonus ?? 15,
+          volatilityVeryLowThreshold: configuration.virtualTrading?.volatilityVeryLowThreshold ?? 0.2,
+          volatilityLowThreshold: configuration.virtualTrading?.volatilityLowThreshold ?? 0.5,
+          volatilityMediumThreshold: configuration.virtualTrading?.volatilityMediumThreshold ?? 0.8,
+          volatilityHighThreshold: configuration.virtualTrading?.volatilityHighThreshold ?? 1.2,
+          volatilityVeryHighThreshold: configuration.virtualTrading?.volatilityVeryHighThreshold ?? 2,
+          fallbackAtrPercent: configuration.virtualTrading?.fallbackAtrPercent ?? 0.5,
+          maximumPullbackGainPercent: configuration.virtualTrading?.maximumPullbackGainPercent ?? 100,
         },
 
         exit: {
@@ -1843,6 +1901,10 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
             configuration.reporting?.volatilityScoreThreshold ?? 60,
           riskRewardThreshold:
             configuration.reporting?.riskRewardThreshold ?? 2,
+          enableVirtualTradeTickEmails:
+            configuration.reporting?.enableVirtualTradeTickEmails ?? true,
+          minimumVirtualTradeTicksForEmail:
+            configuration.reporting?.minimumVirtualTradeTicksForEmail ?? 10,
         },
       },
       {
@@ -1996,14 +2058,6 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
       validation: profile.validation ?? this.form?.controls?.validation?.value,
     };
     return normalized as InstrumentTradingSettings;
-  }
-
-  private applyConfiguredColumns(configuration: TradingConfiguration): void {
-    this.visibleColumns = new Set(
-      configuration.visibleColumns?.length
-        ? configuration.visibleColumns
-        : this.columnDefinitions.filter(x => x.defaultVisible).map(x => x.key)
-    );
   }
 
   private patchActiveProfile(type: InstrumentType): void {
@@ -2166,36 +2220,7 @@ export class TradingSettingsComponent implements OnInit, OnDestroy {
     );
   }
 
-    private switchInstrumentConfiguration(type: InstrumentType): void {
-    if (type === this.#angel.selectedInstrumentType() && this.loadedConfiguration) {
-      return;
-    }
-
-    if (this.form.dirty && !window.confirm('Switch instrument type and discard unsaved changes?')) {
-      this.form.patchValue({ instrumentType: this.#angel.selectedInstrumentType() }, { emitEvent: false });
-      return;
-    }
-
-    this.#angel.selectInstrumentType(type);
-    this.loading = true;
-    this.optimizationStatus = null;
-
-    this.#angel.getTradingConfiguration(type).pipe(
-      finalize(() => this.loading = false)
-    ).subscribe({
-      next: configuration => {
-        this.patchForm(configuration);
-        this.applyConfiguredColumns(configuration);
-        this.form.markAsPristine();
-        void this.#market.startConnection(type);
-      },
-      error: () => {
-        this.#toastService.error(`Unable to load ${type} trading configuration.`);
-      }
-    });
-  }
-
-onInstrumentTypeChanged(type: InstrumentType): void {
+  onInstrumentTypeChanged(type: InstrumentType): void {
     const previous = this.activeInstrumentType;
 
     if (previous !== type && this.profileDrafts[previous]) {
@@ -2441,24 +2466,6 @@ onInstrumentTypeChanged(type: InstrumentType): void {
     return value.substring(0, 5);
   }
 
-  normalizeOptimizationMode(
-    value: OptimizationMode | string | number | null | undefined,
-  ): 0 | 1 {
-    if (value === 'TimeBased' || value === 1 || value === '1') {
-      return 1;
-    }
-
-    return 0;
-  }
-
-  optimizationModeLabel(
-    value: OptimizationMode | string | number | null | undefined,
-  ): string {
-    return this.normalizeOptimizationMode(value) === 1
-      ? 'Time Based'
-      : 'Count Based';
-  }
-
   private normalizeStrategy(
     value: TradingStrategy | string | number,
   ): TradingStrategy {
@@ -2496,6 +2503,13 @@ onInstrumentTypeChanged(type: InstrumentType): void {
     const normalizedSeconds = totalSeconds % 60;
 
     return `${String(normalizedHours).padStart(2, '0')}:${String(normalizedMinutes).padStart(2, '0')}:${String(normalizedSeconds).padStart(2, '0')}`;
+  }
+
+  private parseCsvValues(value: string | null | undefined): string[] {
+    return String(value ?? '')
+      .split(/[\n,]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
   }
 
   private parseExcludedSymbols(value: string | null | undefined): string[] {
@@ -2557,114 +2571,7 @@ onInstrumentTypeChanged(type: InstrumentType): void {
     );
 
     const configuration: TradingConfiguration = {
-      ...(this.loadedConfiguration ?? {}),
       id: 'DEFAULT',
-      visibleColumns: Array.from(this.visibleColumns),
-      optimization: {
-        enabled: value.optimization?.enabled ?? true,
-        paperTradingOnly: value.optimization?.paperTradingOnly ?? true,
-        mode: this.normalizeOptimizationMode(value.optimization?.mode ?? 0),
-        timeBasedCandidateMinutes: Number(
-          value.optimization?.timeBasedCandidateMinutes ?? 60,
-        ),
-        sendConfigurationEmail:
-          value.optimization?.sendConfigurationEmail ?? true,
-        sendDailyEmail: value.optimization?.sendDailyEmail ?? true,
-        autoPromoteBestConfiguration:
-          value.optimization?.autoPromoteBestConfiguration ?? false,
-
-        signalGenerationWeight: Number(
-          value.optimization?.signalGenerationWeight ?? 0.2,
-        ),
-        virtualConfirmationWeight: Number(
-          value.optimization?.virtualConfirmationWeight ?? 0.3,
-        ),
-        profitabilityWeight: Number(
-          value.optimization?.profitabilityWeight ?? 0.5,
-        ),
-        targetEvaluationSignalRatePercent: Number(
-          value.optimization?.targetEvaluationSignalRatePercent ?? 3,
-        ),
-        targetVirtualConfirmationRatePercent: Number(
-          value.optimization?.targetVirtualConfirmationRatePercent ?? 35,
-        ),
-        explorationCandidateCount: Number(
-          value.optimization?.explorationCandidateCount ?? 2,
-        ),
-        minimumLearningTrades: Number(
-          value.optimization?.minimumLearningTrades ?? 10,
-        ),
-        minimumPatternSampleSize: Number(
-          value.optimization?.minimumPatternSampleSize ?? 5,
-        ),
-        learningStrictnessStepPercent: Number(
-          value.optimization?.learningStrictnessStepPercent ?? 2,
-        ),
-        maximumLearningStrictnessPercent: Number(
-          value.optimization?.maximumLearningStrictnessPercent ?? 50,
-        ),
-        maximumLessonsPerCandidate: Number(
-          value.optimization?.maximumLessonsPerCandidate ?? 3,
-        ),
-
-        pollIntervalSeconds: Number(
-          value.optimization?.pollIntervalSeconds ?? 5,
-        ),
-        minimumCandidateMinutes: Number(
-          value.optimization?.minimumCandidateMinutes ?? 5,
-        ),
-        noSignalTimeoutMinutes: Number(
-          value.optimization?.noSignalTimeoutMinutes ?? 20,
-        ),
-        noVirtualConfirmationTimeoutMinutes: Number(
-          value.optimization?.noVirtualConfirmationTimeoutMinutes ?? 12,
-        ),
-        noPaperTradeTimeoutMinutes: Number(
-          value.optimization?.noPaperTradeTimeoutMinutes ?? 10,
-        ),
-        maxVirtualTradeDurationMinutes: Number(
-          value.optimization?.maxVirtualTradeDurationMinutes ?? 5,
-        ),
-        maxPaperTradeDurationMinutes: Number(
-          value.optimization?.maxPaperTradeDurationMinutes ?? 20,
-        ),
-        forceCloseTimedOutPaperTrades:
-          value.optimization?.forceCloseTimedOutPaperTrades ?? true,
-        maximumCandidateMinutes: Number(
-          value.optimization?.maximumCandidateMinutes ?? 45,
-        ),
-
-        maximumCandidatesPerDay: Number(
-          value.optimization?.maximumCandidatesPerDay ?? 20,
-        ),
-        minimumCompletedTradesForAcceptance: Number(
-          value.optimization?.minimumCompletedTradesForAcceptance ?? 10,
-        ),
-        preferredCompletedTrades: Number(
-          value.optimization?.preferredCompletedTrades ?? 20,
-        ),
-        minimumVirtualCandidatesForAnalysis: Number(
-          value.optimization?.minimumVirtualCandidatesForAnalysis ?? 5,
-        ),
-
-        minimumNetProfit: Number(value.optimization?.minimumNetProfit ?? 0),
-        minimumProfitFactor: Number(
-          value.optimization?.minimumProfitFactor ?? 1.2,
-        ),
-        maximumDrawdownPercent: Number(
-          value.optimization?.maximumDrawdownPercent ?? 10,
-        ),
-
-        dailyEmailDelayMinutes: Number(
-          value.optimization?.dailyEmailDelayMinutes ?? 5,
-        ),
-        validationHistoryFile:
-          value.optimization?.validationHistoryFile ??
-          'OptimizationRuns/validation-configuration-history.json',
-        reportDirectory:
-          value.optimization?.reportDirectory ?? 'OptimizationRuns',
-      },
-
       tradingStrictnessProfile: (value.tradingStrictnessProfile ??
         'VeryLoose') as TradingStrictnessProfile,
 
@@ -2696,6 +2603,66 @@ onInstrumentTypeChanged(type: InstrumentType): void {
       marketOpenTime: this.toTimeSpan(value.marketOpenTime),
 
       marketCloseTime: this.toTimeSpan(value.marketCloseTime),
+
+      maxBrokerFailuresBeforeKillSwitch: Number(value.maxBrokerFailuresBeforeKillSwitch ?? 5),
+      brokerFailureWindowMinutes: Number(value.brokerFailureWindowMinutes ?? 2),
+      futuresOptionsMarketCloseTime: this.toTimeSpan(value.futuresOptionsMarketCloseTime),
+      intradayEntryCutoffTime: this.toTimeSpan(value.intradayEntryCutoffTime),
+      equityMisAutoSquareOffTime: this.toTimeSpan(value.equityMisAutoSquareOffTime),
+      futuresOptionsAutoSquareOffTime: this.toTimeSpan(value.futuresOptionsAutoSquareOffTime),
+      roboAutoSquareOffTime: this.toTimeSpan(value.roboAutoSquareOffTime),
+      casTransitionStart: this.toTimeSpan(value.casTransitionStart),
+      casOrderEntryStart: this.toTimeSpan(value.casOrderEntryStart),
+      casMarketOnlyEnd: this.toTimeSpan(value.casMarketOnlyEnd),
+      casLimitOnlyEnd: this.toTimeSpan(value.casLimitOnlyEnd),
+      casRandomCloseSafetyCutoff: this.toTimeSpan(value.casRandomCloseSafetyCutoff),
+      casEnd: this.toTimeSpan(value.casEnd),
+      casPostCloseEnd: this.toTimeSpan(value.casPostCloseEnd),
+      casPriceBandPercent: Number(value.casPriceBandPercent ?? 3),
+      maximumTotalOpenRisk: Number(value.maximumTotalOpenRisk ?? 10000),
+      maximumTotalUnderlyingDeltaExposure: Number(value.maximumTotalUnderlyingDeltaExposure ?? 2000),
+      maximumMarginUtilizationPercent: Number(value.globalMaximumMarginUtilizationPercent ?? 70),
+      marketTimeZoneId: String(value.marketTimeZoneId ?? 'Asia/Kolkata'),
+      tradingHolidays: this.parseCsvValues(value.tradingHolidaysText),
+      emergencyMarginUtilizationPercent: Number(value.emergencyMarginUtilizationPercent ?? 85),
+      enableTradingKillSwitchPersistence: (value.enableTradingKillSwitchPersistence ?? true),
+      enableGlobalRiskLimits: (value.enableGlobalRiskLimits ?? true),
+      riskReservationSeconds: Number(value.riskReservationSeconds ?? 10),
+      includeUnrealizedPnlInDailyLoss: (value.includeUnrealizedPnlInDailyLoss ?? true),
+      requireClosedHigherTimeframeCandles: (value.requireClosedHigherTimeframeCandles ?? true),
+      enableOptionChainAnalytics: (value.enableOptionChainAnalytics ?? true),
+      enablePutCallRatio: (value.enablePutCallRatio ?? true),
+      enableOIBuildup: (value.enableOIBuildup ?? true),
+      enablePaperMarginSimulation: (value.enablePaperMarginSimulation ?? true),
+      paperFuturesMarginRate: Number(value.paperFuturesMarginRate ?? 0.15),
+      paperOptionsCapitalRate: Number(value.paperOptionsCapitalRate ?? 1),
+      paperNakedOptionMarginRate: Number(value.paperNakedOptionMarginRate ?? 0.03),
+      paperNakedOptionMarginSafetyMultiplier: Number(value.paperNakedOptionMarginSafetyMultiplier ?? 1.2),
+      quoteMaxTokensPerRequest: Number(value.quoteMaxTokensPerRequest ?? 50),
+      quoteRequestsPerSecond: Number(value.quoteRequestsPerSecond ?? 1),
+      maximumSlippagePercent: Number(value.maximumSlippagePercent ?? 0.5),
+      rejectDuplicateOrderIntent: (value.rejectDuplicateOrderIntent ?? true),
+      enableScripConsentForCashOrders: (value.enableScripConsentForCashOrders ?? true),
+      nakedRiskMonitorIntervalSeconds: Number(value.nakedRiskMonitorIntervalSeconds ?? 5),
+      orderIntentRecoveryIntervalSeconds: Number(value.orderIntentRecoveryIntervalSeconds ?? 5),
+      orderIntentRecoveryInitialDelaySeconds: Number(value.orderIntentRecoveryInitialDelaySeconds ?? 2),
+      orderIntentUnknownOrderExpiryMinutes: Number(value.orderIntentUnknownOrderExpiryMinutes ?? 2),
+      webSocketHeartbeatSeconds: Number(value.webSocketHeartbeatSeconds ?? 10),
+      webSocketPongTimeoutSeconds: Number(value.webSocketPongTimeoutSeconds ?? 30),
+      webSocketRetryInitialSeconds: Number(value.webSocketRetryInitialSeconds ?? 10),
+      webSocketRetryMaxSeconds: Number(value.webSocketRetryMaxSeconds ?? 60),
+      brokerPositionConfirmationDelaySeconds: Number(value.brokerPositionConfirmationDelaySeconds ?? 1),
+      squareOffRetryDelaySeconds: Number(value.squareOffRetryDelaySeconds ?? 1),
+      stopLossConfirmationSeconds: Number(value.stopLossConfirmationSeconds ?? 2),
+      capitalAllocationBaseMultiplier: Number(value.capitalAllocationBaseMultiplier ?? 0.25),
+      capitalAllocationConfidenceMultiplier: Number(value.capitalAllocationConfidenceMultiplier ?? 0.75),
+      eliteMovementScore: Number(value.eliteMovementScore ?? 95),
+      strongMovementScore: Number(value.strongMovementScore ?? 90),
+      eliteCapitalBonus: Number(value.eliteCapitalBonus ?? 0.1),
+      strongCapitalBonus: Number(value.strongCapitalBonus ?? 0.05),
+      maximumObservedDrawdownPercent: Number(value.maximumObservedDrawdownPercent ?? 0.25),
+      brokerBalanceRefreshSeconds: Number(value.brokerBalanceRefreshSeconds ?? 30),
+
 
       excludedSymbols: this.parseExcludedSymbols(value.excludedSymbolsText),
 
@@ -2785,6 +2752,7 @@ onInstrumentTypeChanged(type: InstrumentType): void {
         value.maximumVirtualPullbackPercent ?? 0.5,
       ),
 
+      visibleColumns: this.parseCsvValues(value.visibleColumnsText),
 
       maximumChargesPerTrade: Number(value.maximumChargesPerTrade ?? 100),
       lastDailySummarySent: null,
@@ -2806,6 +2774,110 @@ onInstrumentTypeChanged(type: InstrumentType): void {
       enableAnchoredVWAP: value.enableAnchoredVWAP ?? true,
       enableMACD: value.enableMACD ?? true,
       enableBollinger: value.enableBollinger ?? true,
+      dynamicEvaluation: {
+        enabled: (value.dynamicEvaluation?.enabled ?? true),
+        minimumCandleHistory: Number(value.dynamicEvaluation?.minimumCandleHistory ?? 30),
+        profileLookbackCandles: Number(value.dynamicEvaluation?.profileLookbackCandles ?? 20),
+        minimumEntryScore: Number(value.dynamicEvaluation?.minimumEntryScore ?? 42),
+        minimumQuoteOnlyEntryScore: Number(value.dynamicEvaluation?.minimumQuoteOnlyEntryScore ?? 32),
+        minimumQuoteOnlySubscriptionScore: Number(value.dynamicEvaluation?.minimumQuoteOnlySubscriptionScore ?? 28),
+        maximumQuoteOnlyRiskPenalty: Number(value.dynamicEvaluation?.maximumQuoteOnlyRiskPenalty ?? 8),
+        maximumAdaptiveSubscriptions: Number(value.dynamicEvaluation?.maximumAdaptiveSubscriptions ?? 150),
+        historicalWarmupCandidates: Number(value.dynamicEvaluation?.historicalWarmupCandidates ?? 100),
+        strongTrendThreshold: Number(value.dynamicEvaluation?.strongTrendThreshold ?? 68),
+        developingThreshold: Number(value.dynamicEvaluation?.developingThreshold ?? 28),
+        maximumEntryScore: Number(value.dynamicEvaluation?.maximumEntryScore ?? 100),
+        unknownStockRiskReward: Number(value.dynamicEvaluation?.unknownStockRiskReward ?? 1.5),
+        minimumRiskReward: Number(value.dynamicEvaluation?.minimumRiskReward ?? 1.25),
+        maximumRiskReward: Number(value.dynamicEvaluation?.maximumRiskReward ?? 3.5),
+        minimumNetProfit: Number(value.dynamicEvaluation?.minimumNetProfit ?? 5),
+        poorStockNetRewardMultiplier: Number(value.dynamicEvaluation?.poorStockNetRewardMultiplier ?? 1),
+        goodStockNetRewardMultiplier: Number(value.dynamicEvaluation?.goodStockNetRewardMultiplier ?? 1.35),
+        excellentStockNetRewardMultiplier: Number(value.dynamicEvaluation?.excellentStockNetRewardMultiplier ?? 1.75),
+        normalStopAtrMultiplier: Number(value.dynamicEvaluation?.normalStopAtrMultiplier ?? 1.15),
+        recoveryStopAtrMultiplier: Number(value.dynamicEvaluation?.recoveryStopAtrMultiplier ?? 1.8),
+        maximumStopAtrMultiplier: Number(value.dynamicEvaluation?.maximumStopAtrMultiplier ?? 2.5),
+        maximumStructuralStopAtrDistance: Number(value.dynamicEvaluation?.maximumStructuralStopAtrDistance ?? 2.5),
+        targetExtensionStepAtr: Number(value.dynamicEvaluation?.targetExtensionStepAtr ?? 0.5),
+        maximumTargetExtensionIterations: Number(value.dynamicEvaluation?.maximumTargetExtensionIterations ?? 4),
+        strongPerformanceScore: Number(value.dynamicEvaluation?.strongPerformanceScore ?? 70),
+        excellentPerformanceScore: Number(value.dynamicEvaluation?.excellentPerformanceScore ?? 85),
+        recoveryScoreThreshold: Number(value.dynamicEvaluation?.recoveryScoreThreshold ?? 60),
+        minimumRiskMultiplier: Number(value.dynamicEvaluation?.minimumRiskMultiplier ?? 0.35),
+        maximumRiskMultiplier: Number(value.dynamicEvaluation?.maximumRiskMultiplier ?? 1.25),
+        trendWeight: Number(value.dynamicEvaluation?.trendWeight ?? 18),
+        momentumWeight: Number(value.dynamicEvaluation?.momentumWeight ?? 16),
+        candleWeight: Number(value.dynamicEvaluation?.candleWeight ?? 14),
+        volumeWeight: Number(value.dynamicEvaluation?.volumeWeight ?? 10),
+        priceActionWeight: Number(value.dynamicEvaluation?.priceActionWeight ?? 14),
+        recoveryWeight: Number(value.dynamicEvaluation?.recoveryWeight ?? 10),
+        regimeWeight: Number(value.dynamicEvaluation?.regimeWeight ?? 8),
+        multiTimeframeWeight: Number(value.dynamicEvaluation?.multiTimeframeWeight ?? 8),
+        spreadPenaltyWeight: Number(value.dynamicEvaluation?.spreadPenaltyWeight ?? 8),
+        exhaustionPenalty: Number(value.dynamicEvaluation?.exhaustionPenalty ?? 12),
+        minimumExpectedNetValue: Number(value.dynamicEvaluation?.minimumExpectedNetValue ?? 0),
+        minimumEdgeScore: Number(value.dynamicEvaluation?.minimumEdgeScore ?? 45),
+        minimumStatisticalConfidence: Number(value.dynamicEvaluation?.minimumStatisticalConfidence ?? 20),
+        noTradePenaltyThreshold: Number(value.dynamicEvaluation?.noTradePenaltyThreshold ?? 65),
+        maximumRiskWhenStatisticallyUncertain: Number(value.dynamicEvaluation?.maximumRiskWhenStatisticallyUncertain ?? 0.65),
+        recentPerformanceWeight: Number(value.dynamicEvaluation?.recentPerformanceWeight ?? 0.35),
+        historicalPerformanceWeight: Number(value.dynamicEvaluation?.historicalPerformanceWeight ?? 0.65),
+        marketRegimeWeight: Number(value.dynamicEvaluation?.marketRegimeWeight ?? 0.10),
+        relativeStrengthWeight: Number(value.dynamicEvaluation?.relativeStrengthWeight ?? 0.10),
+      },
+      analysisCapture: {
+        enabled: value.analysisCapture?.enabled ?? false,
+        batchIntervalMinutes: Number(value.analysisCapture?.batchIntervalMinutes ?? 30),
+        captureWindowMinutes: Number(value.analysisCapture?.captureWindowMinutes ?? 30),
+        stockCount: Number(value.analysisCapture?.stockCount ?? 100),
+        candleCount: Number(value.analysisCapture?.candleCount ?? 30),
+        instrumentType: String(value.analysisCapture?.instrumentType ?? 'Equity'),
+        outputDirectory: String(value.analysisCapture?.outputDirectory ?? 'Data/TradingAnalysis'),
+        publicBaseUrl: String(value.analysisCapture?.publicBaseUrl ?? ''),
+        downloadLinkLifetimeHours: Number(value.analysisCapture?.downloadLinkLifetimeHours ?? 48),
+        downloadSigningKey: String(value.analysisCapture?.downloadSigningKey ?? ''),
+        emailOnCompletion: value.analysisCapture?.emailOnCompletion ?? true,
+        includeTickData: value.analysisCapture?.includeTickData ?? true,
+        includeConfiguration: value.analysisCapture?.includeConfiguration ?? true,
+        includeActualVirtualTradeState: value.analysisCapture?.includeActualVirtualTradeState ?? true,
+      },
+      dynamicVirtualTrading: {
+        enabled: (value.dynamicVirtualTrading?.enabled ?? true),
+        minimumObservationTicks: Number(value.dynamicVirtualTrading?.minimumObservationTicks ?? 3),
+        maximumObservationTicks: Number(value.dynamicVirtualTrading?.maximumObservationTicks ?? 40),
+        minimumObservationSeconds: Number(value.dynamicVirtualTrading?.minimumObservationSeconds ?? 1),
+        maximumObservationSeconds: Number(value.dynamicVirtualTrading?.maximumObservationSeconds ?? 30),
+        minimumFavorableTickRatio: Number(value.dynamicVirtualTrading?.minimumFavorableTickRatio ?? 0.52),
+        maximumAdverseTickRatio: Number(value.dynamicVirtualTrading?.maximumAdverseTickRatio ?? 0.6),
+        recoveryTickRatioBonus: Number(value.dynamicVirtualTrading?.recoveryTickRatioBonus ?? 0.08),
+        maximumAdverseMoveAtr: Number(value.dynamicVirtualTrading?.maximumAdverseMoveAtr ?? 0.9),
+        recoveryMaximumAdverseMoveAtr: Number(value.dynamicVirtualTrading?.recoveryMaximumAdverseMoveAtr ?? 1.5),
+        minimumTickMomentum: Number(value.dynamicVirtualTrading?.minimumTickMomentum ?? 0.05),
+        minimumTrendStability: Number(value.dynamicVirtualTrading?.minimumTrendStability ?? 45),
+        minimumMovementScore: Number(value.dynamicVirtualTrading?.minimumMovementScore ?? 35),
+        maximumNoiseScoreForEntry: Number(value.dynamicVirtualTrading?.maximumNoiseScoreForEntry ?? 75),
+        minimumRecoveryScore: Number(value.dynamicVirtualTrading?.minimumRecoveryScore ?? 45),
+        minimumBreakoutStrength: Number(value.dynamicVirtualTrading?.minimumBreakoutStrength ?? 35),
+        minimumPriceSlope: Number(value.dynamicVirtualTrading?.minimumPriceSlope ?? -0.05),
+        minimumProfitAtrBeforeTrailing: Number(value.dynamicVirtualTrading?.minimumProfitAtrBeforeTrailing ?? 0.5),
+        baseTrailingAtrMultiplier: Number(value.dynamicVirtualTrading?.baseTrailingAtrMultiplier ?? 1.2),
+        strongTrendTrailingAtrMultiplier: Number(value.dynamicVirtualTrading?.strongTrendTrailingAtrMultiplier ?? 1.5),
+        recoveryTrailingAtrMultiplier: Number(value.dynamicVirtualTrading?.recoveryTrailingAtrMultiplier ?? 1.8),
+        weakTrendTrailingAtrMultiplier: Number(value.dynamicVirtualTrading?.weakTrendTrailingAtrMultiplier ?? 0.9),
+        minimumTrailingAtrMultiplier: Number(value.dynamicVirtualTrading?.minimumTrailingAtrMultiplier ?? 0.7),
+        maximumTrailingAtrMultiplier: Number(value.dynamicVirtualTrading?.maximumTrailingAtrMultiplier ?? 2.2),
+        minimumExecutionConfidence: Number(value.dynamicVirtualTrading?.minimumExecutionConfidence ?? 35),
+        peakProfitRetentionPercent: Number(value.dynamicVirtualTrading?.peakProfitRetentionPercent ?? 60),
+        recoveryPeakProfitRetentionPercent: Number(value.dynamicVirtualTrading?.recoveryPeakProfitRetentionPercent ?? 40),
+        tickPriceMoveWeight: Number(value.dynamicVirtualTrading?.tickPriceMoveWeight ?? 30),
+        tickDirectionWeight: Number(value.dynamicVirtualTrading?.tickDirectionWeight ?? 25),
+        tickAccelerationWeight: Number(value.dynamicVirtualTrading?.tickAccelerationWeight ?? 15),
+        tickVolumeWeight: Number(value.dynamicVirtualTrading?.tickVolumeWeight ?? 10),
+        tickSpreadWeight: Number(value.dynamicVirtualTrading?.tickSpreadWeight ?? 10),
+        tickRecoveryWeight: Number(value.dynamicVirtualTrading?.tickRecoveryWeight ?? 10),
+        baseCapitalMultiplier: Number(value.dynamicVirtualTrading?.baseCapitalMultiplier ?? 0.35),
+        confidenceCapitalMultiplier: Number(value.dynamicVirtualTrading?.confidenceCapitalMultiplier ?? 0.65),
+      },
       validation: {
         minimumMovementScore: Number(
           value.validation?.minimumMovementScore ?? 45,
@@ -2915,6 +2987,12 @@ onInstrumentTypeChanged(type: InstrumentType): void {
         ),
         priceAboveVwapScore: Number(value.evaluation?.priceAboveVwapScore ?? 5),
         anchoredVwapScore: Number(value.evaluation?.anchoredVwapScore ?? 5),
+        ema9BelowEma21Score: Number(value.evaluation?.ema9BelowEma21Score ?? 10),
+        priceBelowVwapScore: Number(value.evaluation?.priceBelowVwapScore ?? 5),
+        superTrendBearishScore: Number(value.evaluation?.superTrendBearishScore ?? 5),
+        minusDiAbovePlusDiScore: Number(value.evaluation?.minusDiAbovePlusDiScore ?? 5),
+        lastCandleBearishScore: Number(value.evaluation?.lastCandleBearishScore ?? 5),
+        lowerLowScore: Number(value.evaluation?.lowerLowScore ?? 3),
         strongAdxScore: Number(value.evaluation?.strongAdxScore ?? 10),
         mediumAdxScore: Number(value.evaluation?.mediumAdxScore ?? 6),
         plusDiAboveMinusDiScore: Number(
@@ -3077,6 +3155,20 @@ onInstrumentTypeChanged(type: InstrumentType): void {
         pullbackWarmupSeconds: Number(
           value.virtualTrading?.pullbackWarmupSeconds ?? 8,
         ),
+        entryMinimumPriceRatio: Number(value.virtualTrading?.entryMinimumPriceRatio ?? 0),
+        maximumDrawdownPercent: Number(value.virtualTrading?.maximumDrawdownPercent ?? 100),
+        highestPriceMinimumRatio: Number(value.virtualTrading?.highestPriceMinimumRatio ?? 0),
+        positiveRatioWeight: Number(value.virtualTrading?.positiveRatioWeight ?? 40),
+        aboveEntryRatioWeight: Number(value.virtualTrading?.aboveEntryRatioWeight ?? 30),
+        maximumHigherHighBonus: Number(value.virtualTrading?.maximumHigherHighBonus ?? 15),
+        maximumConsecutivePositiveBonus: Number(value.virtualTrading?.maximumConsecutivePositiveBonus ?? 15),
+        volatilityVeryLowThreshold: Number(value.virtualTrading?.volatilityVeryLowThreshold ?? 0.2),
+        volatilityLowThreshold: Number(value.virtualTrading?.volatilityLowThreshold ?? 0.5),
+        volatilityMediumThreshold: Number(value.virtualTrading?.volatilityMediumThreshold ?? 0.8),
+        volatilityHighThreshold: Number(value.virtualTrading?.volatilityHighThreshold ?? 1.2),
+        volatilityVeryHighThreshold: Number(value.virtualTrading?.volatilityVeryHighThreshold ?? 2),
+        fallbackAtrPercent: Number(value.virtualTrading?.fallbackAtrPercent ?? 0.5),
+        maximumPullbackGainPercent: Number(value.virtualTrading?.maximumPullbackGainPercent ?? 100),
       },
       exit: {
         atrExitMultiplier: Number(value.exit?.atrExitMultiplier ?? 0.4),
@@ -3183,11 +3275,15 @@ onInstrumentTypeChanged(type: InstrumentType): void {
           value.reporting?.volatilityScoreThreshold ?? 60,
         ),
         riskRewardThreshold: Number(value.reporting?.riskRewardThreshold ?? 2),
+        enableVirtualTradeTickEmails: value.reporting?.enableVirtualTradeTickEmails ?? true,
+        minimumVirtualTradeTicksForEmail: Number(
+          value.reporting?.minimumVirtualTradeTicksForEmail ?? 10,
+        ),
       },
     };
 
     this.#angel
-      .saveTradingConfiguration(configuration, this.selectedInstrumentType)
+      .saveTradingConfiguration(configuration)
 
       .pipe(
         finalize(() => {

@@ -5,9 +5,6 @@ export class Config implements IEnvironment {
     profilePictureUrl!: string;
     authenticationBaseURL!: string;
     baseURL!: string;
-    equityTradingBaseURL!: string;
-    futuresTradingBaseURL!: string;
-    optionsTradingBaseURL!: string;
     toast_delay!: number;
     loadGridImages!: boolean;
 }

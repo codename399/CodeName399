@@ -1,11 +1,8 @@
 import { IEnvironment } from "./environment-type";
 
 export const environment: IEnvironment = {
-    authenticationBaseURL: "http://localhost:5000",
-    baseURL: "http://localhost:5000",
-    equityTradingBaseURL: "http://localhost:5000",
-    futuresTradingBaseURL: "http://localhost:5000",
-    optionsTradingBaseURL: "http://localhost:5000",
+    authenticationBaseURL: "https://api.codename399.com",
+    baseURL: "https://api.codename399.com",
     toast_delay: 3000,
     profilePictureUrl: "../../../../../assets/images/default-avatar.png",
     pageSize: 10,

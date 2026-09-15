@@ -1,13 +1,13 @@
 import { Routes } from '@angular/router';
+import { Constants } from '../constants';
 import { AuthGuard } from '../route-guards/auth-guard';
 import { NoAuthGuard } from '../route-guards/no-auth-guard';
 import { RegisterResolver } from './components/authentication/resolvers/register-resolver';
 import { DashboardResolver } from './components/home/resolvers/dashboard-resolver';
 import { ProjectResolver } from './components/home/resolvers/project-resolver';
 import { RoleResolver } from './components/home/resolvers/role-resolver';
-import { UserResolver } from './components/home/resolvers/user-resolver';
 import { UserProjectMappingResolver } from './components/home/resolvers/user-project-mapping-resolver';
-import { Constants } from '../constants';
+import { UserResolver } from './components/home/resolvers/user-resolver';
 
 export const routes: Routes = [
   {
@@ -21,27 +21,6 @@ export const routes: Routes = [
       import(
         '../app/components/authentication/components/login-component/login-component'
       ).then((c) => c.LoginComponent),
-    canActivate: [NoAuthGuard],
-  },
-  {
-    path: 'oauth-callback',
-    loadComponent: () =>
-      import('../app/components/authentication/components/oauth-callback/oauth-callback.component')
-        .then((c) => c.OAuthCallbackComponent),
-    canActivate: [NoAuthGuard],
-  },
-  {
-    path: 'otp-login',
-    loadComponent: () =>
-      import('../app/components/authentication/components/otp-login/otp-login.component')
-        .then((c) => c.OtpLoginComponent),
-    canActivate: [NoAuthGuard],
-  },
-  {
-    path: 'forgot-password',
-    loadComponent: () =>
-      import('../app/components/authentication/components/forgot-password/forgot-password.component')
-        .then((c) => c.ForgotPasswordComponent),
     canActivate: [NoAuthGuard],
   },
   {
@@ -140,19 +119,27 @@ export const routes: Routes = [
         },
       },
       {
-        path: 'kuber399',
+        path: 'angel-one',
         loadComponent: () =>
           import(
-            './components/home/components/kuber399/kuber399.component'
-          ).then((c) => c.Kuber399Component),
+            './components/home/components/angel-one/angel-one.component'
+          ).then((c) => c.AngelOneComponent),
         data: { projectName: Constants.angelOne }
       },
       {
         path: 'trading-settings',
         loadComponent: () =>
           import(
-            './components/home/components/kuber399/trading-settings/trading-settings.component'
+            './components/home/components/angel-one/trading-settings/trading-settings.component'
           ).then((c) => c.TradingSettingsComponent),
+        data: { projectName: Constants.angelOne }
+      },
+      {
+        path: 'simulation',
+        loadComponent: () =>
+          import(
+            './components/home/components/simulation/simulation.component'
+          ).then((c) => c.TradingSimulationComponent),
         data: { projectName: Constants.angelOne }
       }
     ],
