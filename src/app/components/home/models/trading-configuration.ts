@@ -459,6 +459,14 @@ export interface ExitSettings {
   trailingActivationNetProfit?: number;
   trailingStopAtrMultiplier: number;
   trailingProfitRetentionPercent?: number;
+  enableTradeFailureExit?: boolean;
+  tradeFailureMinimumHoldingSeconds?: number;
+  tradeFailureMinimumFavorableExcursionPercent?: number;
+  tradeFailureMaximumAdverseExcursionPercent?: number;
+  tradeFailureMaximumAdverseAtrMultiplier?: number;
+  tradeFailureHealthScoreThreshold?: number;
+  tradeFailureRequireTrendDeterioration?: boolean;
+  tradeFailureRequireMomentumDeterioration?: boolean;
 }
 
 // ValidationSettings is defined later with extended fields.
@@ -599,6 +607,7 @@ export interface ReportingSettings {
   minimumVirtualTradeTicksForEmail?: number;
   virtualTradeEmailStages?: string[];
   exitPostSellTickCount?: number;
+  tradeAnalyticsPersistenceIntervalSeconds?: number;
 }
 
 export interface ConfidenceSettings {

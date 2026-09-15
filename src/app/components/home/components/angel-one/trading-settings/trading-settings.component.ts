@@ -955,6 +955,7 @@ export class TradingSettingsComponent implements OnInit {
         exit: [true],
       }),
       exitPostSellTickCount: [3, [Validators.min(0), Validators.max(100)]],
+      tradeAnalyticsPersistenceIntervalSeconds: [5, [Validators.min(0), Validators.max(300)]],
     }),
 
     exit: this.#fb.group({
@@ -978,6 +979,14 @@ export class TradingSettingsComponent implements OnInit {
         70,
         [Validators.required, Validators.min(0), Validators.max(100)],
       ],
+      enableTradeFailureExit: [true],
+      tradeFailureMinimumHoldingSeconds: [30, [Validators.required, Validators.min(0)]],
+      tradeFailureMinimumFavorableExcursionPercent: [0.25, [Validators.required, Validators.min(0)]],
+      tradeFailureMaximumAdverseExcursionPercent: [1, [Validators.required, Validators.min(0)]],
+      tradeFailureMaximumAdverseAtrMultiplier: [1.5, [Validators.required, Validators.min(0)]],
+      tradeFailureHealthScoreThreshold: [45, [Validators.required, Validators.min(0), Validators.max(100)]],
+      tradeFailureRequireTrendDeterioration: [true],
+      tradeFailureRequireMomentumDeterioration: [true],
     }),
   });
 
@@ -1868,6 +1877,14 @@ export class TradingSettingsComponent implements OnInit {
             configuration.exit?.trailingStopAtrMultiplier ?? 0.6,
           trailingProfitRetentionPercent:
             configuration.exit?.trailingProfitRetentionPercent ?? 70,
+          enableTradeFailureExit: configuration.exit?.enableTradeFailureExit ?? true,
+          tradeFailureMinimumHoldingSeconds: configuration.exit?.tradeFailureMinimumHoldingSeconds ?? 30,
+          tradeFailureMinimumFavorableExcursionPercent: configuration.exit?.tradeFailureMinimumFavorableExcursionPercent ?? 0.25,
+          tradeFailureMaximumAdverseExcursionPercent: configuration.exit?.tradeFailureMaximumAdverseExcursionPercent ?? 1,
+          tradeFailureMaximumAdverseAtrMultiplier: configuration.exit?.tradeFailureMaximumAdverseAtrMultiplier ?? 1.5,
+          tradeFailureHealthScoreThreshold: configuration.exit?.tradeFailureHealthScoreThreshold ?? 45,
+          tradeFailureRequireTrendDeterioration: configuration.exit?.tradeFailureRequireTrendDeterioration ?? true,
+          tradeFailureRequireMomentumDeterioration: configuration.exit?.tradeFailureRequireMomentumDeterioration ?? true,
         },
         confidence: {
           maximumGainBonus: configuration.confidence?.maximumGainBonus ?? 15,
@@ -1954,6 +1971,8 @@ export class TradingSettingsComponent implements OnInit {
           },
           exitPostSellTickCount:
             configuration.reporting?.exitPostSellTickCount ?? 3,
+          tradeAnalyticsPersistenceIntervalSeconds:
+            configuration.reporting?.tradeAnalyticsPersistenceIntervalSeconds ?? 5,
         },
       },
       {
@@ -3248,6 +3267,14 @@ export class TradingSettingsComponent implements OnInit {
         trailingProfitRetentionPercent: Number(
           value.exit?.trailingProfitRetentionPercent ?? 70,
         ),
+        enableTradeFailureExit: value.exit?.enableTradeFailureExit ?? true,
+        tradeFailureMinimumHoldingSeconds: Number(value.exit?.tradeFailureMinimumHoldingSeconds ?? 30),
+        tradeFailureMinimumFavorableExcursionPercent: Number(value.exit?.tradeFailureMinimumFavorableExcursionPercent ?? 0.25),
+        tradeFailureMaximumAdverseExcursionPercent: Number(value.exit?.tradeFailureMaximumAdverseExcursionPercent ?? 1),
+        tradeFailureMaximumAdverseAtrMultiplier: Number(value.exit?.tradeFailureMaximumAdverseAtrMultiplier ?? 1.5),
+        tradeFailureHealthScoreThreshold: Number(value.exit?.tradeFailureHealthScoreThreshold ?? 45),
+        tradeFailureRequireTrendDeterioration: value.exit?.tradeFailureRequireTrendDeterioration ?? true,
+        tradeFailureRequireMomentumDeterioration: value.exit?.tradeFailureRequireMomentumDeterioration ?? true,
       },
       confidence: {
         maximumGainBonus: Number(value.confidence?.maximumGainBonus ?? 15),
@@ -3347,6 +3374,7 @@ export class TradingSettingsComponent implements OnInit {
         ),
         virtualTradeEmailStages: virtualEmailStages,
         exitPostSellTickCount: Number(value.reporting?.exitPostSellTickCount ?? 3),
+        tradeAnalyticsPersistenceIntervalSeconds: Number(value.reporting?.tradeAnalyticsPersistenceIntervalSeconds ?? 5),
       },
     };
 
