@@ -148,12 +148,13 @@ export interface TradingConfiguration {
 
   paperTrading: boolean;
 
+  enableVirtualTrading?: boolean;
+
   enableNotification: boolean;
 
   strategy: TradingStrategy;
   dynamicEvaluation?: DynamicEvaluationSettings;
   dynamicVirtualTrading?: DynamicVirtualTradingSettings;
-  analysisCapture?: AnalysisCaptureSettings;
   tradingStrictnessProfile?: TradingStrictnessProfile;
 
   riskPercentage: number;
@@ -311,6 +312,19 @@ export interface TradingConfiguration {
   enableMACD: boolean;
 
   enableBollinger: boolean;
+  enableStochastic: boolean;
+  stochasticPeriod: number;
+  stochasticKPeriod: number;
+  stochasticDPeriod: number;
+  stochasticOversold: number;
+  stochasticOverbought: number;
+  enableAroon: boolean;
+  aroonPeriod: number;
+  aroonBullishThreshold: number;
+  aroonBearishThreshold: number;
+  enableParabolicSAR: boolean;
+  parabolicSARStep: number;
+  parabolicSARMaximum: number;
 
   virtualTradeObservationSeconds: number;
 
@@ -424,6 +438,19 @@ export interface EvaluationSettings {
   pullbackExhaustedMovePenalty: number;
   superTrendBearishPenalty: number;
   highChoppinessPenalty: number;
+
+  momentumStochasticBullishScore: number;
+  momentumStochasticBearishScore: number;
+  pullbackStochasticBullishScore: number;
+  pullbackStochasticBearishScore: number;
+  momentumAroonBullishScore: number;
+  momentumAroonBearishScore: number;
+  pullbackAroonBullishScore: number;
+  pullbackAroonBearishScore: number;
+  momentumParabolicSARBullishScore: number;
+  momentumParabolicSARBearishScore: number;
+  pullbackParabolicSARBullishScore: number;
+  pullbackParabolicSARBearishScore: number;
 }
 
 export interface ExitSettings {
@@ -464,22 +491,6 @@ export interface VirtualTradingSettings {
   maximumPullbackGainPercent?: number;
 }
 
-export interface AnalysisCaptureSettings {
-  enabled: boolean;
-  batchIntervalMinutes: number;
-  captureWindowMinutes: number;
-  stockCount: number;
-  candleCount: number;
-  instrumentType: string;
-  outputDirectory: string;
-  publicBaseUrl: string;
-  downloadLinkLifetimeHours: number;
-  downloadSigningKey: string;
-  emailOnCompletion: boolean;
-  includeTickData: boolean;
-  includeConfiguration: boolean;
-  includeActualVirtualTradeState: boolean;
-}
 
 export interface DynamicEvaluationSettings {
   enabled: boolean;
@@ -586,6 +597,8 @@ export interface ReportingSettings {
   riskRewardThreshold: number;
   enableVirtualTradeTickEmails?: boolean;
   minimumVirtualTradeTicksForEmail?: number;
+  virtualTradeEmailStages?: string[];
+  exitPostSellTickCount?: number;
 }
 
 export interface ConfidenceSettings {

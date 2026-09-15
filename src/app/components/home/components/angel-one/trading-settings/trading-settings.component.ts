@@ -21,7 +21,6 @@ import {
   FuturesTradingSettings,
   OptionsTradingSettings,
   TradingStrictnessProfile,
-  AnalysisCaptureSettings,
 } from '../../../models/trading-configuration';
 import { TradingStrategy } from '../../../models/enum/trading-strategy';
 import { AngelOneService } from '../../../services/angel-one.service';
@@ -219,6 +218,8 @@ export class TradingSettingsComponent implements OnInit {
     enableAutoTrading: [{ value: false, disabled: false }],
 
     paperTrading: [true],
+
+    enableVirtualTrading: [false],
 
     enableNotification: [true],
 
@@ -464,6 +465,19 @@ export class TradingSettingsComponent implements OnInit {
     enableMACD: [true],
 
     enableBollinger: [true],
+    enableStochastic: [true],
+    stochasticPeriod: [14, [Validators.required, Validators.min(2), Validators.max(100)]],
+    stochasticKPeriod: [3, [Validators.required, Validators.min(1), Validators.max(20)]],
+    stochasticDPeriod: [3, [Validators.required, Validators.min(1), Validators.max(20)]],
+    stochasticOversold: [15, [Validators.min(0), Validators.max(100)]],
+    stochasticOverbought: [85, [Validators.min(0), Validators.max(100)]],
+    enableAroon: [true],
+    aroonPeriod: [25, [Validators.required, Validators.min(2), Validators.max(200)]],
+    aroonBullishThreshold: [55, [Validators.min(0), Validators.max(100)]],
+    aroonBearishThreshold: [45, [Validators.min(0), Validators.max(100)]],
+    enableParabolicSAR: [true],
+    parabolicSARStep: [0.02, [Validators.required, Validators.min(0.0001), Validators.max(1)]],
+    parabolicSARMaximum: [0.2, [Validators.required, Validators.min(0.0001), Validators.max(1)]],
 
     maxBrokerFailuresBeforeKillSwitch: [5],
     brokerFailureWindowMinutes: [2],
@@ -575,23 +589,6 @@ export class TradingSettingsComponent implements OnInit {
       historicalPerformanceWeight: [0.65],
       marketRegimeWeight: [0.10],
       relativeStrengthWeight: [0.10],
-    }),
-
-    analysisCapture: this.#fb.group({
-      enabled: [false],
-      batchIntervalMinutes: [30],
-      captureWindowMinutes: [30],
-      stockCount: [100],
-      candleCount: [30],
-      instrumentType: ['Equity'],
-      outputDirectory: ['Data/TradingAnalysis'],
-      publicBaseUrl: [''],
-      downloadLinkLifetimeHours: [48],
-      downloadSigningKey: [''],
-      emailOnCompletion: [true],
-      includeTickData: [true],
-      includeConfiguration: [true],
-      includeActualVirtualTradeState: [true],
     }),
 
     dynamicVirtualTrading: this.#fb.group({
@@ -848,6 +845,18 @@ export class TradingSettingsComponent implements OnInit {
       minusDiAbovePlusDiScore: [5],
       lastCandleBearishScore: [5],
       lowerLowScore: [3],
+      momentumStochasticBullishScore: [3],
+      momentumStochasticBearishScore: [0],
+      pullbackStochasticBullishScore: [3],
+      pullbackStochasticBearishScore: [0],
+      momentumAroonBullishScore: [3],
+      momentumAroonBearishScore: [0],
+      pullbackAroonBullishScore: [3],
+      pullbackAroonBearishScore: [0],
+      momentumParabolicSARBullishScore: [3],
+      momentumParabolicSARBearishScore: [0],
+      pullbackParabolicSARBullishScore: [3],
+      pullbackParabolicSARBearishScore: [0],
     }),
 
     virtualTrading: this.#fb.group({
@@ -939,7 +948,13 @@ export class TradingSettingsComponent implements OnInit {
       volatilityScoreThreshold: [60, [Validators.min(0), Validators.max(100)]],
       riskRewardThreshold: [2, [Validators.min(0)]],
       enableVirtualTradeTickEmails: [true],
-      minimumVirtualTradeTicksForEmail: [10, [Validators.min(1)]],
+      minimumVirtualTradeTicksForEmail: [3, [Validators.min(1)]],
+      virtualTradeEmailStages: this.#fb.group({
+        expired: [true],
+        rejected: [true],
+        exit: [true],
+      }),
+      exitPostSellTickCount: [3, [Validators.min(0), Validators.max(100)]],
     }),
 
     exit: this.#fb.group({
@@ -1305,6 +1320,8 @@ export class TradingSettingsComponent implements OnInit {
 
         paperTrading: configuration.paperTrading,
 
+        enableVirtualTrading: configuration.enableVirtualTrading ?? false,
+
         enableNotification: configuration.enableNotification,
 
         strategy: this.normalizeStrategy(configuration.strategy),
@@ -1498,6 +1515,19 @@ export class TradingSettingsComponent implements OnInit {
         enableMACD: configuration.enableMACD,
 
         enableBollinger: configuration.enableBollinger,
+        enableStochastic: configuration.enableStochastic ?? true,
+        stochasticPeriod: configuration.stochasticPeriod ?? 14,
+        stochasticKPeriod: configuration.stochasticKPeriod ?? 3,
+        stochasticDPeriod: configuration.stochasticDPeriod ?? 3,
+        stochasticOversold: configuration.stochasticOversold ?? 15,
+        stochasticOverbought: configuration.stochasticOverbought ?? 85,
+        enableAroon: configuration.enableAroon ?? true,
+        aroonPeriod: configuration.aroonPeriod ?? 25,
+        aroonBullishThreshold: configuration.aroonBullishThreshold ?? 55,
+        aroonBearishThreshold: configuration.aroonBearishThreshold ?? 45,
+        enableParabolicSAR: configuration.enableParabolicSAR ?? true,
+        parabolicSARStep: configuration.parabolicSARStep ?? 0.02,
+        parabolicSARMaximum: configuration.parabolicSARMaximum ?? 0.2,
 
         dynamicEvaluation: {
           enabled: configuration.dynamicEvaluation?.enabled ?? true,
@@ -1776,6 +1806,18 @@ export class TradingSettingsComponent implements OnInit {
             configuration.evaluation?.superTrendBearishPenalty ?? -10,
           highChoppinessPenalty:
             configuration.evaluation?.highChoppinessPenalty ?? -10,
+          momentumStochasticBullishScore: configuration.evaluation?.momentumStochasticBullishScore ?? 3,
+          momentumStochasticBearishScore: configuration.evaluation?.momentumStochasticBearishScore ?? 0,
+          pullbackStochasticBullishScore: configuration.evaluation?.pullbackStochasticBullishScore ?? 3,
+          pullbackStochasticBearishScore: configuration.evaluation?.pullbackStochasticBearishScore ?? 0,
+          momentumAroonBullishScore: configuration.evaluation?.momentumAroonBullishScore ?? 3,
+          momentumAroonBearishScore: configuration.evaluation?.momentumAroonBearishScore ?? 0,
+          pullbackAroonBullishScore: configuration.evaluation?.pullbackAroonBullishScore ?? 3,
+          pullbackAroonBearishScore: configuration.evaluation?.pullbackAroonBearishScore ?? 0,
+          momentumParabolicSARBullishScore: configuration.evaluation?.momentumParabolicSARBullishScore ?? 3,
+          momentumParabolicSARBearishScore: configuration.evaluation?.momentumParabolicSARBearishScore ?? 0,
+          pullbackParabolicSARBullishScore: configuration.evaluation?.pullbackParabolicSARBullishScore ?? 3,
+          pullbackParabolicSARBearishScore: configuration.evaluation?.pullbackParabolicSARBearishScore ?? 0,
         },
 
         virtualTrading: {
@@ -1904,7 +1946,14 @@ export class TradingSettingsComponent implements OnInit {
           enableVirtualTradeTickEmails:
             configuration.reporting?.enableVirtualTradeTickEmails ?? true,
           minimumVirtualTradeTicksForEmail:
-            configuration.reporting?.minimumVirtualTradeTicksForEmail ?? 10,
+            configuration.reporting?.minimumVirtualTradeTicksForEmail ?? 3,
+          virtualTradeEmailStages: {
+            expired: (configuration.reporting?.virtualTradeEmailStages ?? ['EXPIRED', 'REJECTED', 'EXIT']).some(x => x.toUpperCase() === 'EXPIRED'),
+            rejected: (configuration.reporting?.virtualTradeEmailStages ?? ['EXPIRED', 'REJECTED', 'EXIT']).some(x => x.toUpperCase() === 'REJECTED'),
+            exit: (configuration.reporting?.virtualTradeEmailStages ?? ['EXPIRED', 'REJECTED', 'EXIT']).some(x => x.toUpperCase() === 'EXIT'),
+          },
+          exitPostSellTickCount:
+            configuration.reporting?.exitPostSellTickCount ?? 3,
         },
       },
       {
@@ -2570,6 +2619,12 @@ export class TradingSettingsComponent implements OnInit {
       ),
     );
 
+    const virtualEmailStages = [
+      ...(value.reporting?.virtualTradeEmailStages?.expired ? ['EXPIRED'] : []),
+      ...(value.reporting?.virtualTradeEmailStages?.rejected ? ['REJECTED'] : []),
+      ...(value.reporting?.virtualTradeEmailStages?.exit ? ['EXIT'] : []),
+    ];
+
     const configuration: TradingConfiguration = {
       id: 'DEFAULT',
       tradingStrictnessProfile: (value.tradingStrictnessProfile ??
@@ -2583,6 +2638,8 @@ export class TradingSettingsComponent implements OnInit {
       enableAutoTrading: value.enableAutoTrading ?? false,
 
       paperTrading: value.paperTrading ?? false,
+
+      enableVirtualTrading: value.enableVirtualTrading ?? false,
 
       enableNotification: value.enableNotification ?? false,
 
@@ -2774,6 +2831,19 @@ export class TradingSettingsComponent implements OnInit {
       enableAnchoredVWAP: value.enableAnchoredVWAP ?? true,
       enableMACD: value.enableMACD ?? true,
       enableBollinger: value.enableBollinger ?? true,
+      enableStochastic: value.enableStochastic ?? true,
+      stochasticPeriod: Number(value.stochasticPeriod ?? 14),
+      stochasticKPeriod: Number(value.stochasticKPeriod ?? 3),
+      stochasticDPeriod: Number(value.stochasticDPeriod ?? 3),
+      stochasticOversold: Number(value.stochasticOversold ?? 15),
+      stochasticOverbought: Number(value.stochasticOverbought ?? 85),
+      enableAroon: value.enableAroon ?? true,
+      aroonPeriod: Number(value.aroonPeriod ?? 25),
+      aroonBullishThreshold: Number(value.aroonBullishThreshold ?? 55),
+      aroonBearishThreshold: Number(value.aroonBearishThreshold ?? 45),
+      enableParabolicSAR: value.enableParabolicSAR ?? true,
+      parabolicSARStep: Number(value.parabolicSARStep ?? 0.02),
+      parabolicSARMaximum: Number(value.parabolicSARMaximum ?? 0.2),
       dynamicEvaluation: {
         enabled: (value.dynamicEvaluation?.enabled ?? true),
         minimumCandleHistory: Number(value.dynamicEvaluation?.minimumCandleHistory ?? 30),
@@ -2824,22 +2894,6 @@ export class TradingSettingsComponent implements OnInit {
         historicalPerformanceWeight: Number(value.dynamicEvaluation?.historicalPerformanceWeight ?? 0.65),
         marketRegimeWeight: Number(value.dynamicEvaluation?.marketRegimeWeight ?? 0.10),
         relativeStrengthWeight: Number(value.dynamicEvaluation?.relativeStrengthWeight ?? 0.10),
-      },
-      analysisCapture: {
-        enabled: value.analysisCapture?.enabled ?? false,
-        batchIntervalMinutes: Number(value.analysisCapture?.batchIntervalMinutes ?? 30),
-        captureWindowMinutes: Number(value.analysisCapture?.captureWindowMinutes ?? 30),
-        stockCount: Number(value.analysisCapture?.stockCount ?? 100),
-        candleCount: Number(value.analysisCapture?.candleCount ?? 30),
-        instrumentType: String(value.analysisCapture?.instrumentType ?? 'Equity'),
-        outputDirectory: String(value.analysisCapture?.outputDirectory ?? 'Data/TradingAnalysis'),
-        publicBaseUrl: String(value.analysisCapture?.publicBaseUrl ?? ''),
-        downloadLinkLifetimeHours: Number(value.analysisCapture?.downloadLinkLifetimeHours ?? 48),
-        downloadSigningKey: String(value.analysisCapture?.downloadSigningKey ?? ''),
-        emailOnCompletion: value.analysisCapture?.emailOnCompletion ?? true,
-        includeTickData: value.analysisCapture?.includeTickData ?? true,
-        includeConfiguration: value.analysisCapture?.includeConfiguration ?? true,
-        includeActualVirtualTradeState: value.analysisCapture?.includeActualVirtualTradeState ?? true,
       },
       dynamicVirtualTrading: {
         enabled: (value.dynamicVirtualTrading?.enabled ?? true),
@@ -3126,6 +3180,18 @@ export class TradingSettingsComponent implements OnInit {
         highChoppinessPenalty: Number(
           value.evaluation?.highChoppinessPenalty ?? -10,
         ),
+        momentumStochasticBullishScore: Number(value.evaluation?.momentumStochasticBullishScore ?? 3),
+        momentumStochasticBearishScore: Number(value.evaluation?.momentumStochasticBearishScore ?? 0),
+        pullbackStochasticBullishScore: Number(value.evaluation?.pullbackStochasticBullishScore ?? 3),
+        pullbackStochasticBearishScore: Number(value.evaluation?.pullbackStochasticBearishScore ?? 0),
+        momentumAroonBullishScore: Number(value.evaluation?.momentumAroonBullishScore ?? 3),
+        momentumAroonBearishScore: Number(value.evaluation?.momentumAroonBearishScore ?? 0),
+        pullbackAroonBullishScore: Number(value.evaluation?.pullbackAroonBullishScore ?? 3),
+        pullbackAroonBearishScore: Number(value.evaluation?.pullbackAroonBearishScore ?? 0),
+        momentumParabolicSARBullishScore: Number(value.evaluation?.momentumParabolicSARBullishScore ?? 3),
+        momentumParabolicSARBearishScore: Number(value.evaluation?.momentumParabolicSARBearishScore ?? 0),
+        pullbackParabolicSARBullishScore: Number(value.evaluation?.pullbackParabolicSARBullishScore ?? 3),
+        pullbackParabolicSARBearishScore: Number(value.evaluation?.pullbackParabolicSARBearishScore ?? 0),
       },
       virtualTrading: {
         warmupSeconds: Number(value.virtualTrading?.warmupSeconds ?? 8),
@@ -3277,8 +3343,10 @@ export class TradingSettingsComponent implements OnInit {
         riskRewardThreshold: Number(value.reporting?.riskRewardThreshold ?? 2),
         enableVirtualTradeTickEmails: value.reporting?.enableVirtualTradeTickEmails ?? true,
         minimumVirtualTradeTicksForEmail: Number(
-          value.reporting?.minimumVirtualTradeTicksForEmail ?? 10,
+          value.reporting?.minimumVirtualTradeTicksForEmail ?? 3,
         ),
+        virtualTradeEmailStages: virtualEmailStages,
+        exitPostSellTickCount: Number(value.reporting?.exitPostSellTickCount ?? 3),
       },
     };
 
