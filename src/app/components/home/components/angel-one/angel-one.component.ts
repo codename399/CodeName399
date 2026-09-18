@@ -19,7 +19,7 @@ import { AngelOneService } from '../../services/angel-one.service';
 import { MarketService } from '../../services/market.service';
 
 import { Gainer } from '../../models/gainer';
-import { TradingConfiguration } from '../../models/trading-configuration';
+import { TradingConfiguration } from '../../models/trading-settings';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { MatTooltipModule } from '@angular/material/tooltip';

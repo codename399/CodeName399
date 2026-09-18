@@ -10,7 +10,7 @@ import { API_CONSTANTS } from '../../../../injectors/common-injector';
 import { DashboardSummary } from '../models/dashboard-summary';
 
 import { Gainer } from '../models/gainer';
-import { TradingConfiguration } from '../models/trading-configuration';
+import { TradingConfiguration } from '../models/trading-settings';
 
 @Injectable({
   providedIn: 'root',

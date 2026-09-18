@@ -21,7 +21,7 @@ import {
   FuturesTradingSettings,
   OptionsTradingSettings,
   TradingStrictnessProfile,
-} from '../../../models/trading-configuration';
+} from '../../../models/trading-settings';
 import { TradingStrategy } from '../../../models/enum/trading-strategy';
 import { AngelOneService } from '../../../services/angel-one.service';
 
