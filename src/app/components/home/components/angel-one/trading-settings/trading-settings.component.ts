@@ -629,6 +629,29 @@ export class TradingSettingsComponent implements OnInit {
       confidenceCapitalMultiplier: [0.65],
     }),
 
+    futureTickPrediction: this.#fb.group({
+      enabled: [true],
+      shadowMode: [false],
+      horizonTicks: [5, [Validators.required, Validators.min(1)]],
+      horizonSeconds: [10, [Validators.required, Validators.min(0)]],
+      minimumFavorableProbability: [0.48, [Validators.min(0), Validators.max(1)]],
+      useAdaptiveEntryGate: [true],
+      strongStrategyScore: [70, [Validators.min(0), Validators.max(100)]],
+      adaptiveMinimumFavorableProbability: [0.42, [Validators.min(0), Validators.max(1)]],
+      adaptiveMaximumAdverseProbability: [0.50, [Validators.min(0), Validators.max(1)]],
+      adaptiveMinimumContinuationScore: [0.02],
+      adaptiveMinimumPredictionConfidence: [0.30, [Validators.min(0), Validators.max(1)]],
+      maximumAdverseProbability: [0.48, [Validators.min(0), Validators.max(1)]],
+      minimumContinuationScore: [0.08],
+      minimumPredictionConfidence: [0.40, [Validators.min(0), Validators.max(1)]],
+      minimumExpectedNetValue: [-0.25],
+      maximumAdverseMoveAtr: [0.65, [Validators.min(0)]],
+      minimumVolumeParticipation: [0.25, [Validators.min(0), Validators.max(1)]],
+      immediateFailureScore: [35, [Validators.min(0), Validators.max(100)]],
+      minimumObservedTicksForPostEntryGate: [3, [Validators.min(0)]],
+      consecutiveAdverseTicksForEarlyExit: [3, [Validators.min(0)]],
+    }),
+
     validation: this.#fb.group({
       minimumMovementScore: [
         45,
@@ -956,6 +979,7 @@ export class TradingSettingsComponent implements OnInit {
       }),
       exitPostSellTickCount: [3, [Validators.min(0), Validators.max(100)]],
       tradeAnalyticsPersistenceIntervalSeconds: [5, [Validators.min(0), Validators.max(300)]],
+      tradeAnalysisPublicBaseUrl: [''],
     }),
 
     exit: this.#fb.group({
@@ -1617,6 +1641,29 @@ export class TradingSettingsComponent implements OnInit {
           tickRecoveryWeight: configuration.dynamicVirtualTrading?.tickRecoveryWeight ?? 10,
           baseCapitalMultiplier: configuration.dynamicVirtualTrading?.baseCapitalMultiplier ?? 0.35,
           confidenceCapitalMultiplier: configuration.dynamicVirtualTrading?.confidenceCapitalMultiplier ?? 0.65,
+        },
+
+        futureTickPrediction: {
+          enabled: configuration.futureTickPrediction?.enabled ?? true,
+          shadowMode: configuration.futureTickPrediction?.shadowMode ?? false,
+          horizonTicks: configuration.futureTickPrediction?.horizonTicks ?? 5,
+          horizonSeconds: configuration.futureTickPrediction?.horizonSeconds ?? 10,
+          minimumFavorableProbability: configuration.futureTickPrediction?.minimumFavorableProbability ?? 0.48,
+          useAdaptiveEntryGate: configuration.futureTickPrediction?.useAdaptiveEntryGate ?? true,
+          strongStrategyScore: configuration.futureTickPrediction?.strongStrategyScore ?? 70,
+          adaptiveMinimumFavorableProbability: configuration.futureTickPrediction?.adaptiveMinimumFavorableProbability ?? 0.42,
+          adaptiveMaximumAdverseProbability: configuration.futureTickPrediction?.adaptiveMaximumAdverseProbability ?? 0.50,
+          adaptiveMinimumContinuationScore: configuration.futureTickPrediction?.adaptiveMinimumContinuationScore ?? 0.02,
+          adaptiveMinimumPredictionConfidence: configuration.futureTickPrediction?.adaptiveMinimumPredictionConfidence ?? 0.30,
+          maximumAdverseProbability: configuration.futureTickPrediction?.maximumAdverseProbability ?? 0.48,
+          minimumContinuationScore: configuration.futureTickPrediction?.minimumContinuationScore ?? 0.08,
+          minimumPredictionConfidence: configuration.futureTickPrediction?.minimumPredictionConfidence ?? 0.40,
+          minimumExpectedNetValue: configuration.futureTickPrediction?.minimumExpectedNetValue ?? -0.25,
+          maximumAdverseMoveAtr: configuration.futureTickPrediction?.maximumAdverseMoveAtr ?? 0.65,
+          minimumVolumeParticipation: configuration.futureTickPrediction?.minimumVolumeParticipation ?? 0.25,
+          immediateFailureScore: configuration.futureTickPrediction?.immediateFailureScore ?? 35,
+          minimumObservedTicksForPostEntryGate: configuration.futureTickPrediction?.minimumObservedTicksForPostEntryGate ?? 3,
+          consecutiveAdverseTicksForEarlyExit: configuration.futureTickPrediction?.consecutiveAdverseTicksForEarlyExit ?? 3,
         },
 
         validation: {
@@ -2951,6 +2998,28 @@ export class TradingSettingsComponent implements OnInit {
         baseCapitalMultiplier: Number(value.dynamicVirtualTrading?.baseCapitalMultiplier ?? 0.35),
         confidenceCapitalMultiplier: Number(value.dynamicVirtualTrading?.confidenceCapitalMultiplier ?? 0.65),
       },
+      futureTickPrediction: {
+        enabled: value.futureTickPrediction?.enabled ?? true,
+        shadowMode: value.futureTickPrediction?.shadowMode ?? false,
+        horizonTicks: Number(value.futureTickPrediction?.horizonTicks ?? 5),
+        horizonSeconds: Number(value.futureTickPrediction?.horizonSeconds ?? 10),
+        minimumFavorableProbability: Number(value.futureTickPrediction?.minimumFavorableProbability ?? 0.48),
+        useAdaptiveEntryGate: value.futureTickPrediction?.useAdaptiveEntryGate ?? true,
+        strongStrategyScore: Number(value.futureTickPrediction?.strongStrategyScore ?? 70),
+        adaptiveMinimumFavorableProbability: Number(value.futureTickPrediction?.adaptiveMinimumFavorableProbability ?? 0.42),
+        adaptiveMaximumAdverseProbability: Number(value.futureTickPrediction?.adaptiveMaximumAdverseProbability ?? 0.50),
+        adaptiveMinimumContinuationScore: Number(value.futureTickPrediction?.adaptiveMinimumContinuationScore ?? 0.02),
+        adaptiveMinimumPredictionConfidence: Number(value.futureTickPrediction?.adaptiveMinimumPredictionConfidence ?? 0.30),
+        maximumAdverseProbability: Number(value.futureTickPrediction?.maximumAdverseProbability ?? 0.48),
+        minimumContinuationScore: Number(value.futureTickPrediction?.minimumContinuationScore ?? 0.08),
+        minimumPredictionConfidence: Number(value.futureTickPrediction?.minimumPredictionConfidence ?? 0.40),
+        minimumExpectedNetValue: Number(value.futureTickPrediction?.minimumExpectedNetValue ?? -0.25),
+        maximumAdverseMoveAtr: Number(value.futureTickPrediction?.maximumAdverseMoveAtr ?? 0.65),
+        minimumVolumeParticipation: Number(value.futureTickPrediction?.minimumVolumeParticipation ?? 0.25),
+        immediateFailureScore: Number(value.futureTickPrediction?.immediateFailureScore ?? 35),
+        minimumObservedTicksForPostEntryGate: Number(value.futureTickPrediction?.minimumObservedTicksForPostEntryGate ?? 3),
+        consecutiveAdverseTicksForEarlyExit: Number(value.futureTickPrediction?.consecutiveAdverseTicksForEarlyExit ?? 3),
+      },
       validation: {
         minimumMovementScore: Number(
           value.validation?.minimumMovementScore ?? 45,
@@ -3375,6 +3444,7 @@ export class TradingSettingsComponent implements OnInit {
         virtualTradeEmailStages: virtualEmailStages,
         exitPostSellTickCount: Number(value.reporting?.exitPostSellTickCount ?? 3),
         tradeAnalyticsPersistenceIntervalSeconds: Number(value.reporting?.tradeAnalyticsPersistenceIntervalSeconds ?? 5),
+        tradeAnalysisPublicBaseUrl: String(value.reporting?.tradeAnalysisPublicBaseUrl ?? ''),
       },
     };
 

@@ -155,6 +155,7 @@ export interface TradingConfiguration {
   strategy: TradingStrategy;
   dynamicEvaluation?: DynamicEvaluationSettings;
   dynamicVirtualTrading?: DynamicVirtualTradingSettings;
+  futureTickPrediction?: FutureTickPredictionSettings;
   tradingStrictnessProfile?: TradingStrictnessProfile;
 
   riskPercentage: number;
@@ -590,6 +591,29 @@ export interface DynamicVirtualTradingSettings {
   confidenceCapitalMultiplier: number;
 }
 
+export interface FutureTickPredictionSettings {
+  enabled: boolean;
+  shadowMode: boolean;
+  horizonTicks: number;
+  horizonSeconds: number;
+  minimumFavorableProbability: number;
+  useAdaptiveEntryGate: boolean;
+  strongStrategyScore: number;
+  adaptiveMinimumFavorableProbability: number;
+  adaptiveMaximumAdverseProbability: number;
+  adaptiveMinimumContinuationScore: number;
+  adaptiveMinimumPredictionConfidence: number;
+  maximumAdverseProbability: number;
+  minimumContinuationScore: number;
+  minimumPredictionConfidence: number;
+  minimumExpectedNetValue: number;
+  maximumAdverseMoveAtr: number;
+  minimumVolumeParticipation: number;
+  immediateFailureScore: number;
+  minimumObservedTicksForPostEntryGate: number;
+  consecutiveAdverseTicksForEarlyExit: number;
+}
+
 export interface ReportingSettings {
   strongBuyConfidence: number;
   buyConfidence: number;
@@ -608,6 +632,7 @@ export interface ReportingSettings {
   virtualTradeEmailStages?: string[];
   exitPostSellTickCount?: number;
   tradeAnalyticsPersistenceIntervalSeconds?: number;
+  tradeAnalysisPublicBaseUrl?: string;
 }
 
 export interface ConfidenceSettings {

@@ -2546,6 +2546,11 @@
               <input id="tradeAnalyticsPersistenceIntervalSeconds" type="number" formControlName="tradeAnalyticsPersistenceIntervalSeconds" class="field-input" min="0" max="300" step="1" />
               <small class="field-help">Persists live position analytics periodically so MFE/MAE and tick history survive a restart. Set 0 to persist every tick.</small>
             </div>
+            <div class="field-row">
+              <label class="field-label" for="tradeAnalysisPublicBaseUrl">Trade Analysis Public Base URL</label>
+              <input id="tradeAnalysisPublicBaseUrl" type="url" formControlName="tradeAnalysisPublicBaseUrl" class="field-input" placeholder="https://example.com/trade-analysis" />
+              <small class="field-help">Public base URL used when generating links to stored trade-analysis files.</small>
+            </div>
           </div>
         </details>
 
@@ -3353,6 +3358,40 @@
 
 
         
+
+        <details class="settings-card" (toggle)="onAccordionToggle($event)">
+          <summary class="card-header">
+            <div>
+              <h2>Future Tick Prediction</h2>
+              <p>Next-tick continuation prediction and post-entry risk-gating controls.</p>
+            </div>
+          </summary>
+          <div class="card-body">
+            <div class="grid-4 compact-profile-grid" formGroupName="futureTickPrediction">
+              <label class="toggle-field"><input type="checkbox" formControlName="enabled" /><span>Enabled</span></label>
+              <label class="toggle-field"><input type="checkbox" formControlName="shadowMode" /><span>Shadow Mode</span></label>
+              <label class="toggle-field"><input type="checkbox" formControlName="useAdaptiveEntryGate" /><span>Use Adaptive Entry Gate</span></label>
+              <div class="field-row"><label class="field-label" for="futurePredictionHorizonTicks">Horizon Ticks</label><input id="futurePredictionHorizonTicks" type="number" formControlName="horizonTicks" class="field-input" min="1" step="1" /></div>
+              <div class="field-row"><label class="field-label" for="futurePredictionHorizonSeconds">Horizon Seconds</label><input id="futurePredictionHorizonSeconds" type="number" formControlName="horizonSeconds" class="field-input" min="0" step="0.1" /></div>
+              <div class="field-row"><label class="field-label" for="futureMinimumFavorableProbability">Minimum Favorable Probability</label><input id="futureMinimumFavorableProbability" type="number" formControlName="minimumFavorableProbability" class="field-input" min="0" max="1" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="futureStrongStrategyScore">Strong Strategy Score</label><input id="futureStrongStrategyScore" type="number" formControlName="strongStrategyScore" class="field-input" min="0" max="100" step="0.1" /></div>
+              <div class="field-row"><label class="field-label" for="futureAdaptiveMinimumFavorableProbability">Adaptive Min Favorable Probability</label><input id="futureAdaptiveMinimumFavorableProbability" type="number" formControlName="adaptiveMinimumFavorableProbability" class="field-input" min="0" max="1" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="futureAdaptiveMaximumAdverseProbability">Adaptive Max Adverse Probability</label><input id="futureAdaptiveMaximumAdverseProbability" type="number" formControlName="adaptiveMaximumAdverseProbability" class="field-input" min="0" max="1" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="futureAdaptiveMinimumContinuationScore">Adaptive Min Continuation Score</label><input id="futureAdaptiveMinimumContinuationScore" type="number" formControlName="adaptiveMinimumContinuationScore" class="field-input" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="futureAdaptiveMinimumPredictionConfidence">Adaptive Min Prediction Confidence</label><input id="futureAdaptiveMinimumPredictionConfidence" type="number" formControlName="adaptiveMinimumPredictionConfidence" class="field-input" min="0" max="1" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="futureMaximumAdverseProbability">Maximum Adverse Probability</label><input id="futureMaximumAdverseProbability" type="number" formControlName="maximumAdverseProbability" class="field-input" min="0" max="1" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="futureMinimumContinuationScore">Minimum Continuation Score</label><input id="futureMinimumContinuationScore" type="number" formControlName="minimumContinuationScore" class="field-input" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="futureMinimumPredictionConfidence">Minimum Prediction Confidence</label><input id="futureMinimumPredictionConfidence" type="number" formControlName="minimumPredictionConfidence" class="field-input" min="0" max="1" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="futureMinimumExpectedNetValue">Minimum Expected Net Value</label><input id="futureMinimumExpectedNetValue" type="number" formControlName="minimumExpectedNetValue" class="field-input" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="futureMaximumAdverseMoveAtr">Maximum Adverse Move ATR</label><input id="futureMaximumAdverseMoveAtr" type="number" formControlName="maximumAdverseMoveAtr" class="field-input" min="0" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="futureMinimumVolumeParticipation">Minimum Volume Participation</label><input id="futureMinimumVolumeParticipation" type="number" formControlName="minimumVolumeParticipation" class="field-input" min="0" max="1" step="0.01" /></div>
+              <div class="field-row"><label class="field-label" for="futureImmediateFailureScore">Immediate Failure Score</label><input id="futureImmediateFailureScore" type="number" formControlName="immediateFailureScore" class="field-input" min="0" max="100" step="0.1" /></div>
+              <div class="field-row"><label class="field-label" for="futureMinimumObservedTicksForPostEntryGate">Minimum Observed Ticks For Post-Entry Gate</label><input id="futureMinimumObservedTicksForPostEntryGate" type="number" formControlName="minimumObservedTicksForPostEntryGate" class="field-input" min="0" step="1" /></div>
+              <div class="field-row"><label class="field-label" for="futureConsecutiveAdverseTicksForEarlyExit">Consecutive Adverse Ticks For Early Exit</label><input id="futureConsecutiveAdverseTicksForEarlyExit" type="number" formControlName="consecutiveAdverseTicksForEarlyExit" class="field-input" min="0" step="1" /></div>
+            </div>
+          </div>
+        </details>
+
 
         <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header"><div><h2>Advanced Trade &amp; Runtime Settings</h2><p>Global risk limits, market timing, execution recovery, margin controls and runtime safety.</p></div></summary>
