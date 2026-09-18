@@ -3387,7 +3387,13 @@
               <div class="field-row"><label class="field-label" for="futureMinimumVolumeParticipation">Minimum Volume Participation</label><input id="futureMinimumVolumeParticipation" type="number" formControlName="minimumVolumeParticipation" class="field-input" min="0" max="1" step="0.01" /></div>
               <div class="field-row"><label class="field-label" for="futureImmediateFailureScore">Immediate Failure Score</label><input id="futureImmediateFailureScore" type="number" formControlName="immediateFailureScore" class="field-input" min="0" max="100" step="0.1" /></div>
               <div class="field-row"><label class="field-label" for="futureMinimumObservedTicksForPostEntryGate">Minimum Observed Ticks For Post-Entry Gate</label><input id="futureMinimumObservedTicksForPostEntryGate" type="number" formControlName="minimumObservedTicksForPostEntryGate" class="field-input" min="0" step="1" /></div>
-              <div class="field-row"><label class="field-label" for="futureConsecutiveAdverseTicksForEarlyExit">Consecutive Adverse Ticks For Early Exit</label><input id="futureConsecutiveAdverseTicksForEarlyExit" type="number" formControlName="consecutiveAdverseTicksForEarlyExit" class="field-input" min="0" step="1" /></div>
+              <div class="field-row"><label class="field-label" for="futureConsecutiveAdverseTicksForEarlyExit">Consecutive Adverse Ticks For Early Exit</label><input id="futureConsecutiveAdverseTicksForEarlyExit" type="number" formControlName="consecutiveAdverseTicksForEarlyExit" class="field-input" min="0" step="1" /></div>              <div class="grid-4 compact-profile-grid" formGroupName="shadowStorage">
+                <label class="toggle-field"><input id="futureShadowStorageEnabled" type="checkbox" formControlName="enabled" /><span>Shadow Storage Enabled</span></label>
+                <div class="field-row"><label class="field-label" for="futureShadowStoragePath">Shadow Storage Path</label><input id="futureShadowStoragePath" type="text" formControlName="path" class="field-input" /></div>
+                <div class="field-row"><label class="field-label" for="futureShadowStorageInterval">Shadow Record Interval (Seconds/Symbol)</label><input id="futureShadowStorageInterval" type="number" formControlName="minimumRecordIntervalSecondsPerSymbol" class="field-input" min="0" step="1" /></div>
+                <div class="field-row"><label class="field-label" for="futureShadowStorageRetention">Shadow Storage Retention (Days)</label><input id="futureShadowStorageRetention" type="number" formControlName="retentionDays" class="field-input" min="0" step="1" /></div>
+              </div>
+
             </div>
           </div>
         </details>

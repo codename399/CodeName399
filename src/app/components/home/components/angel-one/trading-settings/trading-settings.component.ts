@@ -650,6 +650,12 @@ export class TradingSettingsComponent implements OnInit {
       immediateFailureScore: [35, [Validators.min(0), Validators.max(100)]],
       minimumObservedTicksForPostEntryGate: [3, [Validators.min(0)]],
       consecutiveAdverseTicksForEarlyExit: [3, [Validators.min(0)]],
+      shadowStorage: this.#fb.group({
+        enabled: [true],
+        path: ['TradeAnalysis/FutureTickPrediction'],
+        minimumRecordIntervalSecondsPerSymbol: [1, [Validators.min(0)]],
+        retentionDays: [90, [Validators.min(0)]],
+      }),
     }),
 
     validation: this.#fb.group({
@@ -1664,6 +1670,13 @@ export class TradingSettingsComponent implements OnInit {
           immediateFailureScore: configuration.futureTickPrediction?.immediateFailureScore ?? 35,
           minimumObservedTicksForPostEntryGate: configuration.futureTickPrediction?.minimumObservedTicksForPostEntryGate ?? 3,
           consecutiveAdverseTicksForEarlyExit: configuration.futureTickPrediction?.consecutiveAdverseTicksForEarlyExit ?? 3,
+          shadowStorage: {
+            enabled: configuration.futureTickPrediction?.shadowStorage?.enabled ?? true,
+            path: configuration.futureTickPrediction?.shadowStorage?.path ?? 'TradeAnalysis/FutureTickPrediction',
+            minimumRecordIntervalSecondsPerSymbol:
+              configuration.futureTickPrediction?.shadowStorage?.minimumRecordIntervalSecondsPerSymbol ?? 1,
+            retentionDays: configuration.futureTickPrediction?.shadowStorage?.retentionDays ?? 90,
+          },
         },
 
         validation: {
@@ -3019,6 +3032,14 @@ export class TradingSettingsComponent implements OnInit {
         immediateFailureScore: Number(value.futureTickPrediction?.immediateFailureScore ?? 35),
         minimumObservedTicksForPostEntryGate: Number(value.futureTickPrediction?.minimumObservedTicksForPostEntryGate ?? 3),
         consecutiveAdverseTicksForEarlyExit: Number(value.futureTickPrediction?.consecutiveAdverseTicksForEarlyExit ?? 3),
+        shadowStorage: {
+          enabled: value.futureTickPrediction?.shadowStorage?.enabled ?? true,
+          path: String(value.futureTickPrediction?.shadowStorage?.path ?? 'TradeAnalysis/FutureTickPrediction'),
+          minimumRecordIntervalSecondsPerSymbol: Number(
+            value.futureTickPrediction?.shadowStorage?.minimumRecordIntervalSecondsPerSymbol ?? 1,
+          ),
+          retentionDays: Number(value.futureTickPrediction?.shadowStorage?.retentionDays ?? 90),
+        },
       },
       validation: {
         minimumMovementScore: Number(

@@ -591,6 +591,13 @@ export interface DynamicVirtualTradingSettings {
   confidenceCapitalMultiplier: number;
 }
 
+export interface FutureTickPredictionShadowStorageSettings {
+  enabled: boolean;
+  path: string;
+  minimumRecordIntervalSecondsPerSymbol: number;
+  retentionDays: number;
+}
+
 export interface FutureTickPredictionSettings {
   enabled: boolean;
   shadowMode: boolean;
@@ -612,6 +619,7 @@ export interface FutureTickPredictionSettings {
   immediateFailureScore: number;
   minimumObservedTicksForPostEntryGate: number;
   consecutiveAdverseTicksForEarlyExit: number;
+  shadowStorage: FutureTickPredictionShadowStorageSettings;
 }
 
 export interface ReportingSettings {
