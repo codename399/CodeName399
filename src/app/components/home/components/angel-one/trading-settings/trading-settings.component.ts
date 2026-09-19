@@ -539,6 +539,14 @@ export class TradingSettingsComponent implements OnInit {
     tradingHolidaysText: [''],
     visibleColumnsText: [''],
 
+    coreStrategy: this.#fb.group({
+      enabled: [true],
+      minimumCompletedCandles: [3],
+      minimumRecoveryScore: [40],
+      minimumPriceChangePercent: [0],
+      minimumBreakoutStrength: [0],
+    }),
+
     dynamicEvaluation: this.#fb.group({
       enabled: [true],
       minimumCandleHistory: [30],
@@ -1567,6 +1575,14 @@ export class TradingSettingsComponent implements OnInit {
         enableParabolicSAR: configuration.enableParabolicSAR ?? true,
         parabolicSARStep: configuration.parabolicSARStep ?? 0.02,
         parabolicSARMaximum: configuration.parabolicSARMaximum ?? 0.2,
+
+        coreStrategy: {
+          enabled: configuration.coreStrategy?.enabled ?? true,
+          minimumCompletedCandles: configuration.coreStrategy?.minimumCompletedCandles ?? 3,
+          minimumRecoveryScore: configuration.coreStrategy?.minimumRecoveryScore ?? 40,
+          minimumPriceChangePercent: configuration.coreStrategy?.minimumPriceChangePercent ?? 0,
+          minimumBreakoutStrength: configuration.coreStrategy?.minimumBreakoutStrength ?? 0,
+        },
 
         dynamicEvaluation: {
           enabled: configuration.dynamicEvaluation?.enabled ?? true,
@@ -2923,6 +2939,13 @@ export class TradingSettingsComponent implements OnInit {
       enableParabolicSAR: value.enableParabolicSAR ?? true,
       parabolicSARStep: Number(value.parabolicSARStep ?? 0.02),
       parabolicSARMaximum: Number(value.parabolicSARMaximum ?? 0.2),
+      coreStrategy: {
+        enabled: value.coreStrategy?.enabled ?? true,
+        minimumCompletedCandles: Number(value.coreStrategy?.minimumCompletedCandles ?? 3),
+        minimumRecoveryScore: Number(value.coreStrategy?.minimumRecoveryScore ?? 40),
+        minimumPriceChangePercent: Number(value.coreStrategy?.minimumPriceChangePercent ?? 0),
+        minimumBreakoutStrength: Number(value.coreStrategy?.minimumBreakoutStrength ?? 0),
+      },
       dynamicEvaluation: {
         enabled: (value.dynamicEvaluation?.enabled ?? true),
         minimumCandleHistory: Number(value.dynamicEvaluation?.minimumCandleHistory ?? 30),

@@ -133,6 +133,14 @@ export interface OptionsTradingSettings extends InstrumentTradingSettings {
 
 export type TradingStrictnessProfile = 'VeryLoose' | 'Loose' | 'Balanced' | 'Moderate' | 'Strict' | 'VeryStrict';
 
+export interface CoreStrategySettings {
+  enabled: boolean;
+  minimumCompletedCandles: number;
+  minimumRecoveryScore: number;
+  minimumPriceChangePercent: number;
+  minimumBreakoutStrength: number;
+}
+
 export interface TradingConfiguration {
   id: string;
 
@@ -154,6 +162,7 @@ export interface TradingConfiguration {
 
   strategy: TradingStrategy;
   dynamicEvaluation?: DynamicEvaluationSettings;
+  coreStrategy?: CoreStrategySettings;
   dynamicVirtualTrading?: DynamicVirtualTradingSettings;
   futureTickPrediction?: FutureTickPredictionSettings;
   tradingStrictnessProfile?: TradingStrictnessProfile;
