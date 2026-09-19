@@ -1359,8 +1359,7 @@ export class TradingSettingsComponent implements OnInit {
   // ======================================================
 
   private patchForm(configuration: TradingConfiguration): void {
-    this.form.patchValue(
-      {
+    const patch = this.removeNullishValues({
         instrumentType: configuration.instrumentType ?? 'Equity',
 
         enableAutoTrading: configuration.enableAutoTrading,
@@ -2050,11 +2049,9 @@ export class TradingSettingsComponent implements OnInit {
           tradeAnalyticsPersistenceIntervalSeconds:
             configuration.reporting?.tradeAnalyticsPersistenceIntervalSeconds ?? 5,
         },
-      },
-      {
-        emitEvent: false,
-      },
-    );
+      });
+
+    this.form.patchValue(patch, { emitEvent: false });
 
     this.profileDrafts = {
       Equity: this.normalizeProfile(
@@ -2194,12 +2191,19 @@ export class TradingSettingsComponent implements OnInit {
       maximumMarginUtilizationPercent: 70,
       forceSquareOffBuffer: '00:15:00',
     };
+    // API instrument profiles are intentionally sparse. Do not let undefined/null
+    // API properties overwrite the UI defaults; doing so makes required controls
+    // invalid after patchActiveProfile() even though the API configuration is valid.
+    const definedProfile = Object.fromEntries(
+      Object.entries(profile).filter(([, value]) => value !== undefined && value !== null),
+    ) as Partial<InstrumentTradingSettings>;
+
     const normalized = {
       ...base,
-      ...profile,
-      exchange: this.normalizeExchange(type, profile.exchange),
-      evaluation: profile.evaluation ?? this.form?.controls?.evaluation?.value,
-      validation: profile.validation ?? this.form?.controls?.validation?.value,
+      ...definedProfile,
+      exchange: this.normalizeExchange(type, definedProfile.exchange ?? base.exchange),
+      evaluation: definedProfile.evaluation ?? this.form?.controls?.evaluation?.value,
+      validation: definedProfile.validation ?? this.form?.controls?.validation?.value,
     };
     return normalized as InstrumentTradingSettings;
   }
@@ -2602,9 +2606,29 @@ export class TradingSettingsComponent implements OnInit {
     return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:00`;
   }
 
-  private toTimeInput(value: string | null | undefined): string {
+  private removeNullishValues<T>(value: T): T {
+    if (Array.isArray(value)) {
+      return value
+        .filter((item) => item !== null && item !== undefined)
+        .map((item) => this.removeNullishValues(item)) as T;
+    }
+
+    if (value && typeof value === 'object') {
+      const result: Record<string, unknown> = {};
+      Object.entries(value as Record<string, unknown>).forEach(([key, item]) => {
+        if (item !== null && item !== undefined) {
+          result[key] = this.removeNullishValues(item);
+        }
+      });
+      return result as T;
+    }
+
+    return value;
+  }
+
+  private toTimeInput(value: string | null | undefined): string | undefined {
     if (!value) {
-      return '';
+      return undefined;
     }
 
     return value.substring(0, 5);
