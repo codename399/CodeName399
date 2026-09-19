@@ -556,18 +556,22 @@
             </div>
 
             <div class="field-row">
-              <label class="field-label" for="maxCapitalPerTrade"
-                >Max Capital Per Trade</label
+              <label class="field-label" for="maxCapitalPerTradePercent"
+                >Max Capital Per Trade (%)</label
               >
               <div class="input-with-suffix">
-                <span class="prefix">₹</span>
                 <input
-                  id="maxCapitalPerTrade"
+                  id="maxCapitalPerTradePercent"
                   type="number"
-                  formControlName="maxCapitalPerTrade"
+                  formControlName="maxCapitalPerTradePercent"
                   class="field-input"
+                  min="0"
+                  max="100"
+                  step="0.1"
                 />
+                <span class="suffix">%</span>
               </div>
+              <small class="field-help">Maximum capital allocated to one trade as a percentage of the currently selected paper-trading or live available balance.</small>
             </div>
 
             <div class="field-row">

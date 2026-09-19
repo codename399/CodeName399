@@ -19,7 +19,7 @@ export interface InstrumentTradingSettings {
   allowLong: boolean;
   allowShort: boolean;
   riskPercentage: number;
-  maxCapitalPerTrade: number;
+  maxCapitalPerTradePercent: number;
   minimumNetProfit: number;
   minimumRoiPercent: number;
   maximumChargesPerTrade: number;
@@ -169,7 +169,7 @@ export interface TradingConfiguration {
 
   riskPercentage: number;
 
-  maxCapitalPerTrade: number;
+  maxCapitalPerTradePercent: number;
 
   maxDailyLoss: number;
 

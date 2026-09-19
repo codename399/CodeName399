@@ -344,7 +344,7 @@ export class TradingSettingsComponent implements OnInit {
       [Validators.required, Validators.min(0.1), Validators.max(100)],
     ],
 
-    maxCapitalPerTrade: [10000, Validators.required],
+    maxCapitalPerTradePercent: [10, [Validators.required, Validators.min(0), Validators.max(100)]],
 
     maxDailyLoss: [3000, Validators.required],
 
@@ -1377,7 +1377,7 @@ export class TradingSettingsComponent implements OnInit {
 
         riskPercentage: configuration.riskPercentage,
 
-        maxCapitalPerTrade: configuration.maxCapitalPerTrade,
+        maxCapitalPerTradePercent: configuration.maxCapitalPerTradePercent,
 
         maxDailyLoss: configuration.maxDailyLoss,
 
@@ -2116,8 +2116,8 @@ export class TradingSettingsComponent implements OnInit {
       allowShort: source?.allowShort ?? true,
       riskPercentage:
         source?.riskPercentage ?? configuration.riskPercentage ?? 2,
-      maxCapitalPerTrade:
-        source?.maxCapitalPerTrade ?? configuration.maxCapitalPerTrade ?? 10000,
+      maxCapitalPerTradePercent:
+        source?.maxCapitalPerTradePercent ?? configuration.maxCapitalPerTradePercent ?? 10,
       minimumNetProfit:
         source?.minimumNetProfit ?? configuration.minimumNetProfit ?? 5,
       minimumRoiPercent:
@@ -2170,7 +2170,7 @@ export class TradingSettingsComponent implements OnInit {
       allowLong: true,
       allowShort: true,
       riskPercentage: 2,
-      maxCapitalPerTrade: 10000,
+      maxCapitalPerTradePercent: 10,
       minimumNetProfit: 5,
       minimumRoiPercent: 0.3,
       maximumChargesPerTrade: 100,
@@ -2236,7 +2236,7 @@ export class TradingSettingsComponent implements OnInit {
         allowLong: profile.allowLong,
         allowShort: profile.allowShort,
         riskPercentage: profile.riskPercentage,
-        maxCapitalPerTrade: profile.maxCapitalPerTrade,
+        maxCapitalPerTradePercent: profile.maxCapitalPerTradePercent,
         minimumNetProfit: profile.minimumNetProfit,
         minimumRoiPercent: profile.minimumRoiPercent,
         maximumChargesPerTrade: profile.maximumChargesPerTrade,
@@ -2410,7 +2410,7 @@ export class TradingSettingsComponent implements OnInit {
       allowLong: !!value.allowLong,
       allowShort: !!value.allowShort,
       riskPercentage: Number(value.riskPercentage),
-      maxCapitalPerTrade: Number(value.maxCapitalPerTrade),
+      maxCapitalPerTradePercent: Number(value.maxCapitalPerTradePercent),
       minimumNetProfit: Number(value.minimumNetProfit),
       minimumRoiPercent: Number(value.minimumRoiPercent),
       maximumChargesPerTrade: Number(value.maximumChargesPerTrade),
@@ -2766,7 +2766,7 @@ export class TradingSettingsComponent implements OnInit {
 
       riskPercentage: Number(value.riskPercentage),
 
-      maxCapitalPerTrade: Number(value.maxCapitalPerTrade),
+      maxCapitalPerTradePercent: Number(value.maxCapitalPerTradePercent),
 
       maxDailyLoss: Number(value.maxDailyLoss),
 
