@@ -361,6 +361,7 @@ export interface TradingConfiguration {
   confidence: ConfidenceSettings;
 
   reporting: ReportingSettings;
+  allStockAnalysisArchive?: AllStockAnalysisArchiveSettings;
 }
 
 export interface EvaluationSettings {
@@ -629,6 +630,19 @@ export interface FutureTickPredictionSettings {
   minimumObservedTicksForPostEntryGate: number;
   consecutiveAdverseTicksForEarlyExit: number;
   shadowStorage: FutureTickPredictionShadowStorageSettings;
+}
+
+export interface AllStockAnalysisArchiveSettings {
+  enabled: boolean;
+  path: string;
+  samplingIntervalSecondsPerSymbol: number;
+  flushIntervalSeconds: number;
+  maximumBufferedRecords: number;
+  chunkMinutes: number;
+  retentionDays: number;
+  recordStateChanges: boolean;
+  includeConfigurationSnapshot: boolean;
+  recordLoadingCandidates: boolean;
 }
 
 export interface ReportingSettings {

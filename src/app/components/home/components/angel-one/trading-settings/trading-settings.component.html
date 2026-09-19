@@ -2210,6 +2210,49 @@
         <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>
+              <h2>All-Stock Analysis Archive</h2>
+              <p>Store market-scan analysis in compressed files only. Nothing is added to MongoDB.</p>
+            </div>
+          </summary>
+          <div class="card-body grid-2" formGroupName="allStockAnalysisArchive">
+            <label class="toggle-field"><input type="checkbox" formControlName="enabled" /><span>Enable All-Stock Analysis Archive</span></label>
+            <label class="toggle-field"><input type="checkbox" formControlName="recordStateChanges" /><span>Mark State Changes</span></label>
+            <label class="toggle-field"><input type="checkbox" formControlName="includeConfigurationSnapshot" /><span>Include Configuration Snapshot</span></label>
+            <label class="toggle-field"><input type="checkbox" formControlName="recordLoadingCandidates" /><span>Record Loading Candidates</span></label>
+            <div class="field-row">
+              <label class="field-label" for="allStockArchivePath">Archive Path</label>
+              <input id="allStockArchivePath" type="text" formControlName="path" class="field-input" />
+              <small class="field-help">Relative paths are created under the API application directory. Absolute paths are also supported.</small>
+            </div>
+            <div class="field-row">
+              <label class="field-label" for="allStockSamplingInterval">Sampling Interval / Symbol (seconds)</label>
+              <input id="allStockSamplingInterval" type="number" formControlName="samplingIntervalSecondsPerSymbol" class="field-input" min="1" max="300" step="1" />
+            </div>
+            <div class="field-row">
+              <label class="field-label" for="allStockFlushInterval">Flush Interval (seconds)</label>
+              <input id="allStockFlushInterval" type="number" formControlName="flushIntervalSeconds" class="field-input" min="1" max="300" step="1" />
+            </div>
+            <div class="field-row">
+              <label class="field-label" for="allStockBuffer">Maximum Buffered Records</label>
+              <input id="allStockBuffer" type="number" formControlName="maximumBufferedRecords" class="field-input" min="100" max="100000" step="100" />
+            </div>
+            <div class="field-row">
+              <label class="field-label" for="allStockChunkMinutes">Archive Chunk (minutes)</label>
+              <input id="allStockChunkMinutes" type="number" formControlName="chunkMinutes" class="field-input" min="1" max="60" step="1" />
+            </div>
+            <div class="field-row">
+              <label class="field-label" for="allStockRetentionDays">Retention (days)</label>
+              <input id="allStockRetentionDays" type="number" formControlName="retentionDays" class="field-input" min="1" max="3650" step="1" />
+            </div>
+            <div class="field-row field-help-wide">
+              <small class="field-help">Data is sampled from the existing MarketScanner results and written asynchronously as JSON Lines inside GZIP files. Trading and MongoDB writes are not blocked by the archive.</small>
+            </div>
+          </div>
+        </details>
+
+        <details class="settings-card" (toggle)="onAccordionToggle($event)">
+          <summary class="card-header">
+            <div>
               <h2>Additional Reporting Controls</h2>
               <p>Additional thresholds used by reporting and signal analysis</p>
             </div>

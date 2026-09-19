@@ -996,6 +996,19 @@ export class TradingSettingsComponent implements OnInit {
       tradeAnalysisPublicBaseUrl: [''],
     }),
 
+    allStockAnalysisArchive: this.#fb.group({
+      enabled: [false],
+      path: ['TradeAnalysis/AllStocks'],
+      samplingIntervalSecondsPerSymbol: [15, [Validators.min(1), Validators.max(300)]],
+      flushIntervalSeconds: [15, [Validators.min(1), Validators.max(300)]],
+      maximumBufferedRecords: [5000, [Validators.min(100), Validators.max(100000)]],
+      chunkMinutes: [15, [Validators.min(1), Validators.max(60)]],
+      retentionDays: [30, [Validators.min(1), Validators.max(3650)]],
+      recordStateChanges: [false],
+      includeConfigurationSnapshot: [true],
+      recordLoadingCandidates: [true],
+    }),
+
     exit: this.#fb.group({
       atrExitMultiplier: [
         0.4,
@@ -2049,7 +2062,19 @@ export class TradingSettingsComponent implements OnInit {
           tradeAnalyticsPersistenceIntervalSeconds:
             configuration.reporting?.tradeAnalyticsPersistenceIntervalSeconds ?? 5,
         },
-      });
+      allStockAnalysisArchive: {
+        enabled: configuration.allStockAnalysisArchive?.enabled ?? false,
+        path: configuration.allStockAnalysisArchive?.path ?? 'TradeAnalysis/AllStocks',
+        samplingIntervalSecondsPerSymbol: configuration.allStockAnalysisArchive?.samplingIntervalSecondsPerSymbol ?? 15,
+        flushIntervalSeconds: configuration.allStockAnalysisArchive?.flushIntervalSeconds ?? 15,
+        maximumBufferedRecords: configuration.allStockAnalysisArchive?.maximumBufferedRecords ?? 5000,
+        chunkMinutes: configuration.allStockAnalysisArchive?.chunkMinutes ?? 15,
+        retentionDays: configuration.allStockAnalysisArchive?.retentionDays ?? 30,
+        recordStateChanges: configuration.allStockAnalysisArchive?.recordStateChanges ?? false,
+        includeConfigurationSnapshot: configuration.allStockAnalysisArchive?.includeConfigurationSnapshot ?? true,
+        recordLoadingCandidates: configuration.allStockAnalysisArchive?.recordLoadingCandidates ?? true,
+      },
+    });
 
     this.form.patchValue(patch, { emitEvent: false });
 
@@ -3513,6 +3538,18 @@ export class TradingSettingsComponent implements OnInit {
         exitPostSellTickCount: Number(value.reporting?.exitPostSellTickCount ?? 3),
         tradeAnalyticsPersistenceIntervalSeconds: Number(value.reporting?.tradeAnalyticsPersistenceIntervalSeconds ?? 5),
         tradeAnalysisPublicBaseUrl: String(value.reporting?.tradeAnalysisPublicBaseUrl ?? ''),
+      },
+      allStockAnalysisArchive: {
+        enabled: value.allStockAnalysisArchive?.enabled ?? false,
+        path: String(value.allStockAnalysisArchive?.path ?? 'TradeAnalysis/AllStocks'),
+        samplingIntervalSecondsPerSymbol: Number(value.allStockAnalysisArchive?.samplingIntervalSecondsPerSymbol ?? 15),
+        flushIntervalSeconds: Number(value.allStockAnalysisArchive?.flushIntervalSeconds ?? 15),
+        maximumBufferedRecords: Number(value.allStockAnalysisArchive?.maximumBufferedRecords ?? 5000),
+        chunkMinutes: Number(value.allStockAnalysisArchive?.chunkMinutes ?? 15),
+        retentionDays: Number(value.allStockAnalysisArchive?.retentionDays ?? 30),
+        recordStateChanges: value.allStockAnalysisArchive?.recordStateChanges ?? false,
+        includeConfigurationSnapshot: value.allStockAnalysisArchive?.includeConfigurationSnapshot ?? true,
+        recordLoadingCandidates: value.allStockAnalysisArchive?.recordLoadingCandidates ?? true,
       },
     };
 
