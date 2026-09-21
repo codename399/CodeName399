@@ -742,7 +742,6 @@ button[mat-flat-button]:hover {
 }
 
 /* Instrument-type aware trading profiles */
-.instrument-profile-card,
 .profile-selector-grid {
   display: grid;
   grid-template-columns: minmax(220px, 320px) 1fr;
