@@ -127,26 +127,15 @@
         <details class="settings-card instrument-profile-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
             <div>
-              <h2>Instrument Profile</h2>
-              <p>Choose which market segment the engine trades. Each profile keeps its own risk, validation and execution settings.</p>
+              <h2>Equity Profile</h2>
+              <p>Equity-only execution, risk, validation and market settings.</p>
             </div>
           </summary>
 
           <div class="card-body">
-            <div class="profile-selector-grid">
-              <div class="field-row">
-                <label class="field-label" for="instrumentType">Active Instrument Type</label>
-                <select id="instrumentType" formControlName="instrumentType" class="field-input">
-                  @for (item of instrumentTypes; track item.value) {
-                    <option [ngValue]="item.value">{{ item.text }}</option>
-                  }
-                </select>
-              </div>
-
-              <div class="profile-summary">
-                <span class="profile-badge">{{ selectedInstrumentType }}</span>
-                <span class="muted">Existing positions retain their original instrument/execution profile.</span>
-              </div>
+            <div class="profile-summary equity-profile-summary">
+              <span class="profile-badge">Equity</span>
+              <span class="muted">Only NSE/BSE equity instruments are supported.</span>
             </div>
 
             <div class="grid-4 compact-profile-grid">
@@ -207,10 +196,7 @@
             <div class="grid-4 compact-profile-grid">
               <label class="toggle-field"><input type="checkbox" formControlName="allowLong" /><span>Allow Long</span></label>
               <label class="toggle-field"><input type="checkbox" formControlName="allowShort" /><span>Allow Short</span></label>
-              <div class="field-row">
-                <label class="field-label" for="maximumLotsPerTrade">Maximum Lots / Trade</label>
-                <input id="maximumLotsPerTrade" type="number" formControlName="maximumLotsPerTrade" class="field-input" min="0" />
-              </div>
+              
               <div class="field-row">
                 <label class="field-label" for="maximumMarginUtilizationPercent">Max Margin Utilization</label>
                 <div class="input-with-suffix"><input id="maximumMarginUtilizationPercent" type="number" formControlName="maximumMarginUtilizationPercent" class="field-input" min="0" max="100" step="1" /><span class="suffix">%</span></div>
@@ -268,13 +254,7 @@
               <span class="suffix">sec</span>
               </div>
             </div>
-              <div class="field-row">
-              <label class="field-label" for="greeksCacheSeconds">Greeks Cache</label>
-              <div class="input-with-suffix">
-              <input id="greeksCacheSeconds" type="number" formControlName="greeksCacheSeconds" class="field-input" min="1" />
-              <span class="suffix">sec</span>
-              </div>
-            </div>
+              
               <div class="field-row">
               <label class="field-label" for="maximumSpreadPercent">Maximum Spread %</label>
               <div class="input-with-suffix">
@@ -303,233 +283,9 @@
           </div>
         </details>
 
-        @if (isFutures) {
-          <details class="settings-card fno-profile-card" (toggle)="onAccordionToggle($event)">
-            <summary class="card-header"><div><h2>Futures</h2><p>Expiry, OI and futures-specific risk controls.</p></div></summary>
-            <div class="card-body grid-4 compact-profile-grid">
-              <div class="field-row">
-              <label class="field-label">Expiry</label><select formControlName="futuresExpiryType" class="field-input"><option value="NEAR">NEAR</option><option value="NEXT">NEXT</option><option value="FAR">FAR</option></select></div>
-              <div class="field-row">
-              <label class="field-label">Minimum Open Interest</label>
-              <input type="number" formControlName="futuresMinimumOpenInterest" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Minimum OI Change %</label>
-              <input type="number" formControlName="futuresMinimumOIChangePercent" class="field-input" min="0" step="0.1" /></div>
-              <div class="field-row">
-              <label class="field-label">Maximum Daily Loss</label>
-              <input type="number" formControlName="futuresMaximumDailyLoss" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Maximum Daily Trades</label>
-              <input type="number" formControlName="futuresMaximumDailyTrades" class="field-input" min="1" /></div>
-            </div>
-          </details>
-        }
 
-        @if (isOptions) {
-          <details class="settings-card fno-profile-card" (toggle)="onAccordionToggle($event)">
-            <summary class="card-header"><div><h2>Options — Contract Selection</h2><p>CE/PE selection, expiry, liquidity and Greeks.</p></div></summary>
-            <div class="card-body grid-4 compact-profile-grid">
-              <div class="field-row">
-              <label class="field-label">Option Side</label><select formControlName="optionsOptionSide" class="field-input">@for (item of optionSides; track item.value) {<option [ngValue]="item.value">{{ item.text }}</option>}</select></div>
-              <div class="field-row">
-              <label class="field-label">Expiry</label><select formControlName="optionsExpiryType" class="field-input"><option value="NEAR">NEAR</option><option value="NEXT">NEXT</option><option value="FAR">FAR</option></select></div>
-              <div class="field-row">
-              <label class="field-label">Strike Steps From ATM</label>
-              <input type="number" formControlName="optionsStrikeStepsFromAtm" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Contracts / Underlying</label>
-              <input type="number" formControlName="optionsContractsPerUnderlying" class="field-input" min="1" /></div>
-              <div class="field-row">
-              <label class="field-label">Minimum OI</label>
-              <input type="number" formControlName="optionsMinimumOpenInterest" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Minimum Delta</label>
-              <input type="number" formControlName="optionsMinimumDelta" class="field-input" min="0" max="1" step="0.01" /></div>
-              <div class="field-row">
-              <label class="field-label">Maximum Delta</label>
-              <input type="number" formControlName="optionsMaximumDelta" class="field-input" min="0" max="1" step="0.01" /></div>
-              <div class="field-row">
-              <label class="field-label">Maximum |Theta|</label>
-              <input type="number" formControlName="optionsMaximumAbsoluteTheta" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Maximum IV</label>
-              <div class="input-with-suffix">
-              <input type="number" formControlName="optionsMaximumImpliedVolatility" class="field-input" min="0" />
-              <span class="suffix">%</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label">Minimum Gamma</label>
-              <input type="number" formControlName="optionsMinimumGamma" class="field-input" min="0" step="0.0001" /></div>
-              <div class="field-row">
-              <label class="field-label">Minimum Vega</label>
-              <input type="number" formControlName="optionsMinimumVega" class="field-input" min="0" step="0.01" /></div>
-              <div class="field-row">
-              <label class="field-label">Strike Interval</label>
-              <input type="number" formControlName="optionsStrikeInterval" class="field-input" min="0" step="0.05" /></div>
-              <div class="field-row">
-              <label class="field-label">Minimum Option Volume</label>
-              <input type="number" formControlName="optionsMinimumOptionVolume" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Minimum Turnover</label>
-              <input type="number" formControlName="optionsMinimumTurnover" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Minimum Premium</label>
-              <input type="number" formControlName="optionsMinimumPremium" class="field-input" min="0" step="0.01" /></div>
-              <div class="field-row">
-              <label class="field-label">Maximum Premium</label>
-              <input type="number" formControlName="optionsMaximumPremium" class="field-input" min="0" step="0.01" /></div>
-              <div class="field-row">
-              <label class="field-label">Minimum OI Change %</label>
-              <input type="number" formControlName="optionsMinimumOIChangePercent" class="field-input" min="0" step="0.1" /></div>
-              <div class="field-row">
-              <label class="field-label">Max Strike Candidates / Side</label>
-              <input type="number" formControlName="optionsMaximumStrikeCandidatesPerSide" class="field-input" min="1" /></div>
-              <div class="field-row">
-              <label class="field-label">Minimum Call Score</label>
-              <input type="number" formControlName="optionsMinimumCallScore" class="field-input" min="0" max="100" /></div>
-              <div class="field-row">
-              <label class="field-label">Minimum Put Score</label>
-              <input type="number" formControlName="optionsMinimumPutScore" class="field-input" min="0" max="100" /></div>
-              <div class="field-row">
-              <label class="field-label">Minimum PCR</label>
-              <input type="number" formControlName="optionsMinimumPCR" class="field-input" min="0" step="0.01" /></div>
-              <div class="field-row">
-              <label class="field-label">Maximum PCR</label>
-              <input type="number" formControlName="optionsMaximumPCR" class="field-input" min="0" step="0.01" /></div>
-              <div class="field-row">
-              <label class="field-label">Expiry Close</label>
-              <input type="time" formControlName="optionsExpiryMarketCloseTime" class="field-input" /></div>
-              <label class="toggle-field"><input type="checkbox" formControlName="optionsRequireMarketDepth" /><span>Require Market Depth</span></label>
-              <label class="toggle-field"><input type="checkbox" formControlName="optionsRequireFreshGreeks" /><span>Require Fresh Greeks</span></label>
-              <label class="toggle-field"><input type="checkbox" formControlName="optionsUseUnderlyingMultiTimeframeTrend" /><span>Use 30m/5m/1m Underlying Trend</span></label>
-              <label class="toggle-field"><input type="checkbox" formControlName="optionsAllowExpiryDayTrading" /><span>Allow Expiry-Day Trading</span></label>
-            </div>
-          </details>
 
-          <details class="settings-card fno-profile-card" (toggle)="onAccordionToggle($event)">
-            <summary class="card-header"><div><h2>Options — Long / Short Mode</h2><p>Control premium buying and naked writing independently.</p></div></summary>
-            <div class="card-body grid-4 compact-profile-grid">
-              <div class="field-row">
-              <label class="field-label">Trade Mode</label><select formControlName="optionsTradeMode" class="field-input">@for (item of optionTradeModes; track item.value) {<option [ngValue]="item.value">{{ item.text }}</option>}</select></div>
-              <label class="toggle-field"><input type="checkbox" formControlName="optionsAllowNakedWriting" /><span>Allow Naked Writing</span></label>
-              <label class="toggle-field"><input type="checkbox" formControlName="optionsAllowNakedCallWriting" /><span>Allow Naked CE</span></label>
-              <label class="toggle-field"><input type="checkbox" formControlName="optionsAllowNakedPutWriting" /><span>Allow Naked PE</span></label>
-              <label class="toggle-field"><input type="checkbox" formControlName="optionsAllowNakedWritingOnExpiryDay" /><span>Allow Naked Writing on Expiry</span></label>
-              <label class="toggle-field"><input type="checkbox" formControlName="optionsAllowNakedStrangle" /><span>Allow Naked Strangle</span></label>
-              <label class="toggle-field"><input type="checkbox" formControlName="optionsAllowNakedStraddle" /><span>Allow Naked Straddle</span></label>
-              <div class="field-row">
-              <label class="field-label">Short Min Delta</label>
-              <input type="number" formControlName="optionsShortMinimumDelta" class="field-input" min="-1" max="1" step="0.01" /></div>
-              <div class="field-row">
-              <label class="field-label">Short Max Delta</label>
-              <input type="number" formControlName="optionsShortMaximumDelta" class="field-input" min="-1" max="1" step="0.01" /></div>
-              <div class="field-row">
-              <label class="field-label">Short Min IV</label>
-              <input type="number" formControlName="optionsShortMinimumIV" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Short Max IV</label>
-              <input type="number" formControlName="optionsShortMaximumIV" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Short Min |Theta|</label>
-              <input type="number" formControlName="optionsShortMinimumThetaAbs" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Short Max |Theta|</label>
-              <input type="number" formControlName="optionsShortMaximumThetaAbs" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Short Min Premium</label>
-              <input type="number" formControlName="optionsShortMinimumPremium" class="field-input" min="0" step="0.01" /></div>
-              <div class="field-row">
-              <label class="field-label">Short Max Premium</label>
-              <input type="number" formControlName="optionsShortMaximumPremium" class="field-input" min="0" step="0.01" /></div>
-              <div class="field-row">
-              <label class="field-label">Short CE Minimum Score</label>
-              <input type="number" formControlName="optionsMinimumShortCallScore" class="field-input" min="0" max="100" /></div>
-              <div class="field-row">
-              <label class="field-label">Short PE Minimum Score</label>
-              <input type="number" formControlName="optionsMinimumShortPutScore" class="field-input" min="0" max="100" /></div>
-              <div class="field-row">
-              <label class="field-label">Max Naked Risk / Trade</label>
-              <input type="number" formControlName="optionsMaximumNakedOptionRiskPerTrade" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Max Naked Lots / Trade</label>
-              <input type="number" formControlName="optionsMaximumNakedOptionLotsPerTrade" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Margin Safety Multiplier</label>
-              <input type="number" formControlName="optionsNakedOptionMarginSafetyMultiplier" class="field-input" min="1" step="0.05" /></div>
-              <div class="field-row">
-              <label class="field-label">Max Underlying Delta</label>
-              <input type="number" formControlName="optionsMaximumUnderlyingDeltaExposure" class="field-input" min="0" /></div>
-            </div>
-          </details>
 
-          <details class="settings-card fno-profile-card" (toggle)="onAccordionToggle($event)">
-            <summary class="card-header"><div><h2>Naked Options — Stress & Emergency Risk</h2><p>Hard limits for short CE/PE exposure and emergency exits.</p></div></summary>
-            <div class="card-body grid-4 compact-profile-grid">
-              <div class="field-row">
-              <label class="field-label">Expiry Risk Multiplier</label>
-              <input type="number" formControlName="optionsMaximumExpiryDayRiskMultiplier" class="field-input" min="0" step="0.05" /></div>
-              <div class="field-row">
-              <label class="field-label">Underlying Stress %</label>
-              <input type="number" formControlName="optionsNakedStressUnderlyingMovePercent" class="field-input" min="0" step="0.25" /></div>
-              <div class="field-row">
-              <label class="field-label">IV Stress Increase %</label>
-              <input type="number" formControlName="optionsNakedStressIVIncreasePercent" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Max Stress Loss / Trade</label>
-              <input type="number" formControlName="optionsMaximumNakedStressLossPerTrade" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Max Underlying Stress Loss</label>
-              <input type="number" formControlName="optionsMaximumUnderlyingStressLoss" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Max Open Delta</label>
-              <input type="number" formControlName="optionsMaximumOpenDeltaExposure" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Max Open Gamma</label>
-              <input type="number" formControlName="optionsMaximumOpenGammaExposure" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Max Open Vega</label>
-              <input type="number" formControlName="optionsMaximumOpenVegaExposure" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Max Short Lots / Expiry</label>
-              <input type="number" formControlName="optionsMaximumShortLotsPerExpiry" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Max Short Lots / Underlying</label>
-              <input type="number" formControlName="optionsMaximumShortLotsPerUnderlying" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Max Short Lots / Strike</label>
-              <input type="number" formControlName="optionsMaximumShortLotsPerStrike" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Max Short Premium Exposure</label>
-              <input type="number" formControlName="optionsMaximumShortPremiumExposure" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Emergency Delta</label>
-              <input type="number" formControlName="optionsEmergencyDeltaExposure" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Emergency Gamma</label>
-              <input type="number" formControlName="optionsEmergencyGammaExposure" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Emergency Vega</label>
-              <input type="number" formControlName="optionsEmergencyVegaExposure" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Emergency IV Increase %</label>
-              <input type="number" formControlName="optionsEmergencyIVIncreasePercent" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Emergency Stress Loss</label>
-              <input type="number" formControlName="optionsEmergencyStressLoss" class="field-input" min="0" /></div>
-              <div class="field-row">
-              <label class="field-label">Emergency Margin Utilization %</label>
-              <input type="number" formControlName="optionsEmergencyMarginUtilizationPercent" class="field-input" min="0" max="100" /></div>
-              <div class="field-row">
-              <label class="field-label">Risk Monitor Interval</label>
-              <div class="input-with-suffix">
-              <input type="number" formControlName="optionsNakedRiskMonitorSeconds" class="field-input" min="1" />
-              <span class="suffix">sec</span>
-              </div>
-            </div>
-            </div>
-          </details>
-        }
 
         <details class="settings-card" (toggle)="onAccordionToggle($event)">
           <summary class="card-header">
@@ -2866,12 +2622,7 @@
               <span class="suffix">₹</span>
               </div>
             </div>
-              <div class="field-row">
-              <label class="field-label" for="maximumTotalUnderlyingDeltaExposure">Maximum Total Underlying Delta Exposure</label>
-              <div class="input-with-suffix">
-              <input id="maximumTotalUnderlyingDeltaExposure" type="number" formControlName="maximumTotalUnderlyingDeltaExposure" class="field-input" step="0.01" />
-              </div>
-            </div>
+              
               <div class="field-row">
               <label class="field-label" for="globalMaximumMarginUtilizationPercent">Global Maximum Margin Utilization Percent</label>
               <div class="input-with-suffix">
@@ -2913,13 +2664,7 @@
               <span class="suffix">/sec</span>
               </div>
             </div>
-              <div class="field-row">
-              <label class="field-label" for="nakedRiskMonitorIntervalSeconds">Naked Risk Monitor Interval Seconds</label>
-              <div class="input-with-suffix">
-              <input id="nakedRiskMonitorIntervalSeconds" type="number" formControlName="nakedRiskMonitorIntervalSeconds" class="field-input" step="0.01" />
-              <span class="suffix">sec</span>
-              </div>
-            </div>
+              
               <div class="field-row">
               <label class="field-label" for="orderIntentRecoveryIntervalSeconds">Order Intent Recovery Interval Seconds</label>
               <div class="input-with-suffix">
@@ -2990,33 +2735,10 @@
               <span class="suffix">sec</span>
               </div>
             </div>
-              <div class="field-row">
-              <label class="field-label" for="paperFuturesMarginRate">Paper Futures Margin Rate</label>
-              <div class="input-with-suffix">
-              <input id="paperFuturesMarginRate" type="number" formControlName="paperFuturesMarginRate" class="field-input" step="0.01" />
-              <span class="suffix">%</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="paperOptionsCapitalRate">Paper Options Capital Rate</label>
-              <div class="input-with-suffix">
-              <input id="paperOptionsCapitalRate" type="number" formControlName="paperOptionsCapitalRate" class="field-input" step="0.01" />
-              <span class="suffix">%</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="paperNakedOptionMarginRate">Paper Naked Option Margin Rate</label>
-              <div class="input-with-suffix">
-              <input id="paperNakedOptionMarginRate" type="number" formControlName="paperNakedOptionMarginRate" class="field-input" step="0.01" />
-              <span class="suffix">%</span>
-              </div>
-            </div>
-              <div class="field-row">
-              <label class="field-label" for="paperNakedOptionMarginSafetyMultiplier">Paper Naked Option Margin Safety Multiplier</label>
-              <div class="input-with-suffix">
-              <input id="paperNakedOptionMarginSafetyMultiplier" type="number" formControlName="paperNakedOptionMarginSafetyMultiplier" class="field-input" step="0.01" />
-              </div>
-            </div>
+              
+              
+              
+              
               <div class="field-row">
               <label class="field-label" for="capitalAllocationBaseMultiplier">Capital Allocation Base Multiplier</label>
               <div class="input-with-suffix">
@@ -3071,21 +2793,13 @@
 <label class="toggle-field"><input type="checkbox" formControlName="enableGlobalRiskLimits" /><span>Enable Global Risk Limits</span></label>
 <label class="toggle-field"><input type="checkbox" formControlName="includeUnrealizedPnlInDailyLoss" /><span>Include Unrealized Pnl In Daily Loss</span></label>
 <label class="toggle-field"><input type="checkbox" formControlName="requireClosedHigherTimeframeCandles" /><span>Require Closed Higher Timeframe Candles</span></label>
-<label class="toggle-field"><input type="checkbox" formControlName="enableOptionChainAnalytics" /><span>Enable Option Chain Analytics</span></label>
-<label class="toggle-field"><input type="checkbox" formControlName="enablePutCallRatio" /><span>Enable Put Call Ratio</span></label>
-<label class="toggle-field"><input type="checkbox" formControlName="enableOIBuildup" /><span>Enable OIBuildup</span></label>
 <label class="toggle-field"><input type="checkbox" formControlName="enablePaperMarginSimulation" /><span>Enable Paper Margin Simulation</span></label>
 <label class="toggle-field"><input type="checkbox" formControlName="rejectDuplicateOrderIntent" /><span>Reject Duplicate Order Intent</span></label>
 <label class="toggle-field"><input type="checkbox" formControlName="enableScripConsentForCashOrders" /><span>Enable Scrip Consent For Cash Orders</span></label>
             </div>
             <h3>Market Timing</h3>
             <div class="grid-4 compact-profile-grid">
-              <div class="field-row">
-              <label class="field-label" for="futuresOptionsMarketCloseTime">Futures Options Market Close Time</label>
-              <div class="input-with-suffix">
-              <input id="futuresOptionsMarketCloseTime" type="time" formControlName="futuresOptionsMarketCloseTime" class="field-input" />
-              </div>
-            </div>
+              
               <div class="field-row">
               <label class="field-label" for="intradayEntryCutoffTime">Intraday Entry Cutoff Time</label>
               <div class="input-with-suffix">
@@ -3098,12 +2812,7 @@
               <input id="equityMisAutoSquareOffTime" type="time" formControlName="equityMisAutoSquareOffTime" class="field-input" />
               </div>
             </div>
-              <div class="field-row">
-              <label class="field-label" for="futuresOptionsAutoSquareOffTime">Futures Options Auto Square Off Time</label>
-              <div class="input-with-suffix">
-              <input id="futuresOptionsAutoSquareOffTime" type="time" formControlName="futuresOptionsAutoSquareOffTime" class="field-input" />
-              </div>
-            </div>
+              
               <div class="field-row">
               <label class="field-label" for="roboAutoSquareOffTime">Robo Auto Square Off Time</label>
               <div class="input-with-suffix">

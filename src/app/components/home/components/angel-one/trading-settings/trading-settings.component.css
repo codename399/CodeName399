@@ -743,10 +743,6 @@ button[mat-flat-button]:hover {
 
 /* Instrument-type aware trading profiles */
 .instrument-profile-card,
-.fno-profile-card {
-  border-left: 3px solid var(--accent-color, #4f46e5);
-}
-
 .profile-selector-grid {
   display: grid;
   grid-template-columns: minmax(220px, 320px) 1fr;
@@ -780,11 +776,6 @@ button[mat-flat-button]:hover {
 
 .compact-profile-grid {
   align-items: start;
-}
-
-.fno-profile-card .card-body {
-  max-height: 70vh;
-  overflow: auto;
 }
 
 .muted {

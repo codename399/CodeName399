@@ -103,18 +103,10 @@ export class AngelOneService {
     return this.configuration()?.strategy;
   }
 
-  get selectedInstrumentType(): string {
-    return this.configuration()?.instrumentType ?? 'Equity';
-  }
+  get selectedInstrumentType(): string { return 'Equity'; }
 
   get activeInstrumentSettings() {
-    const configuration = this.configuration();
-    if (!configuration) return undefined;
-    switch (configuration.instrumentType) {
-      case 'Futures': return configuration.futures;
-      case 'Options': return configuration.options;
-      default: return configuration.equity;
-    }
+    return this.configuration()?.equity;
   }
 
   get riskPercentage(): number {

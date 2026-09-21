@@ -121,17 +121,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly columnDefinitions = [
     { key: 'star', label: '⭐', defaultVisible: true },
     { key: 'symbol', label: 'Symbol', defaultVisible: true },
-    { key: 'instrumentType', label: 'Type', defaultVisible: true },
     { key: 'exchange', label: 'Exchange', defaultVisible: false },
-    { key: 'optionContract', label: 'Option Contract', defaultVisible: false },
-    { key: 'oi', label: 'OI', defaultVisible: false },
-    { key: 'oiChange', label: 'OI Change %', defaultVisible: false },
-    { key: 'pcr', label: 'PCR', defaultVisible: false },
-    { key: 'iv', label: 'IV', defaultVisible: false },
-    { key: 'delta', label: 'Delta', defaultVisible: false },
-    { key: 'gamma', label: 'Gamma', defaultVisible: false },
-    { key: 'theta', label: 'Theta', defaultVisible: false },
-    { key: 'vega', label: 'Vega', defaultVisible: false },
     { key: 'token', label: 'Token', defaultVisible: false },
     { key: 'prevClose', label: 'Prev Close', defaultVisible: true },
     { key: 'vwap', label: 'VWAP', defaultVisible: false },
@@ -234,22 +224,9 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
     () => this.configuration()?.enableNotification ?? false,
   );
 
-  activeInstrumentType = computed(
-    () => this.configuration()?.instrumentType ?? 'Equity',
-  );
+  activeInstrumentType = computed(() => 'Equity' as const);
 
-  activeInstrumentSettings = computed(() => {
-    const config = this.configuration();
-    if (!config) return undefined;
-    switch (config.instrumentType) {
-      case 'Futures':
-        return config.futures;
-      case 'Options':
-        return config.options;
-      default:
-        return config.equity;
-    }
-  });
+  activeInstrumentSettings = computed(() => this.configuration()?.equity);
 
   riskPercentage = computed(
     () => this.activeInstrumentSettings()?.riskPercentage ?? 0,
@@ -257,7 +234,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
 
   maxDailyTrades = computed(() => {
     const settings = this.activeInstrumentSettings() as any;
-    return settings?.maximumDailyTrades ?? 0;
+    return settings?.maximumOpenPositions ?? 0;
   });
 
   // ======================================================
@@ -638,16 +615,10 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   // ======================================================
 
   private normalizeGainerForDisplay(stock: Gainer): Gainer {
-    const instrumentType = String(stock.instrumentType ?? 'Equity')
-      .trim()
-      .toLowerCase();
-    const isEquity = instrumentType === '' || instrumentType === 'equity';
     const signal = String(stock.signal ?? '').trim().toUpperCase();
-
-    if (isEquity && !stock.isOwned && signal === 'SELL') {
+    if (!stock.isOwned && signal === 'SELL') {
       return { ...stock, signal: 'HOLD' };
     }
-
     return stock;
   }
 

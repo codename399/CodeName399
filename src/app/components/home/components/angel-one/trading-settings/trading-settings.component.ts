@@ -16,10 +16,7 @@ import { catchError, finalize, of } from 'rxjs';
 import { ToastService } from '../../../../../services/toast.service';
 import {
   TradingConfiguration,
-  InstrumentType,
   InstrumentTradingSettings,
-  FuturesTradingSettings,
-  OptionsTradingSettings,
   TradingStrictnessProfile,
 } from '../../../models/trading-settings';
 import { TradingStrategy } from '../../../models/enum/trading-strategy';
@@ -65,6 +62,11 @@ export class TradingSettingsComponent implements OnInit {
     { value: 'VeryStrict', text: 'Very Strict — Maximum Selectivity' },
   ];
 
+  readonly availableExchanges = [
+    { value: 'NSE', text: 'NSE' },
+    { value: 'BSE', text: 'BSE' },
+  ];
+
   readonly strategies = [
     {
       value: 0,
@@ -77,102 +79,12 @@ export class TradingSettingsComponent implements OnInit {
     },
   ];
 
-  readonly instrumentTypes: { value: InstrumentType; text: string }[] = [
-    { value: 'Equity', text: 'Equity' },
-    { value: 'Futures', text: 'Futures' },
-    { value: 'Options', text: 'Options' },
-  ];
 
-  /** Exchanges supported by each instrument profile. */
-  readonly exchangeOptions: Record<
-    InstrumentType,
-    { value: string; text: string }[]
-  > = {
-    Equity: [
-      { value: 'NSE', text: 'NSE' },
-      { value: 'BSE', text: 'BSE' },
-    ],
-    Futures: [
-      { value: 'NFO', text: 'NFO' },
-      { value: 'BFO', text: 'BFO' },
-      { value: 'MCX', text: 'MCX' },
-      { value: 'CDS', text: 'CDS' },
-    ],
-    Options: [
-      { value: 'NFO', text: 'NFO' },
-      { value: 'BFO', text: 'BFO' },
-      { value: 'MCX', text: 'MCX' },
-      { value: 'CDS', text: 'CDS' },
-    ],
-  };
+  get isEquity(): boolean { return true; }
 
-  get availableExchanges(): { value: string; text: string }[] {
-    return (
-      this.exchangeOptions[this.selectedInstrumentType] ??
-      this.exchangeOptions.Equity
-    );
-  }
-
-  private defaultExchange(type: InstrumentType): string {
-    return type === 'Equity' ? 'NSE' : 'NFO';
-  }
-
-  private isExchangeAllowed(type: InstrumentType, exchange: unknown): boolean {
-    const value = String(exchange ?? '')
-      .trim()
-      .toUpperCase();
-    return this.exchangeOptions[type].some((option) => option.value === value);
-  }
-
-  private normalizeExchange(type: InstrumentType, exchange: unknown): string {
-    const value = String(exchange ?? '')
-      .trim()
-      .toUpperCase();
-    return this.isExchangeAllowed(type, value)
-      ? value
-      : this.defaultExchange(type);
-  }
-
-  readonly optionSides = [
-    { value: 'Both', text: 'CE + PE' },
-    { value: 'Call', text: 'Call (CE)' },
-    { value: 'Put', text: 'Put (PE)' },
-  ];
-
-  readonly optionTradeModes = [
-    { value: 'Both', text: 'Long + Naked Short' },
-    { value: 'LongOnly', text: 'Long Premium Only' },
-    { value: 'ShortOnly', text: 'Naked Writing Only' },
-  ];
-
-  private profileDrafts: Partial<
-    Record<InstrumentType, InstrumentTradingSettings>
-  > = {};
-  private activeInstrumentType: InstrumentType = 'Equity';
-
-  get selectedInstrumentType(): InstrumentType {
-    return (
-      (this.form?.controls?.instrumentType?.value as InstrumentType) ?? 'Equity'
-    );
-  }
-
-  get isEquity(): boolean {
-    return this.selectedInstrumentType === 'Equity';
-  }
-
-  get isFutures(): boolean {
-    return this.selectedInstrumentType === 'Futures';
-  }
-
-  get isOptions(): boolean {
-    return this.selectedInstrumentType === 'Options';
-  }
 
   get isMomentum(): boolean {
-    return (
-      this.isEquity &&
-      Number(this.form?.controls?.strategy?.value) === TradingStrategy.Momentum
-    );
+    return Number(this.form?.controls?.strategy?.value) === TradingStrategy.Momentum;
   }
 
   strategyName(
@@ -208,7 +120,6 @@ export class TradingSettingsComponent implements OnInit {
 
   get isPullback(): boolean {
     return (
-      this.isEquity &&
       Number(this.form?.controls?.strategy?.value) === TradingStrategy.Pullback
     );
   }
@@ -225,7 +136,6 @@ export class TradingSettingsComponent implements OnInit {
 
     strategy: [1, Validators.required],
 
-    instrumentType: ['Equity' as InstrumentType, Validators.required],
 
     exchange: ['NSE', Validators.required],
     productType: ['INTRADAY', Validators.required],
@@ -247,96 +157,12 @@ export class TradingSettingsComponent implements OnInit {
     maximumSpreadAmount: [5, Validators.required],
     minimumBid: [0, Validators.required],
     minimumAsk: [0, Validators.required],
-    greeksCacheSeconds: [15, Validators.required],
     maximumOpenPositions: [3, Validators.required],
     maximumRiskPerUnderlying: [2500, Validators.required],
     maximumPositionsPerUnderlying: [1, Validators.required],
-    maximumLotsPerTrade: [0, Validators.required],
     maximumMarginUtilizationPercent: [70, Validators.required],
     forceSquareOffBufferMinutes: [15, Validators.required],
 
-    futuresExpiryType: ['NEAR'],
-    futuresMinimumOpenInterest: [0],
-    futuresMinimumOIChangePercent: [0],
-    futuresMaximumDailyLoss: [3000],
-    futuresMaximumDailyTrades: [5],
-
-    optionsOptionSide: ['Both'],
-    optionsExpiryType: ['NEAR'],
-    optionsStrikeStepsFromAtm: [1],
-    optionsContractsPerUnderlying: [4],
-    optionsMinimumOpenInterest: [0],
-    optionsMinimumDelta: [0.25],
-    optionsMaximumDelta: [0.8],
-    optionsMaximumAbsoluteTheta: [1000],
-    optionsMaximumImpliedVolatility: [100],
-    optionsMinimumGamma: [0],
-    optionsMinimumVega: [0],
-    optionsStrikeInterval: [0],
-    optionsMinimumOptionVolume: [0],
-    optionsMinimumTurnover: [0],
-    optionsMinimumPremium: [0],
-    optionsMaximumPremium: [999999999],
-    optionsMinimumOIChangePercent: [0],
-    optionsAllowExpiryDayTrading: [true],
-    optionsMinimumMinutesBeforeExpiry: [30],
-    optionsMaximumExpiryDayIV: [100],
-    optionsMaximumDailyLoss: [3000],
-    optionsMaximumDailyTrades: [5],
-    optionsExpiryMarketCloseTime: ['15:40'],
-    optionsRequireMarketDepth: [true],
-    optionsMaximumBidAskSpreadPercent: [1],
-    optionsMaximumBidAskSpreadAmount: [5],
-    optionsMinimumOptionTurnover: [0],
-    optionsRequireFreshGreeks: [true],
-    optionsGreeksFreshnessSeconds: [15],
-    optionsMaximumStrikeCandidatesPerSide: [3],
-    optionsMinimumCallScore: [75],
-    optionsMinimumPutScore: [75],
-    optionsMinimumPCR: [0],
-    optionsMaximumPCR: [999999999],
-    optionsUseUnderlyingMultiTimeframeTrend: [true],
-    optionsTradeMode: ['Both'],
-    optionsAllowNakedWriting: [true],
-    optionsAllowNakedCallWriting: [true],
-    optionsAllowNakedPutWriting: [true],
-    optionsAllowNakedWritingOnExpiryDay: [false],
-    optionsShortMinimumDelta: [0.1],
-    optionsShortMaximumDelta: [0.6],
-    optionsShortMinimumIV: [0],
-    optionsShortMaximumIV: [100],
-    optionsShortMinimumThetaAbs: [0],
-    optionsShortMaximumThetaAbs: [1000],
-    optionsShortMinimumPremium: [0],
-    optionsShortMaximumPremium: [999999999],
-    optionsMinimumShortCallScore: [75],
-    optionsMinimumShortPutScore: [75],
-    optionsMaximumNakedOptionRiskPerTrade: [5000],
-    optionsMaximumNakedOptionLotsPerTrade: [2],
-    optionsNakedOptionMarginSafetyMultiplier: [1.2],
-    optionsMaximumUnderlyingDeltaExposure: [750],
-    optionsMaximumExpiryDayRiskMultiplier: [0.5],
-    optionsNakedStressUnderlyingMovePercent: [3],
-    optionsNakedStressIVIncreasePercent: [10],
-    optionsMaximumNakedStressLossPerTrade: [5000],
-    optionsMaximumUnderlyingStressLoss: [7500],
-    optionsMaximumOpenDeltaExposure: [1000],
-    optionsMaximumOpenGammaExposure: [100],
-    optionsMaximumOpenVegaExposure: [1000],
-    optionsMaximumShortLotsPerExpiry: [5],
-    optionsMaximumShortLotsPerUnderlying: [8],
-    optionsMaximumShortLotsPerStrike: [2],
-    optionsMaximumShortPremiumExposure: [100000],
-    optionsAllowNakedStrangle: [false],
-    optionsAllowNakedStraddle: [false],
-    optionsEmergencyDeltaExposure: [1000],
-    optionsEmergencyGammaExposure: [100],
-    optionsEmergencyVegaExposure: [1000],
-    optionsEmergencyIVIncreasePercent: [25],
-    optionsEmergencyStressLoss: [7500],
-    optionsEmergencyMarginUtilizationPercent: [85],
-    optionsNakedRiskMonitorSeconds: [5],
-    optionsMaximumRiskPerTrade: [0],
 
     riskPercentage: [
       2,
@@ -481,10 +307,8 @@ export class TradingSettingsComponent implements OnInit {
 
     maxBrokerFailuresBeforeKillSwitch: [5],
     brokerFailureWindowMinutes: [2],
-    futuresOptionsMarketCloseTime: ['15:40'],
     intradayEntryCutoffTime: ['15:20'],
     equityMisAutoSquareOffTime: ['15:10'],
-    futuresOptionsAutoSquareOffTime: ['15:20'],
     roboAutoSquareOffTime: ['15:05'],
     casTransitionStart: ['15:15'],
     casOrderEntryStart: ['15:20'],
@@ -495,27 +319,18 @@ export class TradingSettingsComponent implements OnInit {
     casPostCloseEnd: ['16:00'],
     casPriceBandPercent: [3],
     maximumTotalOpenRisk: [10000],
-    maximumTotalUnderlyingDeltaExposure: [2000],
     emergencyMarginUtilizationPercent: [85],
     enableTradingKillSwitchPersistence: [true],
     enableGlobalRiskLimits: [true],
     riskReservationSeconds: [10],
     includeUnrealizedPnlInDailyLoss: [true],
     requireClosedHigherTimeframeCandles: [true],
-    enableOptionChainAnalytics: [true],
-    enablePutCallRatio: [true],
-    enableOIBuildup: [true],
     enablePaperMarginSimulation: [true],
-    paperFuturesMarginRate: [0.15],
-    paperOptionsCapitalRate: [1],
-    paperNakedOptionMarginRate: [0.03],
-    paperNakedOptionMarginSafetyMultiplier: [1.2],
     quoteMaxTokensPerRequest: [50],
     quoteRequestsPerSecond: [1],
     maximumSlippagePercent: [0.5],
     rejectDuplicateOrderIntent: [true],
     enableScripConsentForCashOrders: [true],
-    nakedRiskMonitorIntervalSeconds: [5],
     orderIntentRecoveryIntervalSeconds: [5],
     orderIntentRecoveryInitialDelaySeconds: [2],
     orderIntentUnknownOrderExpiryMinutes: [2],
@@ -1109,12 +924,6 @@ export class TradingSettingsComponent implements OnInit {
       }
     });
 
-    this.form.controls.instrumentType.valueChanges.subscribe((value) => {
-      if (value) {
-        this.onInstrumentTypeChanged(value as InstrumentType);
-      }
-    });
-
     this.form.controls.strategy.valueChanges.subscribe(() => {
       // Strategy visibility is derived from the current form value. Mark the form dirty
       // because changing strategy changes which strategy-specific settings are active.
@@ -1373,7 +1182,6 @@ export class TradingSettingsComponent implements OnInit {
 
   private patchForm(configuration: TradingConfiguration): void {
     const patch = this.removeNullishValues({
-        instrumentType: configuration.instrumentType ?? 'Equity',
 
         enableAutoTrading: configuration.enableAutoTrading,
 
@@ -1406,10 +1214,8 @@ export class TradingSettingsComponent implements OnInit {
 
         maxBrokerFailuresBeforeKillSwitch: configuration.maxBrokerFailuresBeforeKillSwitch ?? 5,
         brokerFailureWindowMinutes: configuration.brokerFailureWindowMinutes ?? 2,
-        futuresOptionsMarketCloseTime: this.toTimeInput(this.toTimeInput(configuration.futuresOptionsMarketCloseTime)),
         intradayEntryCutoffTime: this.toTimeInput(configuration.intradayEntryCutoffTime),
         equityMisAutoSquareOffTime: this.toTimeInput(configuration.equityMisAutoSquareOffTime),
-        futuresOptionsAutoSquareOffTime: this.toTimeInput(configuration.futuresOptionsAutoSquareOffTime),
         roboAutoSquareOffTime: this.toTimeInput(configuration.roboAutoSquareOffTime),
         casTransitionStart: this.toTimeInput(configuration.casTransitionStart),
         casOrderEntryStart: this.toTimeInput(configuration.casOrderEntryStart),
@@ -1420,7 +1226,6 @@ export class TradingSettingsComponent implements OnInit {
         casPostCloseEnd: this.toTimeInput(configuration.casPostCloseEnd),
         casPriceBandPercent: configuration.casPriceBandPercent ?? 3,
         maximumTotalOpenRisk: configuration.maximumTotalOpenRisk ?? 10000,
-        maximumTotalUnderlyingDeltaExposure: configuration.maximumTotalUnderlyingDeltaExposure ?? 2000,
         maximumMarginUtilizationPercent: configuration.maximumMarginUtilizationPercent ?? 70,
         emergencyMarginUtilizationPercent: configuration.emergencyMarginUtilizationPercent ?? 85,
         enableTradingKillSwitchPersistence: configuration.enableTradingKillSwitchPersistence ?? true,
@@ -1428,20 +1233,12 @@ export class TradingSettingsComponent implements OnInit {
         riskReservationSeconds: configuration.riskReservationSeconds ?? 10,
         includeUnrealizedPnlInDailyLoss: configuration.includeUnrealizedPnlInDailyLoss ?? true,
         requireClosedHigherTimeframeCandles: configuration.requireClosedHigherTimeframeCandles ?? true,
-        enableOptionChainAnalytics: configuration.enableOptionChainAnalytics ?? true,
-        enablePutCallRatio: configuration.enablePutCallRatio ?? true,
-        enableOIBuildup: configuration.enableOIBuildup ?? true,
         enablePaperMarginSimulation: configuration.enablePaperMarginSimulation ?? true,
-        paperFuturesMarginRate: configuration.paperFuturesMarginRate ?? 0.15,
-        paperOptionsCapitalRate: configuration.paperOptionsCapitalRate ?? 1,
-        paperNakedOptionMarginRate: configuration.paperNakedOptionMarginRate ?? 0.03,
-        paperNakedOptionMarginSafetyMultiplier: configuration.paperNakedOptionMarginSafetyMultiplier ?? 1.2,
         quoteMaxTokensPerRequest: configuration.quoteMaxTokensPerRequest ?? 50,
         quoteRequestsPerSecond: configuration.quoteRequestsPerSecond ?? 1,
         maximumSlippagePercent: configuration.maximumSlippagePercent ?? 0.5,
         rejectDuplicateOrderIntent: configuration.rejectDuplicateOrderIntent ?? true,
         enableScripConsentForCashOrders: configuration.enableScripConsentForCashOrders ?? true,
-        nakedRiskMonitorIntervalSeconds: configuration.nakedRiskMonitorIntervalSeconds ?? 5,
         orderIntentRecoveryIntervalSeconds: configuration.orderIntentRecoveryIntervalSeconds ?? 5,
         orderIntentRecoveryInitialDelaySeconds: configuration.orderIntentRecoveryInitialDelaySeconds ?? 2,
         orderIntentUnknownOrderExpiryMinutes: configuration.orderIntentUnknownOrderExpiryMinutes ?? 2,
@@ -2078,26 +1875,6 @@ export class TradingSettingsComponent implements OnInit {
 
     this.form.patchValue(patch, { emitEvent: false });
 
-    this.profileDrafts = {
-      Equity: this.normalizeProfile(
-        configuration.equity ??
-          this.buildProfileFromLegacy(configuration, 'Equity'),
-        'Equity',
-      ),
-      Futures: this.normalizeProfile(
-        configuration.futures ??
-          this.buildProfileFromLegacy(configuration, 'Futures'),
-        'Futures',
-      ) as FuturesTradingSettings,
-      Options: this.normalizeProfile(
-        configuration.options ??
-          this.buildProfileFromLegacy(configuration, 'Options'),
-        'Options',
-      ) as OptionsTradingSettings,
-    };
-
-    this.patchActiveProfile(this.selectedInstrumentType);
-    this.activeInstrumentType = this.selectedInstrumentType;
     this.applyTradingStrictnessProfile(
       (configuration.tradingStrictnessProfile ??
         'VeryLoose') as TradingStrictnessProfile,
@@ -2109,502 +1886,49 @@ export class TradingSettingsComponent implements OnInit {
   // Helpers
   // ======================================================
 
-  private buildProfileFromLegacy(
-    configuration: TradingConfiguration,
-    type: InstrumentType,
-  ): InstrumentTradingSettings {
-    const source =
-      type === 'Options'
-        ? configuration.options
-        : type === 'Futures'
-          ? configuration.futures
-          : configuration.equity;
-    return {
-      exchange: source?.exchange ?? (type === 'Equity' ? 'NSE' : 'NFO'),
-      productType: source?.productType ?? 'INTRADAY',
-      orderType: source?.orderType ?? 'MARKET',
-      duration: source?.duration ?? 'DAY',
-      minimumPrice:
-        source?.minimumPrice ??
-        configuration.minPrice ??
-        (type === 'Equity' ? 50 : 0),
-      minimumVolume:
-        source?.minimumVolume ??
-        configuration.minVolume ??
-        (type === 'Equity' ? 500000 : 0),
-      atrStopMultiplier: source?.atrStopMultiplier ?? 1.2,
-      atrTargetMultiplier: source?.atrTargetMultiplier ?? 2.4,
-      maximumStopPercent: source?.maximumStopPercent ?? 1.5,
-      minimumStopPercent: source?.minimumStopPercent ?? 0.5,
-      minimumRiskReward: source?.minimumRiskReward ?? 1.5,
-      allowLong: source?.allowLong ?? true,
-      allowShort: source?.allowShort ?? true,
-      riskPercentage:
-        source?.riskPercentage ?? configuration.riskPercentage ?? 2,
-      maxCapitalPerTradePercent:
-        source?.maxCapitalPerTradePercent ?? configuration.maxCapitalPerTradePercent ?? 10,
-      minimumNetProfit:
-        source?.minimumNetProfit ?? configuration.minimumNetProfit ?? 5,
-      minimumRoiPercent:
-        source?.minimumRoiPercent ?? configuration.minimumRoiPercent ?? 0.3,
-      maximumChargesPerTrade:
-        source?.maximumChargesPerTrade ??
-        configuration.maximumChargesPerTrade ??
-        100,
-      minimumConfidence: source?.minimumConfidence ?? 65,
-      minimumFinalScore:
-        source?.minimumFinalScore ??
-        configuration.validation?.minimumFinalScore ??
-        70,
-      exitOrderTimeoutSeconds: source?.exitOrderTimeoutSeconds ?? 10,
-      maxMarketDataAgeSeconds: source?.maxMarketDataAgeSeconds ?? 15,
-      maximumExitRetries: source?.maximumExitRetries ?? 5,
-      maximumSpreadPercent: source?.maximumSpreadPercent ?? 1.5,
-      maximumSpreadAmount: source?.maximumSpreadAmount ?? 5,
-      minimumBid: source?.minimumBid ?? 0,
-      minimumAsk: source?.minimumAsk ?? 0,
-      greeksCacheSeconds: source?.greeksCacheSeconds ?? 15,
-      maximumOpenPositions: source?.maximumOpenPositions ?? 3,
-      maximumRiskPerUnderlying: source?.maximumRiskPerUnderlying ?? 2500,
-      maximumPositionsPerUnderlying: source?.maximumPositionsPerUnderlying ?? 1,
-      maximumLotsPerTrade: source?.maximumLotsPerTrade ?? 0,
-      maximumMarginUtilizationPercent:
-        source?.maximumMarginUtilizationPercent ?? 70,
-      forceSquareOffBuffer: source?.forceSquareOffBuffer ?? '00:15:00',
-      evaluation: source?.evaluation ?? configuration.evaluation,
-      validation: source?.validation ?? configuration.validation,
-    };
+  private normalizeExchange(exchange: unknown): string {
+    const value = String(exchange ?? '').trim().toUpperCase();
+    return value === 'BSE' || value === 'NSE' ? value : 'NSE';
   }
 
-  private normalizeProfile(
-    profile: InstrumentTradingSettings,
-    type: InstrumentType,
-  ): InstrumentTradingSettings {
-    const base = {
-      exchange: this.defaultExchange(type),
-      productType: 'INTRADAY',
-      orderType: 'MARKET',
-      duration: 'DAY',
-      minimumPrice: type === 'Equity' ? 50 : 0,
-      minimumVolume: type === 'Equity' ? 500000 : 0,
-      atrStopMultiplier: 1.2,
-      atrTargetMultiplier: 2.4,
-      maximumStopPercent: 1.5,
-      minimumStopPercent: 0.5,
-      minimumRiskReward: 1.5,
-      allowLong: true,
-      allowShort: true,
-      riskPercentage: 2,
-      maxCapitalPerTradePercent: 10,
-      minimumNetProfit: 5,
-      minimumRoiPercent: 0.3,
-      maximumChargesPerTrade: 100,
-      minimumConfidence: 65,
-      minimumFinalScore: 70,
-      exitOrderTimeoutSeconds: 10,
-      maxMarketDataAgeSeconds: 15,
-      maximumExitRetries: 5,
-      maximumSpreadPercent: 1.5,
-      maximumSpreadAmount: 5,
-      minimumBid: 0,
-      minimumAsk: 0,
-      greeksCacheSeconds: 15,
-      maximumOpenPositions: 3,
-      maximumRiskPerUnderlying: 2500,
-      maximumPositionsPerUnderlying: 1,
-      maximumLotsPerTrade: 0,
-      maximumMarginUtilizationPercent: 70,
-      forceSquareOffBuffer: '00:15:00',
-    };
-    // API instrument profiles are intentionally sparse. Do not let undefined/null
-    // API properties overwrite the UI defaults; doing so makes required controls
-    // invalid after patchActiveProfile() even though the API configuration is valid.
-    const definedProfile = Object.fromEntries(
-      Object.entries(profile).filter(([, value]) => value !== undefined && value !== null),
-    ) as Partial<InstrumentTradingSettings>;
-
-    const normalized = {
-      ...base,
-      ...definedProfile,
-      exchange: this.normalizeExchange(type, definedProfile.exchange ?? base.exchange),
-      evaluation: definedProfile.evaluation ?? this.form?.controls?.evaluation?.value,
-      validation: definedProfile.validation ?? this.form?.controls?.validation?.value,
-    };
-    return normalized as InstrumentTradingSettings;
-  }
-
-  private patchActiveProfile(type: InstrumentType): void {
-    const profile = this.profileDrafts[type];
-    if (!profile) return;
-
-    const extra = profile as Partial<
-      FuturesTradingSettings & OptionsTradingSettings
-    >;
-    const exchange = this.normalizeExchange(type, profile.exchange);
-    if (profile.exchange !== exchange) {
-      profile.exchange = exchange;
-    }
-
-    this.form.patchValue(
-      {
-        exchange,
-        productType: profile.productType,
-        orderType: profile.orderType,
-        duration: profile.duration,
-        minimumPrice: profile.minimumPrice,
-        minimumVolume: profile.minimumVolume,
-        atrStopMultiplier: profile.atrStopMultiplier,
-        atrTargetMultiplier: profile.atrTargetMultiplier,
-        maximumStopPercent: profile.maximumStopPercent,
-        minimumStopPercent: profile.minimumStopPercent,
-        minimumRiskReward: profile.minimumRiskReward,
-        allowLong: profile.allowLong,
-        allowShort: profile.allowShort,
-        riskPercentage: profile.riskPercentage,
-        maxCapitalPerTradePercent: profile.maxCapitalPerTradePercent,
-        minimumNetProfit: profile.minimumNetProfit,
-        minimumRoiPercent: profile.minimumRoiPercent,
-        maximumChargesPerTrade: profile.maximumChargesPerTrade,
-        maximumMarginUtilizationPercent:
-          profile.maximumMarginUtilizationPercent,
-        exitOrderTimeoutSeconds: profile.exitOrderTimeoutSeconds,
-        maxMarketDataAgeSeconds: profile.maxMarketDataAgeSeconds,
-        maximumExitRetries: profile.maximumExitRetries,
-        maximumSpreadPercent: profile.maximumSpreadPercent,
-        maximumSpreadAmount: profile.maximumSpreadAmount,
-        minimumBid: profile.minimumBid,
-        minimumAsk: profile.minimumAsk,
-        greeksCacheSeconds: profile.greeksCacheSeconds,
-        maximumOpenPositions: profile.maximumOpenPositions,
-        maximumRiskPerUnderlying: profile.maximumRiskPerUnderlying,
-        maximumPositionsPerUnderlying: profile.maximumPositionsPerUnderlying,
-        maximumLotsPerTrade: profile.maximumLotsPerTrade,
-        forceSquareOffBufferMinutes: this.toMinutes(
-          profile.forceSquareOffBuffer,
-        ),
-        validation: profile.validation
-          ? {
-              ...profile.validation,
-              momentumMaximumDrawdown: Number(
-                profile.validation.momentumMaximumDrawdown ?? 1,
-              ),
-              maximumPullbackGain: Number(
-                profile.validation.maximumPullbackGain ?? 1,
-              ),
-            }
-          : undefined,
-        evaluation: profile.evaluation,
-        futuresExpiryType: extra.expiryType,
-        futuresMinimumOpenInterest: extra.minimumOpenInterest,
-        futuresMinimumOIChangePercent: extra.minimumOIChangePercent,
-        futuresMaximumDailyLoss: extra.maximumDailyLoss,
-        futuresMaximumDailyTrades: extra.maximumDailyTrades,
-        optionsOptionSide: extra.optionSide,
-        optionsExpiryType: extra.expiryType,
-        optionsStrikeStepsFromAtm: extra.strikeStepsFromAtm,
-        optionsContractsPerUnderlying: extra.contractsPerUnderlying,
-        optionsMinimumOpenInterest: extra.minimumOpenInterest,
-        optionsMinimumDelta: extra.minimumDelta,
-        optionsMaximumDelta: extra.maximumDelta,
-        optionsMaximumAbsoluteTheta: extra.maximumAbsoluteTheta,
-        optionsMaximumImpliedVolatility: extra.maximumImpliedVolatility,
-        optionsMinimumGamma: extra.minimumGamma,
-        optionsMinimumVega: extra.minimumVega,
-        optionsStrikeInterval: extra.strikeInterval,
-        optionsMinimumOptionVolume: extra.minimumOptionVolume,
-        optionsMinimumTurnover: extra.minimumTurnover,
-        optionsMinimumPremium: extra.minimumPremium,
-        optionsMaximumPremium: extra.maximumPremium,
-        optionsMinimumOIChangePercent: extra.minimumOIChangePercent,
-        optionsAllowExpiryDayTrading: extra.allowExpiryDayTrading,
-        optionsMinimumMinutesBeforeExpiry: extra.minimumMinutesBeforeExpiry,
-        optionsMaximumExpiryDayIV: extra.maximumExpiryDayIV,
-        optionsMaximumDailyLoss: extra.maximumDailyLoss,
-        optionsMaximumDailyTrades: extra.maximumDailyTrades,
-        optionsExpiryMarketCloseTime: this.toTimeInput(
-          extra.expiryMarketCloseTime,
-        ),
-        optionsRequireMarketDepth: extra.requireMarketDepth,
-        optionsMaximumBidAskSpreadPercent: extra.maximumBidAskSpreadPercent,
-        optionsMaximumBidAskSpreadAmount: extra.maximumBidAskSpreadAmount,
-        optionsMinimumOptionTurnover: extra.minimumOptionTurnover,
-        optionsRequireFreshGreeks: extra.requireFreshGreeks,
-        optionsGreeksFreshnessSeconds: extra.greeksFreshnessSeconds,
-        optionsMaximumStrikeCandidatesPerSide:
-          extra.maximumStrikeCandidatesPerSide,
-        optionsMinimumCallScore: extra.minimumCallScore,
-        optionsMinimumPutScore: extra.minimumPutScore,
-        optionsMinimumPCR: extra.minimumPCR,
-        optionsMaximumPCR: extra.maximumPCR,
-        optionsUseUnderlyingMultiTimeframeTrend:
-          extra.useUnderlyingMultiTimeframeTrend,
-        optionsTradeMode: extra.tradeMode,
-        optionsAllowNakedWriting: extra.allowNakedWriting,
-        optionsAllowNakedCallWriting: extra.allowNakedCallWriting,
-        optionsAllowNakedPutWriting: extra.allowNakedPutWriting,
-        optionsAllowNakedWritingOnExpiryDay: extra.allowNakedWritingOnExpiryDay,
-        optionsShortMinimumDelta: extra.shortMinimumDelta,
-        optionsShortMaximumDelta: extra.shortMaximumDelta,
-        optionsShortMinimumIV: extra.shortMinimumIV,
-        optionsShortMaximumIV: extra.shortMaximumIV,
-        optionsShortMinimumThetaAbs: extra.shortMinimumThetaAbs,
-        optionsShortMaximumThetaAbs: extra.shortMaximumThetaAbs,
-        optionsShortMinimumPremium: extra.shortMinimumPremium,
-        optionsShortMaximumPremium: extra.shortMaximumPremium,
-        optionsMinimumShortCallScore: extra.minimumShortCallScore,
-        optionsMinimumShortPutScore: extra.minimumShortPutScore,
-        optionsMaximumNakedOptionRiskPerTrade:
-          extra.maximumNakedOptionRiskPerTrade,
-        optionsMaximumNakedOptionLotsPerTrade:
-          extra.maximumNakedOptionLotsPerTrade,
-        optionsNakedOptionMarginSafetyMultiplier:
-          extra.nakedOptionMarginSafetyMultiplier,
-        optionsMaximumUnderlyingDeltaExposure:
-          extra.maximumUnderlyingDeltaExposure,
-        optionsMaximumExpiryDayRiskMultiplier:
-          extra.maximumExpiryDayRiskMultiplier,
-        optionsNakedStressUnderlyingMovePercent:
-          extra.nakedStressUnderlyingMovePercent,
-        optionsNakedStressIVIncreasePercent: extra.nakedStressIVIncreasePercent,
-        optionsMaximumNakedStressLossPerTrade:
-          extra.maximumNakedStressLossPerTrade,
-        optionsMaximumUnderlyingStressLoss: extra.maximumUnderlyingStressLoss,
-        optionsMaximumOpenDeltaExposure: extra.maximumOpenDeltaExposure,
-        optionsMaximumOpenGammaExposure: extra.maximumOpenGammaExposure,
-        optionsMaximumOpenVegaExposure: extra.maximumOpenVegaExposure,
-        optionsMaximumShortLotsPerExpiry: extra.maximumShortLotsPerExpiry,
-        optionsMaximumShortLotsPerUnderlying:
-          extra.maximumShortLotsPerUnderlying,
-        optionsMaximumShortLotsPerStrike: extra.maximumShortLotsPerStrike,
-        optionsMaximumShortPremiumExposure: extra.maximumShortPremiumExposure,
-        optionsAllowNakedStrangle: extra.allowNakedStrangle,
-        optionsAllowNakedStraddle: extra.allowNakedStraddle,
-        optionsEmergencyDeltaExposure: extra.emergencyDeltaExposure,
-        optionsEmergencyGammaExposure: extra.emergencyGammaExposure,
-        optionsEmergencyVegaExposure: extra.emergencyVegaExposure,
-        optionsEmergencyIVIncreasePercent: extra.emergencyIVIncreasePercent,
-        optionsEmergencyStressLoss: extra.emergencyStressLoss,
-        optionsEmergencyMarginUtilizationPercent:
-          extra.emergencyMarginUtilizationPercent,
-        optionsNakedRiskMonitorSeconds: extra.nakedRiskMonitorSeconds,
-        optionsMaximumRiskPerTrade: extra.maximumRiskPerTrade,
-      },
-      { emitEvent: false },
-    );
-  }
-
-  onInstrumentTypeChanged(type: InstrumentType): void {
-    const previous = this.activeInstrumentType;
-
-    if (previous !== type && this.profileDrafts[previous]) {
-      this.profileDrafts[previous] = this.readActiveProfile(
-        this.profileDrafts[previous]!,
-      );
-    }
-
-    // Always normalize the destination profile before displaying it.
-    // This prevents an Equity exchange such as NSE/BSE from leaking into
-    // an F&O profile when the instrument type changes.
-    const profile = this.profileDrafts[type];
-    if (profile) {
-      profile.exchange = this.normalizeExchange(type, profile.exchange);
-    }
-
-    this.patchActiveProfile(type);
-    this.activeInstrumentType = type;
-    this.form.markAsDirty();
-  }
-
-  private readActiveProfile(
-    existing: InstrumentTradingSettings,
-  ): InstrumentTradingSettings {
+  private readEquityProfile(): InstrumentTradingSettings {
     const value = this.form.getRawValue() as any;
-    const base: InstrumentTradingSettings = {
-      ...existing,
-      exchange: String(value.exchange ?? existing.exchange),
-      productType: String(value.productType ?? existing.productType),
-      orderType: String(value.orderType ?? existing.orderType),
-      duration: String(value.duration ?? existing.duration),
-      minimumPrice: Number(value.minimumPrice),
-      minimumVolume: Number(value.minimumVolume),
-      atrStopMultiplier: Number(value.atrStopMultiplier),
-      atrTargetMultiplier: Number(value.atrTargetMultiplier),
-      maximumStopPercent: Number(value.maximumStopPercent),
-      minimumStopPercent: Number(value.minimumStopPercent),
-      minimumRiskReward: Number(value.minimumRiskReward),
+    return {
+      exchange: this.normalizeExchange(value.exchange),
+      productType: String(value.productType ?? 'INTRADAY'),
+      orderType: String(value.orderType ?? 'MARKET'),
+      duration: String(value.duration ?? 'DAY'),
+      minimumPrice: Number(value.minimumPrice ?? 50),
+      minimumVolume: Number(value.minimumVolume ?? 500000),
+      atrStopMultiplier: Number(value.atrStopMultiplier ?? 1.2),
+      atrTargetMultiplier: Number(value.atrTargetMultiplier ?? 2.4),
+      maximumStopPercent: Number(value.maximumStopPercent ?? 1.5),
+      minimumStopPercent: Number(value.minimumStopPercent ?? 0.5),
+      minimumRiskReward: Number(value.minimumRiskReward ?? 1.5),
       allowLong: !!value.allowLong,
       allowShort: !!value.allowShort,
-      riskPercentage: Number(value.riskPercentage),
-      maxCapitalPerTradePercent: Number(value.maxCapitalPerTradePercent),
-      minimumNetProfit: Number(value.minimumNetProfit),
-      minimumRoiPercent: Number(value.minimumRoiPercent),
-      maximumChargesPerTrade: Number(value.maximumChargesPerTrade),
-      minimumConfidence: Number(
-        value.validation?.minimumConfidence ?? existing.minimumConfidence,
-      ),
-      minimumFinalScore: Number(
-        value.validation?.minimumFinalScore ?? existing.minimumFinalScore,
-      ),
-      exitOrderTimeoutSeconds: Number(value.exitOrderTimeoutSeconds),
-      maxMarketDataAgeSeconds: Number(value.maxMarketDataAgeSeconds),
-      maximumExitRetries: Number(value.maximumExitRetries),
-      maximumSpreadPercent: Number(value.maximumSpreadPercent),
-      maximumSpreadAmount: Number(value.maximumSpreadAmount),
-      minimumBid: Number(value.minimumBid),
-      minimumAsk: Number(value.minimumAsk),
-      greeksCacheSeconds: Number(value.greeksCacheSeconds),
-      maximumOpenPositions: Number(value.maximumOpenPositions),
-      maximumRiskPerUnderlying: Number(value.maximumRiskPerUnderlying),
-      maximumPositionsPerUnderlying: Number(
-        value.maximumPositionsPerUnderlying,
-      ),
-      maximumLotsPerTrade: Number(value.maximumLotsPerTrade),
-      maximumMarginUtilizationPercent: Number(
-        value.maximumMarginUtilizationPercent,
-      ),
-      forceSquareOffBuffer: this.minutesToTimeSpan(
-        value.forceSquareOffBufferMinutes,
-      ),
+      riskPercentage: Number(value.riskPercentage ?? 2),
+      maxCapitalPerTradePercent: Number(value.maxCapitalPerTradePercent ?? 10),
+      minimumNetProfit: Number(value.minimumNetProfit ?? 5),
+      minimumRoiPercent: Number(value.minimumRoiPercent ?? 0.3),
+      maximumChargesPerTrade: Number(value.maximumChargesPerTrade ?? 100),
+      minimumConfidence: Number(value.validation?.minimumConfidence ?? 65),
+      minimumFinalScore: Number(value.validation?.minimumFinalScore ?? 70),
+      exitOrderTimeoutSeconds: Number(value.exitOrderTimeoutSeconds ?? 10),
+      maxMarketDataAgeSeconds: Number(value.maxMarketDataAgeSeconds ?? 15),
+      maximumExitRetries: Number(value.maximumExitRetries ?? 5),
+      maximumSpreadPercent: Number(value.maximumSpreadPercent ?? 1.5),
+      maximumSpreadAmount: Number(value.maximumSpreadAmount ?? 5),
+      minimumBid: Number(value.minimumBid ?? 0),
+      minimumAsk: Number(value.minimumAsk ?? 0),
+      maximumOpenPositions: Number(value.maximumOpenPositions ?? 3),
+      maximumRiskPerUnderlying: Number(value.maximumRiskPerUnderlying ?? 2500),
+      maximumPositionsPerUnderlying: Number(value.maximumPositionsPerUnderlying ?? 1),
+      maximumMarginUtilizationPercent: Number(value.maximumMarginUtilizationPercent ?? 70),
+      forceSquareOffBuffer: this.minutesToTimeSpan(value.forceSquareOffBufferMinutes),
       evaluation: value.evaluation,
       validation: value.validation,
     };
-
-    if (this.selectedInstrumentType === 'Futures') {
-      return {
-        ...base,
-        expiryType: value.futuresExpiryType,
-        minimumOpenInterest: Number(value.futuresMinimumOpenInterest),
-        minimumOIChangePercent: Number(value.futuresMinimumOIChangePercent),
-        maximumDailyLoss: Number(value.futuresMaximumDailyLoss),
-        maximumDailyTrades: Number(value.futuresMaximumDailyTrades),
-      } as FuturesTradingSettings;
-    }
-
-    if (this.selectedInstrumentType === 'Options') {
-      return {
-        ...base,
-        optionSide: value.optionsOptionSide,
-        expiryType: value.optionsExpiryType,
-        strikeStepsFromAtm: Number(value.optionsStrikeStepsFromAtm),
-        contractsPerUnderlying: Number(value.optionsContractsPerUnderlying),
-        minimumOpenInterest: Number(value.optionsMinimumOpenInterest),
-        minimumDelta: Number(value.optionsMinimumDelta),
-        maximumDelta: Number(value.optionsMaximumDelta),
-        maximumAbsoluteTheta: Number(value.optionsMaximumAbsoluteTheta),
-        maximumImpliedVolatility: Number(value.optionsMaximumImpliedVolatility),
-        minimumGamma: Number(value.optionsMinimumGamma),
-        minimumVega: Number(value.optionsMinimumVega),
-        strikeInterval: Number(value.optionsStrikeInterval),
-        minimumOptionVolume: Number(value.optionsMinimumOptionVolume),
-        minimumTurnover: Number(value.optionsMinimumTurnover),
-        minimumPremium: Number(value.optionsMinimumPremium),
-        maximumPremium: Number(value.optionsMaximumPremium),
-        minimumOIChangePercent: Number(value.optionsMinimumOIChangePercent),
-        allowExpiryDayTrading: !!value.optionsAllowExpiryDayTrading,
-        minimumMinutesBeforeExpiry: Number(
-          value.optionsMinimumMinutesBeforeExpiry,
-        ),
-        maximumExpiryDayIV: Number(value.optionsMaximumExpiryDayIV),
-        maximumDailyLoss: Number(value.optionsMaximumDailyLoss),
-        maximumDailyTrades: Number(value.optionsMaximumDailyTrades),
-        expiryMarketCloseTime: this.toTimeSpan(
-          value.optionsExpiryMarketCloseTime,
-        ),
-        requireMarketDepth: !!value.optionsRequireMarketDepth,
-        maximumBidAskSpreadPercent: Number(
-          value.optionsMaximumBidAskSpreadPercent,
-        ),
-        maximumBidAskSpreadAmount: Number(
-          value.optionsMaximumBidAskSpreadAmount,
-        ),
-        minimumOptionTurnover: Number(value.optionsMinimumOptionTurnover),
-        requireFreshGreeks: !!value.optionsRequireFreshGreeks,
-        greeksFreshnessSeconds: Number(value.optionsGreeksFreshnessSeconds),
-        maximumStrikeCandidatesPerSide: Number(
-          value.optionsMaximumStrikeCandidatesPerSide,
-        ),
-        minimumCallScore: Number(value.optionsMinimumCallScore),
-        minimumPutScore: Number(value.optionsMinimumPutScore),
-        minimumPCR: Number(value.optionsMinimumPCR),
-        maximumPCR: Number(value.optionsMaximumPCR),
-        useUnderlyingMultiTimeframeTrend:
-          !!value.optionsUseUnderlyingMultiTimeframeTrend,
-        tradeMode: value.optionsTradeMode,
-        allowNakedWriting: !!value.optionsAllowNakedWriting,
-        allowNakedCallWriting: !!value.optionsAllowNakedCallWriting,
-        allowNakedPutWriting: !!value.optionsAllowNakedPutWriting,
-        allowNakedWritingOnExpiryDay:
-          !!value.optionsAllowNakedWritingOnExpiryDay,
-        shortMinimumDelta: Number(value.optionsShortMinimumDelta),
-        shortMaximumDelta: Number(value.optionsShortMaximumDelta),
-        shortMinimumIV: Number(value.optionsShortMinimumIV),
-        shortMaximumIV: Number(value.optionsShortMaximumIV),
-        shortMinimumThetaAbs: Number(value.optionsShortMinimumThetaAbs),
-        shortMaximumThetaAbs: Number(value.optionsShortMaximumThetaAbs),
-        shortMinimumPremium: Number(value.optionsShortMinimumPremium),
-        shortMaximumPremium: Number(value.optionsShortMaximumPremium),
-        minimumShortCallScore: Number(value.optionsMinimumShortCallScore),
-        minimumShortPutScore: Number(value.optionsMinimumShortPutScore),
-        maximumNakedOptionRiskPerTrade: Number(
-          value.optionsMaximumNakedOptionRiskPerTrade,
-        ),
-        maximumNakedOptionLotsPerTrade: Number(
-          value.optionsMaximumNakedOptionLotsPerTrade,
-        ),
-        nakedOptionMarginSafetyMultiplier: Number(
-          value.optionsNakedOptionMarginSafetyMultiplier,
-        ),
-        maximumUnderlyingDeltaExposure: Number(
-          value.optionsMaximumUnderlyingDeltaExposure,
-        ),
-        maximumExpiryDayRiskMultiplier: Number(
-          value.optionsMaximumExpiryDayRiskMultiplier,
-        ),
-        nakedStressUnderlyingMovePercent: Number(
-          value.optionsNakedStressUnderlyingMovePercent,
-        ),
-        nakedStressIVIncreasePercent: Number(
-          value.optionsNakedStressIVIncreasePercent,
-        ),
-        maximumNakedStressLossPerTrade: Number(
-          value.optionsMaximumNakedStressLossPerTrade,
-        ),
-        maximumUnderlyingStressLoss: Number(
-          value.optionsMaximumUnderlyingStressLoss,
-        ),
-        maximumOpenDeltaExposure: Number(value.optionsMaximumOpenDeltaExposure),
-        maximumOpenGammaExposure: Number(value.optionsMaximumOpenGammaExposure),
-        maximumOpenVegaExposure: Number(value.optionsMaximumOpenVegaExposure),
-        maximumShortLotsPerExpiry: Number(
-          value.optionsMaximumShortLotsPerExpiry,
-        ),
-        maximumShortLotsPerUnderlying: Number(
-          value.optionsMaximumShortLotsPerUnderlying,
-        ),
-        maximumShortLotsPerStrike: Number(
-          value.optionsMaximumShortLotsPerStrike,
-        ),
-        maximumShortPremiumExposure: Number(
-          value.optionsMaximumShortPremiumExposure,
-        ),
-        allowNakedStrangle: !!value.optionsAllowNakedStrangle,
-        allowNakedStraddle: !!value.optionsAllowNakedStraddle,
-        emergencyDeltaExposure: Number(value.optionsEmergencyDeltaExposure),
-        emergencyGammaExposure: Number(value.optionsEmergencyGammaExposure),
-        emergencyVegaExposure: Number(value.optionsEmergencyVegaExposure),
-        emergencyIVIncreasePercent: Number(
-          value.optionsEmergencyIVIncreasePercent,
-        ),
-        emergencyStressLoss: Number(value.optionsEmergencyStressLoss),
-        emergencyMarginUtilizationPercent: Number(
-          value.optionsEmergencyMarginUtilizationPercent,
-        ),
-        nakedRiskMonitorSeconds: Number(value.optionsNakedRiskMonitorSeconds),
-        maximumRiskPerTrade: Number(value.optionsMaximumRiskPerTrade),
-      } as OptionsTradingSettings;
-    }
-
-    return base;
   }
 
   private toMinutes(value: string | undefined): number {
@@ -2751,17 +2075,6 @@ export class TradingSettingsComponent implements OnInit {
 
     const value = this.form.getRawValue();
 
-    this.profileDrafts[this.selectedInstrumentType] = this.readActiveProfile(
-      this.normalizeProfile(
-        this.profileDrafts[this.selectedInstrumentType] ??
-          this.buildProfileFromLegacy(
-            this.#angel.configuration() ??
-              ({ id: 'DEFAULT' } as TradingConfiguration),
-            this.selectedInstrumentType,
-          ),
-        this.selectedInstrumentType,
-      ),
-    );
 
     const virtualEmailStages = [
       ...(value.reporting?.virtualTradeEmailStages?.expired ? ['EXPIRED'] : []),
@@ -2774,10 +2087,7 @@ export class TradingSettingsComponent implements OnInit {
       tradingStrictnessProfile: (value.tradingStrictnessProfile ??
         'VeryLoose') as TradingStrictnessProfile,
 
-      instrumentType: this.selectedInstrumentType,
-      equity: this.profileDrafts.Equity,
-      futures: this.profileDrafts.Futures as FuturesTradingSettings,
-      options: this.profileDrafts.Options as OptionsTradingSettings,
+      equity: this.readEquityProfile(),
 
       enableAutoTrading: value.enableAutoTrading ?? false,
 
@@ -2807,10 +2117,8 @@ export class TradingSettingsComponent implements OnInit {
 
       maxBrokerFailuresBeforeKillSwitch: Number(value.maxBrokerFailuresBeforeKillSwitch ?? 5),
       brokerFailureWindowMinutes: Number(value.brokerFailureWindowMinutes ?? 2),
-      futuresOptionsMarketCloseTime: this.toTimeSpan(value.futuresOptionsMarketCloseTime),
       intradayEntryCutoffTime: this.toTimeSpan(value.intradayEntryCutoffTime),
       equityMisAutoSquareOffTime: this.toTimeSpan(value.equityMisAutoSquareOffTime),
-      futuresOptionsAutoSquareOffTime: this.toTimeSpan(value.futuresOptionsAutoSquareOffTime),
       roboAutoSquareOffTime: this.toTimeSpan(value.roboAutoSquareOffTime),
       casTransitionStart: this.toTimeSpan(value.casTransitionStart),
       casOrderEntryStart: this.toTimeSpan(value.casOrderEntryStart),
@@ -2821,7 +2129,6 @@ export class TradingSettingsComponent implements OnInit {
       casPostCloseEnd: this.toTimeSpan(value.casPostCloseEnd),
       casPriceBandPercent: Number(value.casPriceBandPercent ?? 3),
       maximumTotalOpenRisk: Number(value.maximumTotalOpenRisk ?? 10000),
-      maximumTotalUnderlyingDeltaExposure: Number(value.maximumTotalUnderlyingDeltaExposure ?? 2000),
       maximumMarginUtilizationPercent: Number(value.globalMaximumMarginUtilizationPercent ?? 70),
       marketTimeZoneId: String(value.marketTimeZoneId ?? 'Asia/Kolkata'),
       tradingHolidays: this.parseCsvValues(value.tradingHolidaysText),
@@ -2831,20 +2138,12 @@ export class TradingSettingsComponent implements OnInit {
       riskReservationSeconds: Number(value.riskReservationSeconds ?? 10),
       includeUnrealizedPnlInDailyLoss: (value.includeUnrealizedPnlInDailyLoss ?? true),
       requireClosedHigherTimeframeCandles: (value.requireClosedHigherTimeframeCandles ?? true),
-      enableOptionChainAnalytics: (value.enableOptionChainAnalytics ?? true),
-      enablePutCallRatio: (value.enablePutCallRatio ?? true),
-      enableOIBuildup: (value.enableOIBuildup ?? true),
       enablePaperMarginSimulation: (value.enablePaperMarginSimulation ?? true),
-      paperFuturesMarginRate: Number(value.paperFuturesMarginRate ?? 0.15),
-      paperOptionsCapitalRate: Number(value.paperOptionsCapitalRate ?? 1),
-      paperNakedOptionMarginRate: Number(value.paperNakedOptionMarginRate ?? 0.03),
-      paperNakedOptionMarginSafetyMultiplier: Number(value.paperNakedOptionMarginSafetyMultiplier ?? 1.2),
       quoteMaxTokensPerRequest: Number(value.quoteMaxTokensPerRequest ?? 50),
       quoteRequestsPerSecond: Number(value.quoteRequestsPerSecond ?? 1),
       maximumSlippagePercent: Number(value.maximumSlippagePercent ?? 0.5),
       rejectDuplicateOrderIntent: (value.rejectDuplicateOrderIntent ?? true),
       enableScripConsentForCashOrders: (value.enableScripConsentForCashOrders ?? true),
-      nakedRiskMonitorIntervalSeconds: Number(value.nakedRiskMonitorIntervalSeconds ?? 5),
       orderIntentRecoveryIntervalSeconds: Number(value.orderIntentRecoveryIntervalSeconds ?? 5),
       orderIntentRecoveryInitialDelaySeconds: Number(value.orderIntentRecoveryInitialDelaySeconds ?? 2),
       orderIntentUnknownOrderExpiryMinutes: Number(value.orderIntentUnknownOrderExpiryMinutes ?? 2),
