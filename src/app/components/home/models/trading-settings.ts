@@ -369,6 +369,7 @@ export interface ExitSettings {
   tradeFailureHealthScoreThreshold?: number;
   tradeFailureRequireTrendDeterioration?: boolean;
   tradeFailureRequireMomentumDeterioration?: boolean;
+  tradeFailureRequireAllDeteriorationSignals?: boolean;
 }
 
 // ValidationSettings is defined later with extended fields.

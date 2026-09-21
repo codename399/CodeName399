@@ -853,6 +853,7 @@ export class TradingSettingsComponent implements OnInit {
       tradeFailureHealthScoreThreshold: [45, [Validators.required, Validators.min(0), Validators.max(100)]],
       tradeFailureRequireTrendDeterioration: [true],
       tradeFailureRequireMomentumDeterioration: [true],
+      tradeFailureRequireAllDeteriorationSignals: [false],
     }),
   });
 
