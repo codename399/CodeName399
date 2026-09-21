@@ -113,6 +113,8 @@ export interface TradingConfiguration {
   entryRevalidationMaxAdverseMovePercent?: number;
   entryRevalidationMaxAdverseMoveAtr?: number;
   entryRevalidationMaxAgeSeconds?: number;
+  enableEntryExecutionAudit?: boolean;
+  entryExecutionAuditPostFillTickCount?: number;
   rejectDuplicateOrderIntent?: boolean;
   enableScripConsentForCashOrders?: boolean;
   orderIntentRecoveryIntervalSeconds?: number;

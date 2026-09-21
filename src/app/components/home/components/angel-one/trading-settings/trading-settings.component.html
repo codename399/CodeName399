@@ -2675,6 +2675,21 @@
               <small class="field-help">Diagnostic age threshold; candidate age alone does not reject a setup because the technical snapshot is refreshed before execution.</small>
             </div>
               <div class="field-row">
+              <label class="toggle-field">
+                <input type="checkbox" formControlName="enableEntryExecutionAudit" />
+                <span>Enable Entry Execution Audit</span>
+              </label>
+              <small class="field-help">Records signal, validation, broker acknowledgement, fill timing, slippage, and a compact post-fill tick window. This is diagnostic only and does not change entry decisions.</small>
+            </div>
+              <div class="field-row">
+              <label class="field-label" for="entryExecutionAuditPostFillTickCount">Entry Audit Post-Fill Ticks</label>
+              <div class="input-with-suffix">
+              <input id="entryExecutionAuditPostFillTickCount" type="number" formControlName="entryExecutionAuditPostFillTickCount" class="field-input" step="1" min="0" max="20" />
+              <span class="suffix">ticks</span>
+              </div>
+              <small class="field-help">Stores the first 0–20 market ticks after the actual fill for execution-quality analysis.</small>
+            </div>
+              <div class="field-row">
               <label class="field-label" for="quoteMaxTokensPerRequest">Quote Max Tokens Per Request</label>
               <div class="input-with-suffix">
               <input id="quoteMaxTokensPerRequest" type="number" formControlName="quoteMaxTokensPerRequest" class="field-input" step="0.01" />
