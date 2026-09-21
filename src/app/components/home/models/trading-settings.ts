@@ -109,6 +109,10 @@ export interface TradingConfiguration {
   quoteMaxTokensPerRequest?: number;
   quoteRequestsPerSecond?: number;
   maximumSlippagePercent?: number;
+  enableEntryExecutionRevalidation?: boolean;
+  entryRevalidationMaxAdverseMovePercent?: number;
+  entryRevalidationMaxAdverseMoveAtr?: number;
+  entryRevalidationMaxAgeSeconds?: number;
   rejectDuplicateOrderIntent?: boolean;
   enableScripConsentForCashOrders?: boolean;
   orderIntentRecoveryIntervalSeconds?: number;
@@ -369,7 +373,6 @@ export interface ExitSettings {
   tradeFailureHealthScoreThreshold?: number;
   tradeFailureRequireTrendDeterioration?: boolean;
   tradeFailureRequireMomentumDeterioration?: boolean;
-  tradeFailureRequireAllDeteriorationSignals?: boolean;
 }
 
 // ValidationSettings is defined later with extended fields.

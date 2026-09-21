@@ -2338,11 +2338,6 @@
             </div>
 
             <div class="field-row">
-              <label class="toggle-field"><input type="checkbox" formControlName="tradeFailureRequireAllDeteriorationSignals" /><span>Require All Deterioration Signals</span></label>
-              <small class="field-help">When disabled, trend OR momentum deterioration can trigger trade-failure exit. Enable only when both signals must deteriorate.</small>
-            </div>
-
-            <div class="field-row">
               <label class="field-label" for="trailingProfitRetentionPercent">
                 Trailing Profit Retention
               </label>
@@ -2655,6 +2650,29 @@
               <input id="maximumSlippagePercent" type="number" formControlName="maximumSlippagePercent" class="field-input" step="0.01" />
               <span class="suffix">%</span>
               </div>
+            </div>
+              <div class="field-row">
+              <label class="toggle-field">
+                <input type="checkbox" formControlName="enableEntryExecutionRevalidation" />
+                <span>Enable Entry Execution Revalidation</span>
+              </label>
+              <small class="field-help">Rechecks the latest market price immediately before an order. A setup is blocked only when adverse movement exceeds both configured percentage and ATR limits.</small>
+            </div>
+              <div class="field-row">
+              <label class="field-label" for="entryRevalidationMaxAdverseMovePercent">Entry Max Adverse Move %</label>
+              <input id="entryRevalidationMaxAdverseMovePercent" type="number" formControlName="entryRevalidationMaxAdverseMovePercent" class="field-input" step="0.01" min="0" />
+            </div>
+              <div class="field-row">
+              <label class="field-label" for="entryRevalidationMaxAdverseMoveAtr">Entry Max Adverse Move ATR</label>
+              <input id="entryRevalidationMaxAdverseMoveAtr" type="number" formControlName="entryRevalidationMaxAdverseMoveAtr" class="field-input" step="0.01" min="0" />
+            </div>
+              <div class="field-row">
+              <label class="field-label" for="entryRevalidationMaxAgeSeconds">Entry Revalidation Candidate Age</label>
+              <div class="input-with-suffix">
+              <input id="entryRevalidationMaxAgeSeconds" type="number" formControlName="entryRevalidationMaxAgeSeconds" class="field-input" step="1" min="0" />
+              <span class="suffix">sec</span>
+              </div>
+              <small class="field-help">Diagnostic age threshold; candidate age alone does not reject a setup because the technical snapshot is refreshed before execution.</small>
             </div>
               <div class="field-row">
               <label class="field-label" for="quoteMaxTokensPerRequest">Quote Max Tokens Per Request</label>
