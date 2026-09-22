@@ -2,11 +2,13 @@
   <div class="page-header">
     <div>
       <h1>Core Trading Settings</h1>
-      <p>Only the production trading rules used by the Core strategy are configurable here.</p>
+      <p>Settings below map directly to the API TradingConfiguration. Runtime/operational fields returned by the API are preserved when saving.</p>
     </div>
     <div class="actions">
       <button type="button" class="secondary-button" (click)="reset()" [disabled]="loading || saving">Reset</button>
-      <button type="button" class="primary-button" (click)="save()" [disabled]="loading || saving || form.invalid">{{ saving ? 'Saving…' : 'Save' }}</button>
+      <button type="button" class="primary-button" (click)="save()" [disabled]="loading || saving || form.invalid">
+        {{ saving ? 'Saving…' : 'Save' }}
+      </button>
     </div>
   </div>
 
@@ -14,22 +16,156 @@
 
   <form [formGroup]="form" *ngIf="!loading">
     <section class="settings-card">
-      <div class="card-header"><h2>Core Entry Rules</h2><p>These are the only entry conditions.</p></div>
+      <div class="card-header">
+        <h2>Trading</h2>
+        <p>Master switches and notifications.</p>
+      </div>
       <div class="grid-4">
-<label class="toggle-field"><input type="checkbox" formControlName="allowLong"><span>Allow long equity entries</span></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="paperTrading"><span>Paper trading</span></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="enableAutoTrading"><span>Auto trading</span></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="enableNotification"><span>Trade emails</span></label>
+        <label class="toggle-field">
+          <input type="checkbox" formControlName="enableAutoTrading">
+          <span>Auto trading</span>
+        </label>
+        <label class="toggle-field">
+          <input type="checkbox" formControlName="paperTrading">
+          <span>Paper trading</span>
+        </label>
+        <label class="toggle-field">
+          <input type="checkbox" formControlName="enableNotification">
+          <span>Trade emails</span>
+        </label>
+        <label class="toggle-field">
+          <input type="checkbox" formControlName="allowLong">
+          <span>Allow long equity entries</span>
+        </label>
       </div>
     </section>
 
     <section class="settings-card">
-      <div class="card-header"><h2>Market Hours</h2></div>
+      <div class="card-header">
+        <h2>Core Entry Rules</h2>
+        <p>These values map to <code>TradingConfiguration.CoreStrategy</code>.</p>
+      </div>
       <div class="grid-4">
-        <label class="toggle-field"><input type="checkbox" formControlName="ignoreMarketHours"><span>Ignore market hours</span></label>
-        <label><span>Market open</span><input type="time" formControlName="marketOpenTime"></label>
-        <label><span>Market close</span><input type="time" formControlName="marketCloseTime"></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="autoSquareOff"><span>Auto square-off</span></label>
+        <label>
+          <span>Minimum completed candles</span>
+          <input type="number" formControlName="minimumCompletedCandles" min="1">
+        </label>
+        <label>
+          <span>Minimum recovery score</span>
+          <input type="number" formControlName="minimumRecoveryScore" min="0" max="100" step="0.1">
+        </label>
+        <label>
+          <span>Minimum price change %</span>
+          <input type="number" formControlName="minimumPriceChangePercent" min="0" step="0.01">
+        </label>
+        <label>
+          <span>Minimum breakout strength</span>
+          <input type="number" formControlName="minimumBreakoutStrength" min="0" max="100" step="0.1">
+        </label>
+      </div>
+    </section>
+
+    <section class="settings-card">
+      <div class="card-header">
+        <h2>Risk & Capital</h2>
+        <p>Risk controls used by position sizing and the hard open-risk guard.</p>
+      </div>
+      <div class="grid-4">
+        <label>
+          <span>Risk per trade %</span>
+          <input type="number" formControlName="riskPercentage" min="0" step="0.01">
+        </label>
+        <label>
+          <span>Maximum capital per trade %</span>
+          <input type="number" formControlName="maxCapitalPerTradePercent" min="0" max="100" step="0.1">
+        </label>
+        <label>
+          <span>Maximum total open risk</span>
+          <input type="number" formControlName="maximumTotalOpenRisk" min="0" step="1">
+        </label>
+        <label>
+          <span>Paper trading balance</span>
+          <input type="number" formControlName="paperTradingBalance" min="0" step="100">
+        </label>
+      </div>
+    </section>
+
+    <section class="settings-card">
+      <div class="card-header">
+        <h2>Equity Execution</h2>
+        <p>These fields map directly to <code>TradingConfiguration.Equity</code>.</p>
+      </div>
+      <div class="grid-4">
+        <label>
+          <span>Exchange</span>
+          <input type="text" formControlName="exchange">
+        </label>
+        <label>
+          <span>Product type</span>
+          <input type="text" formControlName="productType">
+        </label>
+        <label>
+          <span>Order type</span>
+          <input type="text" formControlName="orderType">
+        </label>
+        <label>
+          <span>Duration</span>
+          <input type="text" formControlName="duration">
+        </label>
+        <label>
+          <span>ATR stop multiplier</span>
+          <input type="number" formControlName="atrStopMultiplier" min="0" step="0.01">
+        </label>
+        <label>
+          <span>Minimum stop %</span>
+          <input type="number" formControlName="minimumStopPercent" min="0" step="0.01">
+        </label>
+        <label>
+          <span>Maximum stop %</span>
+          <input type="number" formControlName="maximumStopPercent" min="0" step="0.01">
+        </label>
+      </div>
+    </section>
+
+    <section class="settings-card">
+      <div class="card-header">
+        <h2>Exit Protection</h2>
+        <p>Protective trailing settings from <code>TradingConfiguration.Exit</code>.</p>
+      </div>
+      <div class="grid-4">
+        <label>
+          <span>Trailing ATR multiplier</span>
+          <input type="number" formControlName="trailingStopAtrMultiplier" min="0" step="0.01">
+        </label>
+        <label>
+          <span>Peak profit retention %</span>
+          <input type="number" formControlName="trailingProfitRetentionPercent" min="0" max="100" step="1">
+        </label>
+      </div>
+    </section>
+
+    <section class="settings-card">
+      <div class="card-header">
+        <h2>Market Hours</h2>
+        <p>Times are sent to the API as <code>TimeSpan</code> values.</p>
+      </div>
+      <div class="grid-4">
+        <label class="toggle-field">
+          <input type="checkbox" formControlName="ignoreMarketHours">
+          <span>Ignore market hours</span>
+        </label>
+        <label>
+          <span>Market open</span>
+          <input type="time" formControlName="marketOpenTime">
+        </label>
+        <label>
+          <span>Market close</span>
+          <input type="time" formControlName="marketCloseTime">
+        </label>
+        <label class="toggle-field">
+          <input type="checkbox" formControlName="autoSquareOff">
+          <span>Auto square-off</span>
+        </label>
       </div>
     </section>
   </form>

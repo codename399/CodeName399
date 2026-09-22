@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { ToastService } from '../../../../../services/toast.service';
 import { AngelOneService } from '../../../services/angel-one.service';
+import { TradingConfiguration } from '../../../models/trading-settings';
 
 @Component({
   selector: 'app-trading-settings',
@@ -19,7 +20,7 @@ export class TradingSettingsComponent implements OnInit {
 
   loading = false;
   saving = false;
-  private currentConfiguration: any = {};
+  private currentConfiguration: TradingConfiguration | null = null;
 
   readonly form = this.#fb.group({
     enableAutoTrading: [false],
@@ -31,7 +32,7 @@ export class TradingSettingsComponent implements OnInit {
     minimumPriceChangePercent: [0.05, [Validators.required, Validators.min(0)]],
     minimumBreakoutStrength: [5, [Validators.required, Validators.min(0), Validators.max(100)]],
 
-    riskPercentage: [2, [Validators.required, Validators.min(0.01), Validators.max(100)]],
+    riskPercentage: [2, [Validators.required, Validators.min(0)]],
     maxCapitalPerTradePercent: [10, [Validators.required, Validators.min(0), Validators.max(100)]],
     maximumTotalOpenRisk: [10000, [Validators.required, Validators.min(0)]],
 
@@ -39,7 +40,7 @@ export class TradingSettingsComponent implements OnInit {
     productType: ['INTRADAY', Validators.required],
     orderType: ['MARKET', Validators.required],
     duration: ['DAY', Validators.required],
-    atrStopMultiplier: [1.2, [Validators.required, Validators.min(0.01)]],
+    atrStopMultiplier: [1.2, [Validators.required, Validators.min(0)]],
     minimumStopPercent: [0.5, [Validators.required, Validators.min(0)]],
     maximumStopPercent: [1.5, [Validators.required, Validators.min(0)]],
     allowLong: [true],
@@ -54,45 +55,75 @@ export class TradingSettingsComponent implements OnInit {
     paperTradingBalance: [100000, [Validators.required, Validators.min(0)]],
   });
 
-  ngOnInit(): void { this.loadConfiguration(); }
+  ngOnInit(): void {
+    this.loadConfiguration();
+  }
 
   loadConfiguration(): void {
     this.loading = true;
+
     this.#angel.getTradingConfiguration()
       .pipe(finalize(() => this.loading = false))
       .subscribe({
-        next: (config: any) => {
-          this.currentConfiguration = config ?? {};
-          const equity = config?.equity ?? {};
-          const exit = config?.exit ?? {};
-          const core = config?.coreStrategy ?? {};
+        next: (config: TradingConfiguration) => {
+          this.currentConfiguration = config ?? null;
+
+          const core = config?.coreStrategy ?? {
+            minimumCompletedCandles: 4,
+            minimumRecoveryScore: 60,
+            minimumPriceChangePercent: 0.05,
+            minimumBreakoutStrength: 5,
+          };
+
+          const equity = config?.equity ?? {
+            exchange: 'NSE',
+            productType: 'INTRADAY',
+            orderType: 'MARKET',
+            duration: 'DAY',
+            atrStopMultiplier: 1.2,
+            minimumStopPercent: 0.5,
+            maximumStopPercent: 1.5,
+            allowLong: true,
+          };
+
+          const exit = config?.exit ?? {
+            trailingStopAtrMultiplier: 0.6,
+            trailingProfitRetentionPercent: 70,
+          };
+
           this.form.patchValue({
             enableAutoTrading: config?.enableAutoTrading ?? false,
             paperTrading: config?.paperTrading ?? true,
             enableNotification: config?.enableNotification ?? true,
-            minimumCompletedCandles: core.minimumCompletedCandles ?? 4,
-            minimumRecoveryScore: core.minimumRecoveryScore ?? 60,
-            minimumPriceChangePercent: core.minimumPriceChangePercent ?? 0.05,
-            minimumBreakoutStrength: core.minimumBreakoutStrength ?? 5,
+
+            minimumCompletedCandles: core.minimumCompletedCandles,
+            minimumRecoveryScore: core.minimumRecoveryScore,
+            minimumPriceChangePercent: core.minimumPriceChangePercent,
+            minimumBreakoutStrength: core.minimumBreakoutStrength,
+
             riskPercentage: config?.riskPercentage ?? 2,
             maxCapitalPerTradePercent: config?.maxCapitalPerTradePercent ?? 10,
             maximumTotalOpenRisk: config?.maximumTotalOpenRisk ?? 10000,
-            exchange: equity.exchange ?? 'NSE',
-            productType: equity.productType ?? 'INTRADAY',
-            orderType: equity.orderType ?? 'MARKET',
-            duration: equity.duration ?? 'DAY',
-            atrStopMultiplier: equity.atrStopMultiplier ?? 1.2,
-            minimumStopPercent: equity.minimumStopPercent ?? 0.5,
-            maximumStopPercent: equity.maximumStopPercent ?? 1.5,
-            allowLong: equity.allowLong ?? true,
-            trailingStopAtrMultiplier: exit.trailingStopAtrMultiplier ?? 0.6,
-            trailingProfitRetentionPercent: exit.trailingProfitRetentionPercent ?? 70,
+
+            exchange: equity.exchange,
+            productType: equity.productType,
+            orderType: equity.orderType,
+            duration: equity.duration,
+            atrStopMultiplier: equity.atrStopMultiplier,
+            minimumStopPercent: equity.minimumStopPercent,
+            maximumStopPercent: equity.maximumStopPercent,
+            allowLong: equity.allowLong,
+
+            trailingStopAtrMultiplier: exit.trailingStopAtrMultiplier,
+            trailingProfitRetentionPercent: exit.trailingProfitRetentionPercent,
+
             ignoreMarketHours: config?.ignoreMarketHours ?? false,
             marketOpenTime: this.time(config?.marketOpenTime, '09:15:00'),
             marketCloseTime: this.time(config?.marketCloseTime, '15:30:00'),
             autoSquareOff: config?.autoSquareOff ?? true,
             paperTradingBalance: config?.paperTradingBalance ?? 100000,
           }, { emitEvent: false });
+
           this.form.markAsPristine();
         },
         error: () => this.#toast.error('Unable to load trading configuration'),
@@ -100,43 +131,55 @@ export class TradingSettingsComponent implements OnInit {
   }
 
   save(): void {
-    if (this.form.invalid) { this.form.markAllAsTouched(); return; }
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
     this.saving = true;
     const v = this.form.getRawValue();
-    const configuration = {
-      ...this.currentConfiguration,
-      id: this.currentConfiguration?.id ?? 'DEFAULT',
+    const current = this.currentConfiguration ?? ({} as TradingConfiguration);
+
+    const configuration: TradingConfiguration = {
+      ...current,
+      id: current.id ?? 'DEFAULT',
+
       enableAutoTrading: !!v.enableAutoTrading,
       paperTrading: !!v.paperTrading,
       enableNotification: !!v.enableNotification,
+
       coreStrategy: {
-        ...(this.currentConfiguration?.coreStrategy ?? {}),
+        ...(current.coreStrategy ?? {}),
         minimumCompletedCandles: Number(v.minimumCompletedCandles),
         minimumRecoveryScore: Number(v.minimumRecoveryScore),
         minimumPriceChangePercent: Number(v.minimumPriceChangePercent),
         minimumBreakoutStrength: Number(v.minimumBreakoutStrength),
       },
+
       riskPercentage: Number(v.riskPercentage),
       maxCapitalPerTradePercent: Number(v.maxCapitalPerTradePercent),
       maximumTotalOpenRisk: Number(v.maximumTotalOpenRisk),
+
       ignoreMarketHours: !!v.ignoreMarketHours,
       marketOpenTime: this.toTimeSpan(v.marketOpenTime),
       marketCloseTime: this.toTimeSpan(v.marketCloseTime),
       autoSquareOff: !!v.autoSquareOff,
       paperTradingBalance: Number(v.paperTradingBalance),
+
       equity: {
-        ...(this.currentConfiguration?.equity ?? {}),
-        exchange: v.exchange,
-        productType: v.productType,
-        orderType: v.orderType,
-        duration: v.duration,
+        ...(current.equity ?? {}),
+        exchange: String(v.exchange),
+        productType: String(v.productType),
+        orderType: String(v.orderType),
+        duration: String(v.duration),
         atrStopMultiplier: Number(v.atrStopMultiplier),
         minimumStopPercent: Number(v.minimumStopPercent),
         maximumStopPercent: Number(v.maximumStopPercent),
         allowLong: !!v.allowLong,
       },
+
       exit: {
-        ...(this.currentConfiguration?.exit ?? {}),
+        ...(current.exit ?? {}),
         trailingStopAtrMultiplier: Number(v.trailingStopAtrMultiplier),
         trailingProfitRetentionPercent: Number(v.trailingProfitRetentionPercent),
       },
@@ -145,12 +188,18 @@ export class TradingSettingsComponent implements OnInit {
     this.#angel.saveTradingConfiguration(configuration)
       .pipe(finalize(() => this.saving = false))
       .subscribe({
-        next: (saved: any) => { this.currentConfiguration = saved ?? configuration; this.form.markAsPristine(); this.#toast.success('Core trading configuration saved'); },
+        next: (saved: TradingConfiguration) => {
+          this.currentConfiguration = saved ?? configuration;
+          this.form.markAsPristine();
+          this.#toast.success('Trading configuration saved');
+        },
         error: () => this.#toast.error('Unable to save trading configuration'),
       });
   }
 
-  reset(): void { this.loadConfiguration(); }
+  reset(): void {
+    this.loadConfiguration();
+  }
 
   private time(value: string | undefined, fallback: string): string {
     if (!value) return fallback;
