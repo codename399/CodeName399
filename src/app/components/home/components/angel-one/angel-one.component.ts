@@ -22,15 +22,13 @@ import { Gainer } from '../../models/gainer';
 import { TradingConfiguration } from '../../models/trading-settings';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { TooltipDirective } from '../../../../directives/tooltip.directive';
 
 @Component({
   selector: 'app-angel-one',
 
   standalone: true,
 
-  imports: [CommonModule, TooltipDirective],
+  imports: [CommonModule],
 
   templateUrl: './angel-one.component.html',
 
@@ -214,7 +212,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   // Computed Dashboard
   // ======================================================
 
-  strategy = computed(() => this.configuration()?.strategy);
+  strategy = computed(() => this.configuration()?.['strategy']);
 
   autoTradingEnabled = computed(
     () => this.configuration()?.enableAutoTrading ?? false,
@@ -433,8 +431,8 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   private applyVisibleColumns(
     configuration: TradingConfiguration | null,
   ): void {
-    const configuredColumns = configuration?.visibleColumns?.filter(
-      (columnKey) =>
+    const configuredColumns = configuration?.['visibleColumns']?.filter(
+      (columnKey: string) =>
         this.columnDefinitions.some((column) => column.key === columnKey),
     );
 

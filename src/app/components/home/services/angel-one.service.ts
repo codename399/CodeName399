@@ -100,7 +100,7 @@ export class AngelOneService {
   }
 
   get selectedStrategy() {
-    return this.configuration()?.strategy;
+    return this.configuration()?.['strategy'];
   }
 
   get selectedInstrumentType(): string { return 'Equity'; }

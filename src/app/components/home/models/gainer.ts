@@ -43,7 +43,9 @@ export interface Gainer {
   emA21: number;
   emA50: number;
   emA200: number;
-  atr: number;
+  atr: number;  recoveryScore: number;
+  breakoutStrength: number;
+
   rsi: number;
   vwap: number;
   anchoredVWAP: number;
