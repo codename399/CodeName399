@@ -50,6 +50,21 @@
   flex-wrap: wrap;
 }
 
+.settings-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.search-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: min(100%, 420px);
+  color: #334e68;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 button {
   min-height: 44px;
   padding: 0.75rem 1.3rem;
@@ -119,7 +134,45 @@ form {
 }
 
 .card-header {
-  margin-bottom: 18px;
+  margin: -22px -22px 0;
+}
+
+.accordion-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 84px;
+  padding: 22px;
+  border-radius: 14px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  box-shadow: none;
+}
+
+.accordion-trigger:hover {
+  background: #f8fafc;
+  transform: none;
+}
+
+.accordion-trigger h2,
+.accordion-trigger p {
+  pointer-events: none;
+}
+
+.accordion-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+  color: #2563eb;
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1;
 }
 
 .card-header h2 {
@@ -148,6 +201,7 @@ form {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
+  padding: 0 0 22px;
 }
 
 label:not(.toggle-field) {
@@ -225,5 +279,29 @@ input:not([type='checkbox']):focus {
 
   .settings-card {
     padding: 18px;
+  }
+
+  .card-header {
+    margin: -18px -18px 0;
+  }
+
+  .accordion-trigger {
+    padding: 18px;
+  }
+}
+
+.wide-field {
+  grid-column: span 2;
+}
+
+input[readonly] {
+  background: #f8fafc;
+  color: #64748b;
+  cursor: default;
+}
+
+@media (max-width: 1100px) {
+  .wide-field {
+    grid-column: span 1;
   }
 }
