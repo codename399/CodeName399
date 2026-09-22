@@ -25,6 +25,12 @@ export interface ExitSettings {
   trailingProfitRetentionPercent: number;
 }
 
+/**
+ * Editable trading configuration exposed by the UI.
+ * Runtime/API-only settings are intentionally not duplicated here; the save
+ * operation preserves the complete configuration object returned by the API.
+ * visibleColumns is retained because the grid uses it.
+ */
 export interface TradingConfiguration {
   id: string;
   enableAutoTrading: boolean;
@@ -36,58 +42,16 @@ export interface TradingConfiguration {
 
   riskPercentage: number;
   maxCapitalPerTradePercent: number;
-  maxBrokerFailuresBeforeKillSwitch: number;
-  brokerFailureWindowMinutes: number;
+  maximumTotalOpenRisk: number;
 
   ignoreMarketHours: boolean;
   marketOpenTime: string;
   marketCloseTime: string;
-  intradayEntryCutoffTime: string;
-  equityMisAutoSquareOffTime: string;
-  roboAutoSquareOffTime: string;
-
-  casTransitionStart: string;
-  casOrderEntryStart: string;
-  casMarketOnlyEnd: string;
-  casLimitOnlyEnd: string;
-  casRandomCloseSafetyCutoff: string;
-  casEnd: string;
-  casPostCloseEnd: string;
-  casPriceBandPercent: number;
-
-  watchListRefreshMinutes: number;
-  excludedSymbols: string[];
-  maxCandidates: number;
-
-  lastDailySummarySent?: string | null;
-  instrumentLoadedAt?: string | null;
-  marketTimeZoneId: string;
-  tradingHolidays: string[];
-
-  maximumTotalOpenRisk: number;
-  enableTradingKillSwitchPersistence: boolean;
-  riskReservationSeconds: number;
-
-  enableEntryExecutionAudit: boolean;
-  entryExecutionAuditPostFillTickCount: number;
-  enableScripConsentForCashOrders: boolean;
-
-  webSocketHeartbeatSeconds: number;
-  webSocketPongTimeoutSeconds: number;
-  webSocketRetryInitialSeconds: number;
-  webSocketRetryMaxSeconds: number;
-  brokerPositionConfirmationDelaySeconds: number;
-  squareOffRetryDelaySeconds: number;
-  stopLossConfirmationSeconds: number;
-
-  buyTradingInterval: number;
-  sellTradingInterval: number;
 
   visibleColumns: string[];
 
   autoSquareOff: boolean;
   paperTradingBalance: number;
-  brokerBalanceRefreshSeconds: number;
 
   exit: ExitSettings;
 }

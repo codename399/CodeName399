@@ -84,6 +84,10 @@ export class TradingSettingsComponent implements OnInit {
             minimumStopPercent: 0.5,
             maximumStopPercent: 1.5,
             allowLong: true,
+            exitOrderTimeoutSeconds: 10,
+            maxMarketDataAgeSeconds: 15,
+            maximumExitRetries: 5,
+            maximumOpenPositions: 3,
           };
 
           const exit = config?.exit ?? {
