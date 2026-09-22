@@ -99,10 +99,6 @@ export class AngelOneService {
     return this.configuration()?.enableAutoTrading ?? false;
   }
 
-  get selectedStrategy() {
-    return this.configuration()?.['strategy'];
-  }
-
   get selectedInstrumentType(): string { return 'Equity'; }
 
   get activeInstrumentSettings() {
@@ -110,11 +106,6 @@ export class AngelOneService {
   }
 
   get riskPercentage(): number {
-    return this.activeInstrumentSettings?.riskPercentage ?? this.configuration()?.riskPercentage ?? 0;
-  }
-
-  get maxDailyTrades(): number {
-    const settings = this.activeInstrumentSettings as any;
-    return settings?.maximumDailyTrades ?? this.configuration()?.maxDailyTrades ?? 0;
+    return this.configuration()?.riskPercentage ?? 0;
   }
 }

@@ -11,23 +11,13 @@ export interface InstrumentTradingSettings {
   productType: string;
   orderType: string;
   duration: string;
-  minimumPrice: number;
-  minimumVolume: number;
   atrStopMultiplier: number;
   maximumStopPercent: number;
   minimumStopPercent: number;
   allowLong: boolean;
-  allowShort: boolean;
-  riskPercentage: number;
-  maxCapitalPerTradePercent: number;
   exitOrderTimeoutSeconds?: number;
   maxMarketDataAgeSeconds?: number;
   maximumExitRetries?: number;
-  maximumSpreadPercent?: number;
-  maximumSpreadAmount?: number;
-  minimumBid?: number;
-  minimumAsk?: number;
-  maximumOpenPositions?: number;
 }
 
 export interface TradingConfiguration {
@@ -40,17 +30,14 @@ export interface TradingConfiguration {
   riskPercentage: number;
   maxCapitalPerTradePercent: number;
   maximumTotalOpenRisk: number;
-  maxDailyLoss: number;
-  maxDailyTrades: number;
-  cooldownMinutes: number;
   ignoreMarketHours: boolean;
   marketOpenTime: string;
   marketCloseTime: string;
   autoSquareOff: boolean;
   paperTradingBalance: number;
+  visibleColumns?: string[];
   exit: {
     trailingStopAtrMultiplier: number;
     trailingProfitRetentionPercent: number;
   };
-  [key: string]: any;
 }

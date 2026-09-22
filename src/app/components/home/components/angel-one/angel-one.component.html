@@ -69,17 +69,7 @@
             <span>🎯</span>
             <strong>{{ activeInstrumentType() }}</strong>
           </div>
-
-          <div
-            class="summary-stripe-item tooltip-trigger"
-            title="Strategy"
-            tabindex="0"
-          >
-            <span>📈</span>
-            <strong>{{ strategy() }}</strong>
-          </div>
-
-          <div
+<div
             class="summary-stripe-item tooltip-trigger"
             title="Auto trading"
             tabindex="0"
@@ -205,31 +195,12 @@
                   >
                 </th>
                 <th *ngIf="visibleColumnSet().has('stopLoss')">SL</th>
-                <th *ngIf="visibleColumnSet().has('targetPrice')">Target</th>
                 <th *ngIf="visibleColumnSet().has('token')">Token</th>
                 <th *ngIf="visibleColumnSet().has('exchange')">Exchange</th>
                 <th *ngIf="visibleColumnSet().has('prevClose')">Prev Close</th>
-                <th *ngIf="visibleColumnSet().has('vwap')">VWAP</th>
-                <th *ngIf="visibleColumnSet().has('ema9')">EMA9</th>
-                <th *ngIf="visibleColumnSet().has('ema21')">EMA21</th>
-                <th *ngIf="visibleColumnSet().has('ema50')">EMA50</th>
-                <th *ngIf="visibleColumnSet().has('ema200')">EMA200</th>
-                <th *ngIf="visibleColumnSet().has('anchoredVWAP')">Anchored VWAP</th>
-                <th *ngIf="visibleColumnSet().has('adx')">ADX</th>
-                <th *ngIf="visibleColumnSet().has('superTrend')">SuperTrend</th>
-                <th *ngIf="visibleColumnSet().has('superTrendBullish')">ST Bullish</th>
-                <th *ngIf="visibleColumnSet().has('rsi')">RSI</th>
-                <th *ngIf="visibleColumnSet().has('volumeMultiplier')">Vol×</th>
-                <th *ngIf="visibleColumnSet().has('pullbackDistance')">PB%</th>
-                <th *ngIf="visibleColumnSet().has('distanceFromEMA')">Dist EMA%</th>
-                <th *ngIf="visibleColumnSet().has('distanceFromVWAP')">Dist VWAP%</th>
-                <th *ngIf="visibleColumnSet().has('macd')">MACD</th>
-                <th *ngIf="visibleColumnSet().has('macdSignal')">MACD Sig</th>
-                <th *ngIf="visibleColumnSet().has('macdHistogram')">MACD Hist</th>
-                <th *ngIf="visibleColumnSet().has('bollingerBandwidth')">
-                  Boll Bandwidth
-                </th>
-                <th *ngIf="visibleColumnSet().has('score')">Score</th>
+                <th *ngIf="visibleColumnSet().has('recovery')">Recovery</th>
+                <th *ngIf="visibleColumnSet().has('priceChange')">Price Change %</th>
+                <th *ngIf="visibleColumnSet().has('breakout')">Breakout</th>
                 <th *ngIf="visibleColumnSet().has('signal')">Signal</th>
                 <th *ngIf="visibleColumnSet().has('risk')">Risk</th>
                 <th *ngIf="visibleColumnSet().has('atr')">ATR</th>
@@ -316,10 +287,6 @@
                   ₹{{ stock.stopLoss | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="visibleColumnSet().has('targetPrice')">
-                  ₹{{ stock.targetPrice | number: "1.2-2" }}
-                </td>
-
                 <td *ngIf="visibleColumnSet().has('token')">
                   {{ stock.symbolToken || "-" }}
                 </td>
@@ -332,87 +299,16 @@
                   ₹{{ stock.previousClose | number: "1.2-2" }}
                 </td>
 
-                <td *ngIf="visibleColumnSet().has('vwap')">
-                  {{ stock.vwap | number: "1.2-2" }}
+                <td *ngIf="visibleColumnSet().has('recovery')">
+                  {{ stock.recoveryScore | number: "1.1-1" }}
                 </td>
 
-                <td *ngIf="visibleColumnSet().has('ema9')">
-                  {{ stock.emA9 | number: "1.2-2" }}
+                <td *ngIf="visibleColumnSet().has('priceChange')">
+                  {{ stock.changePercent | number: "1.2-2" }}%
                 </td>
 
-                <td *ngIf="visibleColumnSet().has('ema21')">
-                  {{ stock.emA21 | number: "1.2-2" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('ema50')">
-                  {{ stock.emA50 | number: "1.2-2" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('ema200')">
-                  {{ stock.emA200 | number: "1.2-2" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('anchoredVWAP')">
-                  {{ stock.anchoredVWAP | number: "1.2-2" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('adx')">
-                  {{ stock.adx | number: "1.1-1" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('superTrend')">
-                  {{ stock.superTrend | number: "1.2-2" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('superTrendBullish')">
-                  {{ stock.superTrendBullish ? "Yes" : "No" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('rsi')">
-                  {{ stock.rsi | number: "1.0-0" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('volumeMultiplier')">
-                  {{ stock.volumeMultiplier | number: "1.1-1" }}×
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('pullbackDistance')">
-                  {{ stock.pullbackDistance | number: "1.1-1" }}%
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('distanceFromEMA')">
-                  {{ stock.distanceFromEMA | number: "1.1-1" }}%
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('distanceFromVWAP')">
-                  {{ stock.distanceFromVWAP | number: "1.1-1" }}%
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('macd')">
-                  {{ stock.macd | number: "1.2-2" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('macdSignal')">
-                  {{ stock.macdSignal | number: "1.2-2" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('macdHistogram')">
-                  {{ stock.macdHistogram | number: "1.2-2" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('bollingerBandwidth')">
-                  {{ stock.bollingerBandwidth | number: "1.2-2" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('score')">
-                  <div
-                    class="score-badge"
-                    [class.excellent]="stock.score >= 80"
-                    [class.good]="stock.score >= 60 && stock.score < 80"
-                    [class.average]="stock.score < 60"
-                  >
-                    {{ stock.score }}
-                  </div>
+                <td *ngIf="visibleColumnSet().has('breakout')">
+                  {{ stock.breakoutStrength | number: "1.1-1" }}
                 </td>
 
                 <td *ngIf="visibleColumnSet().has('signal')">

@@ -16,48 +16,7 @@
     <section class="settings-card">
       <div class="card-header"><h2>Core Entry Rules</h2><p>These are the only entry conditions.</p></div>
       <div class="grid-4">
-        <label class="toggle-field"><input type="checkbox" formControlName="coreEnabled"><span>Core strategy enabled</span></label>
-        <label><span>Minimum completed candles</span><input type="number" formControlName="minimumCompletedCandles"></label>
-        <label><span>Recovery ≥</span><input type="number" formControlName="minimumRecoveryScore" step="0.1"></label>
-        <label><span>Price change ≥ %</span><input type="number" formControlName="minimumPriceChangePercent" step="0.01"></label>
-        <label><span>Breakout strength ≥</span><input type="number" formControlName="minimumBreakoutStrength" step="0.1"></label>
-      </div>
-    </section>
-
-    <section class="settings-card">
-      <div class="card-header"><h2>Risk & Capital</h2><p>Position sizing and hard monetary risk protection.</p></div>
-      <div class="grid-4">
-        <label><span>Risk %</span><input type="number" formControlName="riskPercentage" step="0.1"></label>
-        <label><span>Max capital / trade %</span><input type="number" formControlName="maxCapitalPerTradePercent" step="0.1"></label>
-        <label><span>Maximum total open risk ₹</span><input type="number" formControlName="maximumTotalOpenRisk" step="100"></label>
-        <label><span>Maximum daily loss ₹</span><input type="number" formControlName="maxDailyLoss" step="100"></label>
-        <label><span>Maximum daily trades</span><input type="number" formControlName="maxDailyTrades"></label>
-        <label><span>Cooldown minutes</span><input type="number" formControlName="cooldownMinutes"></label>
-        <label><span>Paper balance ₹</span><input type="number" formControlName="paperTradingBalance" step="1000"></label>
-      </div>
-    </section>
-
-    <section class="settings-card">
-      <div class="card-header"><h2>Protective Stop & Trailing</h2><p>ATR is the only technical indicator retained for risk management.</p></div>
-      <div class="grid-4">
-        <label><span>ATR stop multiplier</span><input type="number" formControlName="atrStopMultiplier" step="0.1"></label>
-        <label><span>Minimum stop %</span><input type="number" formControlName="minimumStopPercent" step="0.1"></label>
-        <label><span>Maximum stop %</span><input type="number" formControlName="maximumStopPercent" step="0.1"></label>
-        <label><span>Trailing ATR multiplier</span><input type="number" formControlName="trailingStopAtrMultiplier" step="0.1"></label>
-        <label><span>Peak-profit retention %</span><input type="number" formControlName="trailingProfitRetentionPercent" step="1"></label>
-      </div>
-    </section>
-
-    <section class="settings-card">
-      <div class="card-header"><h2>Execution</h2><p>Broker/order settings required to execute the Core strategy.</p></div>
-      <div class="grid-4">
-        <label><span>Exchange</span><select formControlName="exchange"><option>NSE</option><option>BSE</option></select></label>
-        <label><span>Product</span><select formControlName="productType"><option>INTRADAY</option></select></label>
-        <label><span>Order type</span><select formControlName="orderType"><option>MARKET</option></select></label>
-        <label><span>Duration</span><select formControlName="duration"><option>DAY</option></select></label>
-        <label><span>Minimum price ₹</span><input type="number" formControlName="minimumPrice"></label>
-        <label><span>Minimum volume</span><input type="number" formControlName="minimumVolume"></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="allowLong"><span>Allow long equity entries</span></label>
+<label class="toggle-field"><input type="checkbox" formControlName="allowLong"><span>Allow long equity entries</span></label>
         <label class="toggle-field"><input type="checkbox" formControlName="paperTrading"><span>Paper trading</span></label>
         <label class="toggle-field"><input type="checkbox" formControlName="enableAutoTrading"><span>Auto trading</span></label>
         <label class="toggle-field"><input type="checkbox" formControlName="enableNotification"><span>Trade emails</span></label>

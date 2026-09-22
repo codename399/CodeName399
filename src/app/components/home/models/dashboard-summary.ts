@@ -1,8 +1,6 @@
 export interface DashboardSummary {
   availableCash: number;
 
-  strategy: string;
-
   autoTradingEnabled: boolean;
 
   paperTrading: boolean;
@@ -14,8 +12,4 @@ export interface DashboardSummary {
   killSwitch: boolean;
 
   marketStatus: string;
-
-  maxDailyTrades: number;
-
-  maxDailyLoss: number;
 }

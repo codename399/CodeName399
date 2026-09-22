@@ -122,46 +122,17 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
     { key: 'exchange', label: 'Exchange', defaultVisible: false },
     { key: 'token', label: 'Token', defaultVisible: false },
     { key: 'prevClose', label: 'Prev Close', defaultVisible: true },
-    { key: 'vwap', label: 'VWAP', defaultVisible: false },
-    { key: 'ema9', label: 'EMA9', defaultVisible: false },
-    { key: 'ema21', label: 'EMA21', defaultVisible: false },
-    { key: 'ema50', label: 'EMA50', defaultVisible: false },
-    { key: 'ema200', label: 'EMA200', defaultVisible: false },
-    { key: 'anchoredVWAP', label: 'Anchored VWAP', defaultVisible: false },
-    { key: 'adx', label: 'ADX', defaultVisible: false },
-    { key: 'superTrend', label: 'SuperTrend', defaultVisible: false },
-    { key: 'superTrendBullish', label: 'ST Bullish', defaultVisible: false },
-    { key: 'rsi', label: 'RSI', defaultVisible: false },
-    { key: 'volumeMultiplier', label: 'Vol×', defaultVisible: false },
-    { key: 'pullbackDistance', label: 'PB%', defaultVisible: false },
-    { key: 'distanceFromEMA', label: 'Dist EMA%', defaultVisible: false },
-    { key: 'distanceFromVWAP', label: 'Dist VWAP%', defaultVisible: false },
-    { key: 'macd', label: 'MACD', defaultVisible: false },
-    { key: 'macdSignal', label: 'MACD Sig', defaultVisible: false },
-    { key: 'macdHistogram', label: 'MACD Hist', defaultVisible: false },
-    {
-      key: 'bollingerBandwidth',
-      label: 'Boll Bandwidth',
-      defaultVisible: false,
-    },
-    { key: 'score', label: 'Score', defaultVisible: true },
+    { key: 'recovery', label: 'Recovery', defaultVisible: true },
+    { key: 'priceChange', label: 'Price Change %', defaultVisible: true },
+    { key: 'breakout', label: 'Breakout', defaultVisible: true },
     { key: 'signal', label: 'Signal', defaultVisible: true },
     { key: 'risk', label: 'Risk', defaultVisible: true },
+    { key: 'atr', label: 'ATR', defaultVisible: true },
     { key: 'stopLoss', label: 'SL', defaultVisible: true },
-    { key: 'targetPrice', label: 'Target', defaultVisible: true },
-    { key: 'atr', label: 'ATR', defaultVisible: false },
     { key: 'reason', label: 'Reason', defaultVisible: true },
     { key: 'suggestion', label: 'Suggestion', defaultVisible: true },
-    {
-      key: 'upperCircuitLimit',
-      label: 'Upper Circuit Limit',
-      defaultVisible: false,
-    },
-    {
-      key: 'lowerCircuitLimit',
-      label: 'Lower Circuit Limit',
-      defaultVisible: false,
-    },
+    { key: 'upperCircuitLimit', label: 'Upper Circuit Limit', defaultVisible: false },
+    { key: 'lowerCircuitLimit', label: 'Lower Circuit Limit', defaultVisible: false },
   ];
 
   visibleColumns = signal<string[]>([]);
@@ -198,12 +169,6 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
         return leftBucket - rightBucket;
       }
 
-      const scoreDiff = (right.score ?? 0) - (left.score ?? 0);
-
-      if (scoreDiff !== 0) {
-        return scoreDiff;
-      }
-
       return left.symbol.localeCompare(right.symbol);
     });
   });
@@ -211,8 +176,6 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   // ======================================================
   // Computed Dashboard
   // ======================================================
-
-  strategy = computed(() => this.configuration()?.['strategy']);
 
   autoTradingEnabled = computed(
     () => this.configuration()?.enableAutoTrading ?? false,
@@ -224,16 +187,9 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
 
   activeInstrumentType = computed(() => 'Equity' as const);
 
-  activeInstrumentSettings = computed(() => this.configuration()?.equity);
-
   riskPercentage = computed(
-    () => this.activeInstrumentSettings()?.riskPercentage ?? 0,
+    () => this.configuration()?.riskPercentage ?? 0,
   );
-
-  maxDailyTrades = computed(() => {
-    const settings = this.activeInstrumentSettings() as any;
-    return settings?.maximumOpenPositions ?? 0;
-  });
 
   // ======================================================
   // Lifecycle
