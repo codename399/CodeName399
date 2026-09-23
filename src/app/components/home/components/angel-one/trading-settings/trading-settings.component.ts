@@ -119,6 +119,11 @@ export class TradingSettingsComponent implements OnInit {
 
     autoSquareOff: [true],
     paperTradingBalance: [100000, [Validators.required, Validators.min(0)]],
+
+    enableUnfilteredResearchMode: [true],
+    researchDataVersion: ['v1', Validators.required],
+    captureResearchTickIndicators: [true],
+    researchTickCaptureLimit: [10000, [Validators.required, Validators.min(0)]],
   });
 
   ngOnInit(): void {
@@ -244,6 +249,14 @@ export class TradingSettingsComponent implements OnInit {
 
               autoSquareOff: config?.autoSquareOff ?? true,
               paperTradingBalance: config?.paperTradingBalance ?? 100000,
+
+              enableUnfilteredResearchMode:
+                config?.enableUnfilteredResearchMode ?? true,
+              researchDataVersion: config?.researchDataVersion ?? 'v1',
+              captureResearchTickIndicators:
+                config?.captureResearchTickIndicators ?? true,
+              researchTickCaptureLimit:
+                config?.researchTickCaptureLimit ?? 10000,
             },
             { emitEvent: false },
           );
@@ -333,6 +346,11 @@ export class TradingSettingsComponent implements OnInit {
 
       autoSquareOff: !!v.autoSquareOff,
       paperTradingBalance: Number(v.paperTradingBalance),
+
+      enableUnfilteredResearchMode: !!v.enableUnfilteredResearchMode,
+      researchDataVersion: String(v.researchDataVersion),
+      captureResearchTickIndicators: !!v.captureResearchTickIndicators,
+      researchTickCaptureLimit: Number(v.researchTickCaptureLimit),
 
       equity: {
         ...(current.equity ?? {}),

@@ -153,6 +153,18 @@
       </div>
     </section>
 
+    <section class="settings-card" *ngIf="sectionMatches('research', 'unfiltered research', 'research data version', 'tick indicators', 'tick capture limit')">
+      <div class="card-header">
+        <button type="button" class="accordion-trigger" (click)="toggleSection('research')" [attr.aria-expanded]="openSection === 'research'"><span><h2>Research</h2><p>Controls for research data collection and tick indicator capture.</p></span><span class="accordion-icon">{{ openSection === 'research' ? '−' : '+' }}</span></button>
+      </div>
+      <div class="grid-4" *ngIf="openSection === 'research'">
+        <label class="toggle-field"><input type="checkbox" formControlName="enableUnfilteredResearchMode"><span>Unfiltered research mode</span></label>
+        <label><span>Research data version</span><input type="text" formControlName="researchDataVersion"></label>
+        <label class="toggle-field"><input type="checkbox" formControlName="captureResearchTickIndicators"><span>Capture tick indicators</span></label>
+        <label><span>Tick capture limit</span><input type="number" formControlName="researchTickCaptureLimit" min="0"></label>
+      </div>
+    </section>
+
     <section class="settings-card" *ngIf="sectionMatches('operational metadata', 'daily summary', 'instrument', 'holidays', 'visible columns')">
       <div class="card-header">
         <button type="button" class="accordion-trigger" (click)="toggleSection('metadata')" [attr.aria-expanded]="openSection === 'metadata'"><span><h2>Operational Metadata</h2><p>These API fields are shown so the UI stays synchronized. They are not generated or recalculated by the UI.</p></span><span class="accordion-icon">{{ openSection === 'metadata' ? '−' : '+' }}</span></button>

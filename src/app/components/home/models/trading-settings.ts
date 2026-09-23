@@ -86,5 +86,10 @@ export interface TradingConfiguration {
   autoSquareOff: boolean;
   paperTradingBalance: number;
 
+  enableUnfilteredResearchMode: boolean;
+  researchDataVersion: string;
+  captureResearchTickIndicators: boolean;
+  researchTickCaptureLimit: number;
+
   exit: ExitSettings;
 }
