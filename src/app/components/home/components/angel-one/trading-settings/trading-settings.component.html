@@ -35,18 +35,6 @@
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('core entry rules', 'minimum completed candles', 'recovery score', 'price change', 'breakout strength')">
-      <div class="card-header">
-        <button type="button" class="accordion-trigger" (click)="toggleSection('core')" [attr.aria-expanded]="openSection === 'core'"><span><h2>Core Entry Rules</h2><p>Maps to <code>CoreStrategy</code>.</p></span><span class="accordion-icon">{{ openSection === 'core' ? '−' : '+' }}</span></button>
-      </div>
-      <div class="grid-4" *ngIf="openSection === 'core'">
-        <label><span>Minimum completed candles</span><input type="number" formControlName="minimumCompletedCandles" min="1"></label>
-        <label><span>Minimum recovery score</span><input type="number" formControlName="minimumRecoveryScore" min="0" max="100" step="0.1"></label>
-        <label><span>Minimum price change %</span><input type="number" formControlName="minimumPriceChangePercent" min="0" step="0.01"></label>
-        <label><span>Minimum breakout strength</span><input type="number" formControlName="minimumBreakoutStrength" min="0" max="100" step="0.1"></label>
-      </div>
-    </section>
-
     <section class="settings-card" *ngIf="sectionMatches('risk capital', 'risk per trade', 'capital', 'broker failures', 'open risk', 'reservation')">
       <div class="card-header">
         <button type="button" class="accordion-trigger" (click)="toggleSection('risk')" [attr.aria-expanded]="openSection === 'risk'"><span><h2>Risk &amp; Capital</h2><p>Risk, capital allocation and broker failure controls.</p></span><span class="accordion-icon">{{ openSection === 'risk' ? '−' : '+' }}</span></button>
@@ -153,15 +141,12 @@
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('research', 'unfiltered research', 'research data version', 'tick indicators', 'tick capture limit')">
+    <section class="settings-card" *ngIf="sectionMatches('research', 'research data version')">
       <div class="card-header">
-        <button type="button" class="accordion-trigger" (click)="toggleSection('research')" [attr.aria-expanded]="openSection === 'research'"><span><h2>Research</h2><p>Controls for research data collection and tick indicator capture.</p></span><span class="accordion-icon">{{ openSection === 'research' ? '−' : '+' }}</span></button>
+        <button type="button" class="accordion-trigger" (click)="toggleSection('research')" [attr.aria-expanded]="openSection === 'research'"><span><h2>Research</h2><p>Research data version from the API configuration.</p></span><span class="accordion-icon">{{ openSection === 'research' ? '−' : '+' }}</span></button>
       </div>
       <div class="grid-4" *ngIf="openSection === 'research'">
-        <label class="toggle-field"><input type="checkbox" formControlName="enableUnfilteredResearchMode"><span>Unfiltered research mode</span></label>
         <label><span>Research data version</span><input type="text" formControlName="researchDataVersion"></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="captureResearchTickIndicators"><span>Capture tick indicators</span></label>
-        <label><span>Tick capture limit</span><input type="number" formControlName="researchTickCaptureLimit" min="0"></label>
       </div>
     </section>
 

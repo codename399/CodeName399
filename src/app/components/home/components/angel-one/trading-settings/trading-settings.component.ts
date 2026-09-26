@@ -29,17 +29,6 @@ export class TradingSettingsComponent implements OnInit {
     paperTrading: [true],
     enableNotification: [true],
 
-    minimumCompletedCandles: [4, [Validators.required, Validators.min(1)]],
-    minimumRecoveryScore: [
-      60,
-      [Validators.required, Validators.min(0), Validators.max(100)],
-    ],
-    minimumPriceChangePercent: [0.05, [Validators.required, Validators.min(0)]],
-    minimumBreakoutStrength: [
-      5,
-      [Validators.required, Validators.min(0), Validators.max(100)],
-    ],
-
     riskPercentage: [2, [Validators.required, Validators.min(0)]],
     maxCapitalPerTradePercent: [
       10,
@@ -115,15 +104,12 @@ export class TradingSettingsComponent implements OnInit {
 
     buyTradingInterval: [1000, [Validators.required, Validators.min(0)]],
     sellTradingInterval: [1000, [Validators.required, Validators.min(0)]],
-    visibleColumns: [''],
+    visibleColumns: ['star, symbol, reason, suggestion, stopLoss'],
 
     autoSquareOff: [true],
     paperTradingBalance: [100000, [Validators.required, Validators.min(0)]],
 
-    enableUnfilteredResearchMode: [true],
     researchDataVersion: ['v1', Validators.required],
-    captureResearchTickIndicators: [true],
-    researchTickCaptureLimit: [10000, [Validators.required, Validators.min(0)]],
   });
 
   ngOnInit(): void {
@@ -140,7 +126,6 @@ export class TradingSettingsComponent implements OnInit {
         next: (config: TradingConfiguration) => {
           this.currentConfiguration = config ?? null;
 
-          const core = config?.coreStrategy ?? this.defaultCore();
           const equity = config?.equity ?? this.defaultEquity();
           const exit = config?.exit ?? this.defaultExit();
 
@@ -149,11 +134,6 @@ export class TradingSettingsComponent implements OnInit {
               enableAutoTrading: config?.enableAutoTrading ?? false,
               paperTrading: config?.paperTrading ?? true,
               enableNotification: config?.enableNotification ?? true,
-
-              minimumCompletedCandles: core.minimumCompletedCandles,
-              minimumRecoveryScore: core.minimumRecoveryScore,
-              minimumPriceChangePercent: core.minimumPriceChangePercent,
-              minimumBreakoutStrength: core.minimumBreakoutStrength,
 
               riskPercentage: config?.riskPercentage ?? 2,
               maxCapitalPerTradePercent:
@@ -245,18 +225,20 @@ export class TradingSettingsComponent implements OnInit {
 
               buyTradingInterval: config?.buyTradingInterval ?? 1000,
               sellTradingInterval: config?.sellTradingInterval ?? 1000,
-              visibleColumns: (config?.visibleColumns ?? []).join(', '),
+              visibleColumns: (
+                config?.visibleColumns ?? [
+                  'star',
+                  'symbol',
+                  'reason',
+                  'suggestion',
+                  'stopLoss',
+                ]
+              ).join(', '),
 
               autoSquareOff: config?.autoSquareOff ?? true,
               paperTradingBalance: config?.paperTradingBalance ?? 100000,
 
-              enableUnfilteredResearchMode:
-                config?.enableUnfilteredResearchMode ?? true,
               researchDataVersion: config?.researchDataVersion ?? 'v1',
-              captureResearchTickIndicators:
-                config?.captureResearchTickIndicators ?? true,
-              researchTickCaptureLimit:
-                config?.researchTickCaptureLimit ?? 10000,
             },
             { emitEvent: false },
           );
@@ -284,14 +266,6 @@ export class TradingSettingsComponent implements OnInit {
       enableAutoTrading: !!v.enableAutoTrading,
       paperTrading: !!v.paperTrading,
       enableNotification: !!v.enableNotification,
-
-      coreStrategy: {
-        ...(current.coreStrategy ?? {}),
-        minimumCompletedCandles: Number(v.minimumCompletedCandles),
-        minimumRecoveryScore: Number(v.minimumRecoveryScore),
-        minimumPriceChangePercent: Number(v.minimumPriceChangePercent),
-        minimumBreakoutStrength: Number(v.minimumBreakoutStrength),
-      },
 
       riskPercentage: Number(v.riskPercentage),
       maxCapitalPerTradePercent: Number(v.maxCapitalPerTradePercent),
@@ -347,10 +321,7 @@ export class TradingSettingsComponent implements OnInit {
       autoSquareOff: !!v.autoSquareOff,
       paperTradingBalance: Number(v.paperTradingBalance),
 
-      enableUnfilteredResearchMode: !!v.enableUnfilteredResearchMode,
       researchDataVersion: String(v.researchDataVersion),
-      captureResearchTickIndicators: !!v.captureResearchTickIndicators,
-      researchTickCaptureLimit: Number(v.researchTickCaptureLimit),
 
       equity: {
         ...(current.equity ?? {}),
@@ -415,15 +386,6 @@ export class TradingSettingsComponent implements OnInit {
     link.download = `trading-settings-${new Date().toISOString().slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(link.href);
-  }
-
-  private defaultCore() {
-    return {
-      minimumCompletedCandles: 4,
-      minimumRecoveryScore: 60,
-      minimumPriceChangePercent: 0.05,
-      minimumBreakoutStrength: 5,
-    };
   }
 
   private defaultEquity() {

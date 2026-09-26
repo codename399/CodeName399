@@ -1,10 +1,3 @@
-export interface CoreStrategySettings {
-  minimumCompletedCandles: number;
-  minimumRecoveryScore: number;
-  minimumPriceChangePercent: number;
-  minimumBreakoutStrength: number;
-}
-
 export interface InstrumentTradingSettings {
   exchange: string;
   productType: string;
@@ -35,7 +28,6 @@ export interface TradingConfiguration {
   paperTrading: boolean;
   enableNotification: boolean;
 
-  coreStrategy: CoreStrategySettings;
   equity: InstrumentTradingSettings;
 
   riskPercentage: number;
@@ -86,10 +78,6 @@ export interface TradingConfiguration {
   autoSquareOff: boolean;
   paperTradingBalance: number;
 
-  enableUnfilteredResearchMode: boolean;
   researchDataVersion: string;
-  captureResearchTickIndicators: boolean;
-  researchTickCaptureLimit: number;
-
   exit: ExitSettings;
 }
