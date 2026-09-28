@@ -150,6 +150,45 @@
       </div>
     </section>
 
+    <section class="settings-card" *ngIf="sectionMatches('prediction', 'model', 'simulation', 'probability', 'training')">
+      <div class="card-header">
+        <button type="button" class="accordion-trigger" (click)="toggleSection('prediction')" [attr.aria-expanded]="openSection === 'prediction'"><span><h2>Prediction</h2><p>Prediction model, history, thresholds and simulation settings.</p></span><span class="accordion-icon">{{ openSection === 'prediction' ? '−' : '+' }}</span></button>
+      </div>
+      <div class="grid-4" *ngIf="openSection === 'prediction'">
+        <label class="toggle-field"><input type="checkbox" formControlName="predictionEnabled"><span>Prediction enabled</span></label>
+        <label><span>Target net %</span><input type="number" formControlName="predictionTargetNetPercent" min="0" step="0.01"></label>
+        <label><span>Round-trip cost %</span><input type="number" formControlName="predictionRoundTripCostPercent" min="0" step="0.01"></label>
+        <label><span>Future window seconds</span><input type="number" formControlName="predictionFutureWindowSeconds" min="0"></label>
+        <label><span>Minimum history ticks</span><input type="number" formControlName="predictionMinimumHistoryTicks" min="0"></label>
+        <label><span>Prediction spacing seconds</span><input type="number" formControlName="predictionSpacingSeconds" min="0"></label>
+        <label><span>Maximum history ticks per symbol</span><input type="number" formControlName="predictionMaximumHistoryTicksPerSymbol" min="0"></label>
+        <label><span>Maximum samples</span><input type="number" formControlName="predictionMaximumSamples" min="0"></label>
+        <label><span>Minimum buy probability</span><input type="number" formControlName="predictionMinimumBuyProbability" min="0" max="1" step="0.01"></label>
+        <label><span>Minimum hold probability</span><input type="number" formControlName="predictionMinimumHoldProbability" min="0" max="1" step="0.01"></label>
+        <label><span>Live history ticks</span><input type="number" formControlName="predictionLiveHistoryTicks" min="0"></label>
+        <label><span>Model file name</span><input type="text" formControlName="predictionModelFileName"></label>
+        <label><span>Training data path</span><input type="text" formControlName="predictionTrainingDataPath"></label>
+        <label><span>Train fraction</span><input type="number" formControlName="predictionTrainFraction" min="0" max="1" step="0.01"></label>
+        <label><span>Simulation starting capital</span><input type="number" formControlName="predictionSimulationStartingCapital" min="0"></label>
+        <label><span>Simulation maximum risk per trade</span><input type="number" formControlName="predictionSimulationMaximumRiskPerTrade" min="0"></label>
+        <label><span>Simulation max capital per trade %</span><input type="number" formControlName="predictionSimulationMaxCapitalPerTradePercent" min="0" max="100" step="0.1"></label>
+        <label><span>Simulation protective stop %</span><input type="number" formControlName="predictionSimulationProtectiveStopPercent" min="0" step="0.01"></label>
+      </div>
+    </section>
+
+    <section class="settings-card" *ngIf="sectionMatches('raw market data', 'storage', 'zip', 'rollover', 'recording')">
+      <div class="card-header">
+        <button type="button" class="accordion-trigger" (click)="toggleSection('rawMarketData')" [attr.aria-expanded]="openSection === 'rawMarketData'"><span><h2>Raw Market Data</h2><p>Market data recording and archive rollover settings.</p></span><span class="accordion-icon">{{ openSection === 'rawMarketData' ? '−' : '+' }}</span></button>
+      </div>
+      <div class="grid-4" *ngIf="openSection === 'rawMarketData'">
+        <label class="toggle-field"><input type="checkbox" formControlName="rawMarketDataEnabled"><span>Recording enabled</span></label>
+        <label><span>Storage path</span><input type="text" formControlName="rawMarketDataStoragePath"></label>
+        <label><span>Maximum ZIP size MB</span><input type="number" formControlName="rawMarketDataMaximumZipSizeMb" min="0"></label>
+        <label><span>Rollover at %</span><input type="number" formControlName="rawMarketDataRollOverAtPercent" min="0" max="100"></label>
+        <label class="toggle-field"><input type="checkbox" formControlName="rawMarketDataRecordOnlyDuringMarketHours"><span>Record only during market hours</span></label>
+      </div>
+    </section>
+
     <section class="settings-card" *ngIf="sectionMatches('operational metadata', 'daily summary', 'instrument', 'holidays', 'visible columns')">
       <div class="card-header">
         <button type="button" class="accordion-trigger" (click)="toggleSection('metadata')" [attr.aria-expanded]="openSection === 'metadata'"><span><h2>Operational Metadata</h2><p>These API fields are shown so the UI stays synchronized. They are not generated or recalculated by the UI.</p></span><span class="accordion-icon">{{ openSection === 'metadata' ? '−' : '+' }}</span></button>

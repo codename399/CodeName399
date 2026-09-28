@@ -110,6 +110,31 @@ export class TradingSettingsComponent implements OnInit {
     paperTradingBalance: [100000, [Validators.required, Validators.min(0)]],
 
     researchDataVersion: ['v1', Validators.required],
+
+    predictionEnabled: [true],
+    predictionTargetNetPercent: [0.25, [Validators.required, Validators.min(0)]],
+    predictionRoundTripCostPercent: [0.12, [Validators.required, Validators.min(0)]],
+    predictionFutureWindowSeconds: [300, [Validators.required, Validators.min(0)]],
+    predictionMinimumHistoryTicks: [20, [Validators.required, Validators.min(0)]],
+    predictionSpacingSeconds: [5, [Validators.required, Validators.min(0)]],
+    predictionMaximumHistoryTicksPerSymbol: [120, [Validators.required, Validators.min(0)]],
+    predictionMaximumSamples: [1000000, [Validators.required, Validators.min(0)]],
+    predictionMinimumBuyProbability: [0.25, [Validators.required, Validators.min(0), Validators.max(1)]],
+    predictionMinimumHoldProbability: [0.15, [Validators.required, Validators.min(0), Validators.max(1)]],
+    predictionLiveHistoryTicks: [120, [Validators.required, Validators.min(0)]],
+    predictionModelFileName: ['equity-prediction-model.json', Validators.required],
+    predictionTrainingDataPath: ['RawMarketData', Validators.required],
+    predictionTrainFraction: [0.7, [Validators.required, Validators.min(0), Validators.max(1)]],
+    predictionSimulationStartingCapital: [100000, [Validators.required, Validators.min(0)]],
+    predictionSimulationMaximumRiskPerTrade: [10000, [Validators.required, Validators.min(0)]],
+    predictionSimulationMaxCapitalPerTradePercent: [20, [Validators.required, Validators.min(0), Validators.max(100)]],
+    predictionSimulationProtectiveStopPercent: [0.5, [Validators.required, Validators.min(0)]],
+
+    rawMarketDataEnabled: [true],
+    rawMarketDataStoragePath: ['RawMarketData', Validators.required],
+    rawMarketDataMaximumZipSizeMb: [100, [Validators.required, Validators.min(0)]],
+    rawMarketDataRollOverAtPercent: [95, [Validators.required, Validators.min(0), Validators.max(100)]],
+    rawMarketDataRecordOnlyDuringMarketHours: [true],
   });
 
   ngOnInit(): void {
@@ -128,6 +153,8 @@ export class TradingSettingsComponent implements OnInit {
 
           const equity = config?.equity ?? this.defaultEquity();
           const exit = config?.exit ?? this.defaultExit();
+          const prediction = config?.prediction ?? this.defaultPrediction();
+          const rawMarketData = config?.rawMarketData ?? this.defaultRawMarketData();
 
           this.form.patchValue(
             {
@@ -239,6 +266,31 @@ export class TradingSettingsComponent implements OnInit {
               paperTradingBalance: config?.paperTradingBalance ?? 100000,
 
               researchDataVersion: config?.researchDataVersion ?? 'v1',
+
+              predictionEnabled: prediction.enabled,
+              predictionTargetNetPercent: prediction.targetNetPercent,
+              predictionRoundTripCostPercent: prediction.roundTripCostPercent,
+              predictionFutureWindowSeconds: prediction.futureWindowSeconds,
+              predictionMinimumHistoryTicks: prediction.minimumHistoryTicks,
+              predictionSpacingSeconds: prediction.predictionSpacingSeconds,
+              predictionMaximumHistoryTicksPerSymbol: prediction.maximumHistoryTicksPerSymbol,
+              predictionMaximumSamples: prediction.maximumSamples,
+              predictionMinimumBuyProbability: prediction.minimumBuyProbability,
+              predictionMinimumHoldProbability: prediction.minimumHoldProbability,
+              predictionLiveHistoryTicks: prediction.liveHistoryTicks,
+              predictionModelFileName: prediction.modelFileName,
+              predictionTrainingDataPath: prediction.trainingDataPath,
+              predictionTrainFraction: prediction.trainFraction,
+              predictionSimulationStartingCapital: prediction.simulationStartingCapital,
+              predictionSimulationMaximumRiskPerTrade: prediction.simulationMaximumRiskPerTrade,
+              predictionSimulationMaxCapitalPerTradePercent: prediction.simulationMaxCapitalPerTradePercent,
+              predictionSimulationProtectiveStopPercent: prediction.simulationProtectiveStopPercent,
+
+              rawMarketDataEnabled: rawMarketData.enabled,
+              rawMarketDataStoragePath: rawMarketData.storagePath,
+              rawMarketDataMaximumZipSizeMb: rawMarketData.maximumZipSizeMb,
+              rawMarketDataRollOverAtPercent: rawMarketData.rollOverAtPercent,
+              rawMarketDataRecordOnlyDuringMarketHours: rawMarketData.recordOnlyDuringMarketHours,
             },
             { emitEvent: false },
           );
@@ -322,6 +374,37 @@ export class TradingSettingsComponent implements OnInit {
       paperTradingBalance: Number(v.paperTradingBalance),
 
       researchDataVersion: String(v.researchDataVersion),
+
+      prediction: {
+        ...(current.prediction ?? this.defaultPrediction()),
+        enabled: !!v.predictionEnabled,
+        targetNetPercent: Number(v.predictionTargetNetPercent),
+        roundTripCostPercent: Number(v.predictionRoundTripCostPercent),
+        futureWindowSeconds: Number(v.predictionFutureWindowSeconds),
+        minimumHistoryTicks: Number(v.predictionMinimumHistoryTicks),
+        predictionSpacingSeconds: Number(v.predictionSpacingSeconds),
+        maximumHistoryTicksPerSymbol: Number(v.predictionMaximumHistoryTicksPerSymbol),
+        maximumSamples: Number(v.predictionMaximumSamples),
+        minimumBuyProbability: Number(v.predictionMinimumBuyProbability),
+        minimumHoldProbability: Number(v.predictionMinimumHoldProbability),
+        liveHistoryTicks: Number(v.predictionLiveHistoryTicks),
+        modelFileName: String(v.predictionModelFileName),
+        trainingDataPath: String(v.predictionTrainingDataPath),
+        trainFraction: Number(v.predictionTrainFraction),
+        simulationStartingCapital: Number(v.predictionSimulationStartingCapital),
+        simulationMaximumRiskPerTrade: Number(v.predictionSimulationMaximumRiskPerTrade),
+        simulationMaxCapitalPerTradePercent: Number(v.predictionSimulationMaxCapitalPerTradePercent),
+        simulationProtectiveStopPercent: Number(v.predictionSimulationProtectiveStopPercent),
+      },
+
+      rawMarketData: {
+        ...(current.rawMarketData ?? this.defaultRawMarketData()),
+        enabled: !!v.rawMarketDataEnabled,
+        storagePath: String(v.rawMarketDataStoragePath),
+        maximumZipSizeMb: Number(v.rawMarketDataMaximumZipSizeMb),
+        rollOverAtPercent: Number(v.rawMarketDataRollOverAtPercent),
+        recordOnlyDuringMarketHours: !!v.rawMarketDataRecordOnlyDuringMarketHours,
+      },
 
       equity: {
         ...(current.equity ?? {}),
@@ -409,6 +492,39 @@ export class TradingSettingsComponent implements OnInit {
     return {
       trailingStopAtrMultiplier: 0.6,
       trailingProfitRetentionPercent: 70,
+    };
+  }
+
+  private defaultPrediction() {
+    return {
+      enabled: true,
+      targetNetPercent: 0.25,
+      roundTripCostPercent: 0.12,
+      futureWindowSeconds: 300,
+      minimumHistoryTicks: 20,
+      predictionSpacingSeconds: 5,
+      maximumHistoryTicksPerSymbol: 120,
+      maximumSamples: 1000000,
+      minimumBuyProbability: 0.25,
+      minimumHoldProbability: 0.15,
+      liveHistoryTicks: 120,
+      modelFileName: 'equity-prediction-model.json',
+      trainingDataPath: 'RawMarketData',
+      trainFraction: 0.7,
+      simulationStartingCapital: 100000,
+      simulationMaximumRiskPerTrade: 10000,
+      simulationMaxCapitalPerTradePercent: 20,
+      simulationProtectiveStopPercent: 0.5,
+    };
+  }
+
+  private defaultRawMarketData() {
+    return {
+      enabled: true,
+      storagePath: 'RawMarketData',
+      maximumZipSizeMb: 100,
+      rollOverAtPercent: 95,
+      recordOnlyDuringMarketHours: true,
     };
   }
 

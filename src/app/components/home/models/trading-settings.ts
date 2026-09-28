@@ -18,6 +18,35 @@ export interface ExitSettings {
   trailingProfitRetentionPercent: number;
 }
 
+export interface PredictionSettings {
+  enabled: boolean;
+  targetNetPercent: number;
+  roundTripCostPercent: number;
+  futureWindowSeconds: number;
+  minimumHistoryTicks: number;
+  predictionSpacingSeconds: number;
+  maximumHistoryTicksPerSymbol: number;
+  maximumSamples: number;
+  minimumBuyProbability: number;
+  minimumHoldProbability: number;
+  liveHistoryTicks: number;
+  modelFileName: string;
+  trainingDataPath: string;
+  trainFraction: number;
+  simulationStartingCapital: number;
+  simulationMaximumRiskPerTrade: number;
+  simulationMaxCapitalPerTradePercent: number;
+  simulationProtectiveStopPercent: number;
+}
+
+export interface RawMarketDataSettings {
+  enabled: boolean;
+  storagePath: string;
+  maximumZipSizeMb: number;
+  rollOverAtPercent: number;
+  recordOnlyDuringMarketHours: boolean;
+}
+
 /**
  * Field-for-field mirror of the API TradingConfiguration.
  * Property names intentionally match ASP.NET camelCase JSON names.
@@ -80,4 +109,6 @@ export interface TradingConfiguration {
 
   researchDataVersion: string;
   exit: ExitSettings;
+  prediction: PredictionSettings;
+  rawMarketData: RawMarketDataSettings;
 }
