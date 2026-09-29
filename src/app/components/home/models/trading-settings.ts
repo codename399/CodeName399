@@ -33,6 +33,10 @@ export interface PredictionSettings {
   modelFileName: string;
   trainingDataPath: string;
   trainFraction: number;
+  autoTrainModel: boolean;
+  autoTrainCheckIntervalMinutes: number;
+  autoTrainStartupDelaySeconds: number;
+  autoTrainMinimumArchiveAgeMinutes: number;
   simulationStartingCapital: number;
   simulationMaximumRiskPerTrade: number;
   simulationMaxCapitalPerTradePercent: number;

@@ -169,6 +169,10 @@
         <label><span>Model file name</span><input type="text" formControlName="predictionModelFileName"></label>
         <label><span>Training data path</span><input type="text" formControlName="predictionTrainingDataPath"></label>
         <label><span>Train fraction</span><input type="number" formControlName="predictionTrainFraction" min="0" max="1" step="0.01"></label>
+        <label class="toggle-field"><input type="checkbox" formControlName="predictionAutoTrainModel"><span>Automatic model training</span></label>
+        <label><span>Auto-train check interval minutes</span><input type="number" formControlName="predictionAutoTrainCheckIntervalMinutes" min="0"></label>
+        <label><span>Auto-train startup delay seconds</span><input type="number" formControlName="predictionAutoTrainStartupDelaySeconds" min="0"></label>
+        <label><span>Minimum archive age minutes</span><input type="number" formControlName="predictionAutoTrainMinimumArchiveAgeMinutes" min="0"></label>
         <label><span>Simulation starting capital</span><input type="number" formControlName="predictionSimulationStartingCapital" min="0"></label>
         <label><span>Simulation maximum risk per trade</span><input type="number" formControlName="predictionSimulationMaximumRiskPerTrade" min="0"></label>
         <label><span>Simulation max capital per trade %</span><input type="number" formControlName="predictionSimulationMaxCapitalPerTradePercent" min="0" max="100" step="0.1"></label>

@@ -125,6 +125,10 @@ export class TradingSettingsComponent implements OnInit {
     predictionModelFileName: ['equity-prediction-model.json', Validators.required],
     predictionTrainingDataPath: ['RawMarketData', Validators.required],
     predictionTrainFraction: [0.7, [Validators.required, Validators.min(0), Validators.max(1)]],
+    predictionAutoTrainModel: [true],
+    predictionAutoTrainCheckIntervalMinutes: [5, [Validators.required, Validators.min(0)]],
+    predictionAutoTrainStartupDelaySeconds: [10, [Validators.required, Validators.min(0)]],
+    predictionAutoTrainMinimumArchiveAgeMinutes: [2, [Validators.required, Validators.min(0)]],
     predictionSimulationStartingCapital: [100000, [Validators.required, Validators.min(0)]],
     predictionSimulationMaximumRiskPerTrade: [10000, [Validators.required, Validators.min(0)]],
     predictionSimulationMaxCapitalPerTradePercent: [20, [Validators.required, Validators.min(0), Validators.max(100)]],
@@ -281,6 +285,13 @@ export class TradingSettingsComponent implements OnInit {
               predictionModelFileName: prediction.modelFileName,
               predictionTrainingDataPath: prediction.trainingDataPath,
               predictionTrainFraction: prediction.trainFraction,
+              predictionAutoTrainModel: prediction.autoTrainModel,
+              predictionAutoTrainCheckIntervalMinutes:
+                prediction.autoTrainCheckIntervalMinutes,
+              predictionAutoTrainStartupDelaySeconds:
+                prediction.autoTrainStartupDelaySeconds,
+              predictionAutoTrainMinimumArchiveAgeMinutes:
+                prediction.autoTrainMinimumArchiveAgeMinutes,
               predictionSimulationStartingCapital: prediction.simulationStartingCapital,
               predictionSimulationMaximumRiskPerTrade: prediction.simulationMaximumRiskPerTrade,
               predictionSimulationMaxCapitalPerTradePercent: prediction.simulationMaxCapitalPerTradePercent,
@@ -391,6 +402,16 @@ export class TradingSettingsComponent implements OnInit {
         modelFileName: String(v.predictionModelFileName),
         trainingDataPath: String(v.predictionTrainingDataPath),
         trainFraction: Number(v.predictionTrainFraction),
+        autoTrainModel: !!v.predictionAutoTrainModel,
+        autoTrainCheckIntervalMinutes: Number(
+          v.predictionAutoTrainCheckIntervalMinutes,
+        ),
+        autoTrainStartupDelaySeconds: Number(
+          v.predictionAutoTrainStartupDelaySeconds,
+        ),
+        autoTrainMinimumArchiveAgeMinutes: Number(
+          v.predictionAutoTrainMinimumArchiveAgeMinutes,
+        ),
         simulationStartingCapital: Number(v.predictionSimulationStartingCapital),
         simulationMaximumRiskPerTrade: Number(v.predictionSimulationMaximumRiskPerTrade),
         simulationMaxCapitalPerTradePercent: Number(v.predictionSimulationMaxCapitalPerTradePercent),
@@ -511,6 +532,10 @@ export class TradingSettingsComponent implements OnInit {
       modelFileName: 'equity-prediction-model.json',
       trainingDataPath: 'RawMarketData',
       trainFraction: 0.7,
+      autoTrainModel: true,
+      autoTrainCheckIntervalMinutes: 5,
+      autoTrainStartupDelaySeconds: 10,
+      autoTrainMinimumArchiveAgeMinutes: 2,
       simulationStartingCapital: 100000,
       simulationMaximumRiskPerTrade: 10000,
       simulationMaxCapitalPerTradePercent: 20,
