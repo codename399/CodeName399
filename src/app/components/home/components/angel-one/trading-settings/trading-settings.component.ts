@@ -285,13 +285,13 @@ export class TradingSettingsComponent implements OnInit {
               predictionModelFileName: prediction.modelFileName,
               predictionTrainingDataPath: prediction.trainingDataPath,
               predictionTrainFraction: prediction.trainFraction,
-              predictionAutoTrainModel: prediction.autoTrainModel,
+              predictionAutoTrainModel: prediction.autoTrainModel ?? true,
               predictionAutoTrainCheckIntervalMinutes:
-                prediction.autoTrainCheckIntervalMinutes,
+                prediction.autoTrainCheckIntervalMinutes ?? 5,
               predictionAutoTrainStartupDelaySeconds:
-                prediction.autoTrainStartupDelaySeconds,
+                prediction.autoTrainStartupDelaySeconds ?? 10,
               predictionAutoTrainMinimumArchiveAgeMinutes:
-                prediction.autoTrainMinimumArchiveAgeMinutes,
+                prediction.autoTrainMinimumArchiveAgeMinutes ?? 2,
               predictionSimulationStartingCapital: prediction.simulationStartingCapital,
               predictionSimulationMaximumRiskPerTrade: prediction.simulationMaximumRiskPerTrade,
               predictionSimulationMaxCapitalPerTradePercent: prediction.simulationMaxCapitalPerTradePercent,
