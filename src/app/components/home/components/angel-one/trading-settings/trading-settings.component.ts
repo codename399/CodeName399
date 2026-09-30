@@ -27,9 +27,11 @@ export class TradingSettingsComponent implements OnInit {
   readonly form = this.#fb.group({
     enableAutoTrading: [false],
     paperTrading: [true],
+    paperTradingAsLive: [true],
     enableNotification: [true],
 
     riskPercentage: [2, [Validators.required, Validators.min(0)]],
+    maxLossPercent: [0.5, [Validators.required, Validators.min(0)]],
     maxCapitalPerTradePercent: [
       10,
       [Validators.required, Validators.min(0), Validators.max(100)],
@@ -164,9 +166,11 @@ export class TradingSettingsComponent implements OnInit {
             {
               enableAutoTrading: config?.enableAutoTrading ?? false,
               paperTrading: config?.paperTrading ?? true,
+              paperTradingAsLive: config?.paperTradingAsLive ?? true,
               enableNotification: config?.enableNotification ?? true,
 
               riskPercentage: config?.riskPercentage ?? 2,
+              maxLossPercent: config?.maxLossPercent ?? 0.5,
               maxCapitalPerTradePercent:
                 config?.maxCapitalPerTradePercent ?? 10,
               maxBrokerFailuresBeforeKillSwitch:
@@ -328,9 +332,11 @@ export class TradingSettingsComponent implements OnInit {
 
       enableAutoTrading: !!v.enableAutoTrading,
       paperTrading: !!v.paperTrading,
+      paperTradingAsLive: !!v.paperTradingAsLive,
       enableNotification: !!v.enableNotification,
 
       riskPercentage: Number(v.riskPercentage),
+      maxLossPercent: Number(v.maxLossPercent),
       maxCapitalPerTradePercent: Number(v.maxCapitalPerTradePercent),
       maxBrokerFailuresBeforeKillSwitch: Number(
         v.maxBrokerFailuresBeforeKillSwitch,

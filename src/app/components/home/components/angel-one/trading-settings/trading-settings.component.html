@@ -30,17 +30,19 @@
       <div class="grid-4" *ngIf="openSection === 'trading'">
         <label class="toggle-field"><input type="checkbox" formControlName="enableAutoTrading"><span>Auto trading</span></label>
         <label class="toggle-field"><input type="checkbox" formControlName="paperTrading"><span>Paper trading</span></label>
+        <label class="toggle-field"><input type="checkbox" formControlName="paperTradingAsLive"><span>Paper trading as live</span></label>
         <label class="toggle-field"><input type="checkbox" formControlName="enableNotification"><span>Trade emails</span></label>
         <label class="toggle-field"><input type="checkbox" formControlName="autoSquareOff"><span>Auto square-off</span></label>
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('risk capital', 'risk per trade', 'capital', 'broker failures', 'open risk', 'reservation')">
+    <section class="settings-card" *ngIf="sectionMatches('risk capital', 'risk per trade', 'max loss', 'capital', 'broker failures', 'open risk', 'reservation')">
       <div class="card-header">
         <button type="button" class="accordion-trigger" (click)="toggleSection('risk')" [attr.aria-expanded]="openSection === 'risk'"><span><h2>Risk &amp; Capital</h2><p>Risk, capital allocation and broker failure controls.</p></span><span class="accordion-icon">{{ openSection === 'risk' ? '−' : '+' }}</span></button>
       </div>
       <div class="grid-4" *ngIf="openSection === 'risk'">
         <label><span>Risk per trade %</span><input type="number" formControlName="riskPercentage" min="0" step="0.01"></label>
+        <label><span>Max loss %</span><input type="number" formControlName="maxLossPercent" min="0" step="0.01"></label>
         <label><span>Maximum capital per trade %</span><input type="number" formControlName="maxCapitalPerTradePercent" min="0" max="100" step="0.1"></label>
         <label><span>Maximum total open risk</span><input type="number" formControlName="maximumTotalOpenRisk" min="0" step="1"></label>
         <label><span>Risk reservation seconds</span><input type="number" formControlName="riskReservationSeconds" min="0"></label>

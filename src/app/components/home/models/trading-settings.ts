@@ -59,11 +59,13 @@ export interface TradingConfiguration {
   id: string;
   enableAutoTrading: boolean;
   paperTrading: boolean;
+  paperTradingAsLive: boolean;
   enableNotification: boolean;
 
   equity: InstrumentTradingSettings;
 
   riskPercentage: number;
+  maxLossPercent: number;
   maxCapitalPerTradePercent: number;
   maxBrokerFailuresBeforeKillSwitch: number;
   brokerFailureWindowMinutes: number;
