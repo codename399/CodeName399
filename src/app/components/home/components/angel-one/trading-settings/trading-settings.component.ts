@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ToastService } from '../../../../../services/toast.service';
 import { AngelOneService } from '../../../services/angel-one.service';
@@ -17,6 +18,7 @@ export class TradingSettingsComponent implements OnInit {
   readonly #fb = inject(FormBuilder);
   readonly #angel = inject(AngelOneService);
   readonly #toast = inject(ToastService);
+  readonly #router = inject(Router);
 
   loading = false;
   saving = false;
@@ -466,6 +468,7 @@ export class TradingSettingsComponent implements OnInit {
           this.currentConfiguration = saved ?? configuration;
           this.form.markAsPristine();
           this.#toast.success('Trading configuration saved');
+          void this.#router.navigate(['/home/dashboard']);
         },
         error: () => this.#toast.error('Unable to save trading configuration'),
       });
