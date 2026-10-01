@@ -16,6 +16,7 @@ export interface InstrumentTradingSettings {
 export interface ExitSettings {
   trailingStopAtrMultiplier: number;
   trailingProfitRetentionPercent: number;
+  trailingActivationNetProfitPercent: number;
 }
 
 export interface PredictionSettings {
@@ -93,6 +94,11 @@ export interface TradingConfiguration {
   tradingHolidays: string[];
 
   maximumTotalOpenRisk: number;
+  maximumNetLossPercent: number;
+  preferredMaximumStopPercent: number;
+  minimumProtectiveStopPercent: number;
+  maximumExpectedSlippagePercent: number;
+  maximumEntrySpreadPercent: number;
   riskReservationSeconds: number;
   enableEntryExecutionAudit: boolean;
   enableScripConsentForCashOrders: boolean;

@@ -44,6 +44,11 @@
         <label><span>Risk per trade %</span><input type="number" formControlName="riskPercentage" min="0" step="0.01"></label>
         <label><span>Maximum capital per trade %</span><input type="number" formControlName="maxCapitalPerTradePercent" min="0" max="100" step="0.1"></label>
         <label><span>Maximum total open risk</span><input type="number" formControlName="maximumTotalOpenRisk" min="0" step="1"></label>
+        <label><span>Maximum net loss %</span><input type="number" formControlName="maximumNetLossPercent" min="0" step="0.01"></label>
+        <label><span>Preferred maximum stop %</span><input type="number" formControlName="preferredMaximumStopPercent" min="0" step="0.01"></label>
+        <label><span>Minimum protective stop %</span><input type="number" formControlName="minimumProtectiveStopPercent" min="0" step="0.01"></label>
+        <label><span>Maximum expected slippage %</span><input type="number" formControlName="maximumExpectedSlippagePercent" min="0" step="0.01"></label>
+        <label><span>Maximum entry spread %</span><input type="number" formControlName="maximumEntrySpreadPercent" min="0" step="0.01"></label>
         <label><span>Risk reservation seconds</span><input type="number" formControlName="riskReservationSeconds" min="0"></label>
         <label><span>Max broker failures before kill switch</span><input type="number" formControlName="maxBrokerFailuresBeforeKillSwitch" min="0"></label>
         <label><span>Broker failure window minutes</span><input type="number" formControlName="brokerFailureWindowMinutes" min="0"></label>
@@ -78,6 +83,7 @@
       <div class="grid-4" *ngIf="openSection === 'exit'">
         <label><span>Trailing ATR multiplier</span><input type="number" formControlName="trailingStopAtrMultiplier" min="0" step="0.01"></label>
         <label><span>Peak profit retention %</span><input type="number" formControlName="trailingProfitRetentionPercent" min="0" max="100" step="1"></label>
+        <label><span>Trailing activation net profit %</span><input type="number" formControlName="trailingActivationNetProfitPercent" min="0" step="0.01"></label>
       </div>
     </section>
 

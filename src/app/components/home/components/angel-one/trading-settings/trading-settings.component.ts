@@ -40,6 +40,11 @@ export class TradingSettingsComponent implements OnInit {
     ],
     brokerFailureWindowMinutes: [2, [Validators.required, Validators.min(0)]],
     maximumTotalOpenRisk: [10000, [Validators.required, Validators.min(0)]],
+    maximumNetLossPercent: [0.5, [Validators.required, Validators.min(0)]],
+    preferredMaximumStopPercent: [0.3, [Validators.required, Validators.min(0)]],
+    minimumProtectiveStopPercent: [0.2, [Validators.required, Validators.min(0)]],
+    maximumExpectedSlippagePercent: [0.05, [Validators.required, Validators.min(0)]],
+    maximumEntrySpreadPercent: [0.15, [Validators.required, Validators.min(0)]],
     riskReservationSeconds: [10, [Validators.required, Validators.min(0)]],
 
     exchange: ['NSE', Validators.required],
@@ -47,19 +52,20 @@ export class TradingSettingsComponent implements OnInit {
     orderType: ['MARKET', Validators.required],
     duration: ['DAY', Validators.required],
     atrStopMultiplier: [1.2, [Validators.required, Validators.min(0)]],
-    minimumStopPercent: [0.5, [Validators.required, Validators.min(0)]],
-    maximumStopPercent: [1.5, [Validators.required, Validators.min(0)]],
+    minimumStopPercent: [0.2, [Validators.required, Validators.min(0)]],
+    maximumStopPercent: [0.3, [Validators.required, Validators.min(0)]],
     allowLong: [true],
-    exitOrderTimeoutSeconds: [10, [Validators.required, Validators.min(0)]],
+    exitOrderTimeoutSeconds: [3, [Validators.required, Validators.min(0)]],
     maxMarketDataAgeSeconds: [15, [Validators.required, Validators.min(0)]],
     maximumExitRetries: [5, [Validators.required, Validators.min(0)]],
     maximumOpenPositions: [3, [Validators.required, Validators.min(0)]],
 
-    trailingStopAtrMultiplier: [0.6, [Validators.required, Validators.min(0)]],
+    trailingStopAtrMultiplier: [0.5, [Validators.required, Validators.min(0)]],
     trailingProfitRetentionPercent: [
       70,
       [Validators.required, Validators.min(0), Validators.max(100)],
     ],
+    trailingActivationNetProfitPercent: [0.1, [Validators.required, Validators.min(0)]],
 
     ignoreMarketHours: [false],
     marketOpenTime: ['09:15:00', Validators.required],
@@ -100,11 +106,11 @@ export class TradingSettingsComponent implements OnInit {
       [Validators.required, Validators.min(0)],
     ],
     squareOffRetryDelaySeconds: [1, [Validators.required, Validators.min(0)]],
-    stopLossConfirmationSeconds: [2, [Validators.required, Validators.min(0)]],
+    stopLossConfirmationSeconds: [0, [Validators.required, Validators.min(0)]],
 
     buyTradingInterval: [1000, [Validators.required, Validators.min(0)]],
     sellTradingInterval: [1000, [Validators.required, Validators.min(0)]],
-    visibleColumns: ['star, symbol, reason, suggestion, stopLoss'],
+    visibleColumns: ['star, symbol, signal, risk, atr, stopLoss, reason, suggestion'],
 
     autoSquareOff: [true],
     paperTradingBalance: [100000, [Validators.required, Validators.min(0)]],
@@ -175,6 +181,11 @@ export class TradingSettingsComponent implements OnInit {
               brokerFailureWindowMinutes:
                 config?.brokerFailureWindowMinutes ?? 2,
               maximumTotalOpenRisk: config?.maximumTotalOpenRisk ?? 10000,
+              maximumNetLossPercent: config?.maximumNetLossPercent ?? 0.5,
+              preferredMaximumStopPercent: config?.preferredMaximumStopPercent ?? 0.3,
+              minimumProtectiveStopPercent: config?.minimumProtectiveStopPercent ?? 0.2,
+              maximumExpectedSlippagePercent: config?.maximumExpectedSlippagePercent ?? 0.05,
+              maximumEntrySpreadPercent: config?.maximumEntrySpreadPercent ?? 0.15,
               riskReservationSeconds: config?.riskReservationSeconds ?? 10,
 
               exchange: equity.exchange,
@@ -193,6 +204,8 @@ export class TradingSettingsComponent implements OnInit {
               trailingStopAtrMultiplier: exit.trailingStopAtrMultiplier,
               trailingProfitRetentionPercent:
                 exit.trailingProfitRetentionPercent,
+              trailingActivationNetProfitPercent:
+                exit.trailingActivationNetProfitPercent ?? 0.1,
 
               ignoreMarketHours: config?.ignoreMarketHours ?? false,
               marketOpenTime: this.time(config?.marketOpenTime, '09:15:00'),
@@ -261,9 +274,12 @@ export class TradingSettingsComponent implements OnInit {
                 config?.visibleColumns ?? [
                   'star',
                   'symbol',
+                  'signal',
+                  'risk',
+                  'atr',
+                  'stopLoss',
                   'reason',
                   'suggestion',
-                  'stopLoss',
                 ]
               ).join(', '),
 
@@ -339,6 +355,11 @@ export class TradingSettingsComponent implements OnInit {
       ),
       brokerFailureWindowMinutes: Number(v.brokerFailureWindowMinutes),
       maximumTotalOpenRisk: Number(v.maximumTotalOpenRisk),
+      maximumNetLossPercent: Number(v.maximumNetLossPercent),
+      preferredMaximumStopPercent: Number(v.preferredMaximumStopPercent),
+      minimumProtectiveStopPercent: Number(v.minimumProtectiveStopPercent),
+      maximumExpectedSlippagePercent: Number(v.maximumExpectedSlippagePercent),
+      maximumEntrySpreadPercent: Number(v.maximumEntrySpreadPercent),
       riskReservationSeconds: Number(v.riskReservationSeconds),
 
       ignoreMarketHours: !!v.ignoreMarketHours,
@@ -452,6 +473,9 @@ export class TradingSettingsComponent implements OnInit {
         trailingProfitRetentionPercent: Number(
           v.trailingProfitRetentionPercent,
         ),
+        trailingActivationNetProfitPercent: Number(
+          v.trailingActivationNetProfitPercent,
+        ),
       },
     };
 
@@ -502,10 +526,10 @@ export class TradingSettingsComponent implements OnInit {
       orderType: 'MARKET',
       duration: 'DAY',
       atrStopMultiplier: 1.2,
-      minimumStopPercent: 0.5,
-      maximumStopPercent: 1.5,
+      minimumStopPercent: 0.2,
+      maximumStopPercent: 0.3,
       allowLong: true,
-      exitOrderTimeoutSeconds: 10,
+      exitOrderTimeoutSeconds: 3,
       maxMarketDataAgeSeconds: 15,
       maximumExitRetries: 5,
       maximumOpenPositions: 3,
@@ -514,8 +538,9 @@ export class TradingSettingsComponent implements OnInit {
 
   private defaultExit() {
     return {
-      trailingStopAtrMultiplier: 0.6,
+      trailingStopAtrMultiplier: 0.5,
       trailingProfitRetentionPercent: 70,
+      trailingActivationNetProfitPercent: 0.1,
     };
   }
 
