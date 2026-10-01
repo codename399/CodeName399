@@ -108,7 +108,7 @@ export class TradingSettingsComponent implements OnInit {
 
     buyTradingInterval: [1000, [Validators.required, Validators.min(0)]],
     sellTradingInterval: [1000, [Validators.required, Validators.min(0)]],
-    visibleColumns: ['star, symbol, reason, suggestion, stopLoss'],
+    visibleColumns: ['star, symbol, stopLoss, reason, suggestion'],
 
     autoSquareOff: [true],
     paperTradingBalance: [100000, [Validators.required, Validators.min(0)]],
@@ -123,8 +123,8 @@ export class TradingSettingsComponent implements OnInit {
     predictionSpacingSeconds: [5, [Validators.required, Validators.min(0)]],
     predictionMaximumHistoryTicksPerSymbol: [120, [Validators.required, Validators.min(0)]],
     predictionMaximumSamples: [1000000, [Validators.required, Validators.min(0)]],
-    predictionMinimumBuyProbability: [0.25, [Validators.required, Validators.min(0), Validators.max(1)]],
-    predictionMinimumHoldProbability: [0.15, [Validators.required, Validators.min(0), Validators.max(1)]],
+    predictionMinimumBuyProbability: [0.7, [Validators.required, Validators.min(0), Validators.max(1)]],
+    predictionMinimumHoldProbability: [0.5, [Validators.required, Validators.min(0), Validators.max(1)]],
     predictionLiveHistoryTicks: [120, [Validators.required, Validators.min(0)]],
     predictionModelFileName: ['equity-prediction-model.json', Validators.required],
     predictionTrainingDataPath: ['RawMarketData', Validators.required],
@@ -133,6 +133,11 @@ export class TradingSettingsComponent implements OnInit {
     predictionAutoTrainCheckIntervalMinutes: [5, [Validators.required, Validators.min(0)]],
     predictionAutoTrainStartupDelaySeconds: [10, [Validators.required, Validators.min(0)]],
     predictionAutoTrainMinimumArchiveAgeMinutes: [2, [Validators.required, Validators.min(0)]],
+    predictionIncludeCompletedTradeFeedback: [true],
+    predictionRequireValidatedModel: [true],
+    predictionMinimumRocAuc: [0.52, [Validators.required, Validators.min(0), Validators.max(1)]],
+    predictionMinimumBrierSkill: [0.01, [Validators.required, Validators.min(0), Validators.max(1)]],
+    predictionMinimumTrainingSamplesForLive: [1000, [Validators.required, Validators.min(0)]],
     predictionSimulationStartingCapital: [100000, [Validators.required, Validators.min(0)]],
     predictionSimulationMaximumRiskPerTrade: [10000, [Validators.required, Validators.min(0)]],
     predictionSimulationMaxCapitalPerTradePercent: [20, [Validators.required, Validators.min(0), Validators.max(100)]],
@@ -266,9 +271,9 @@ export class TradingSettingsComponent implements OnInit {
                 config?.visibleColumns ?? [
                   'star',
                   'symbol',
+                  'stopLoss',
                   'reason',
                   'suggestion',
-                  'stopLoss',
                 ]
               ).join(', '),
 
@@ -298,6 +303,14 @@ export class TradingSettingsComponent implements OnInit {
                 prediction.autoTrainStartupDelaySeconds ?? 10,
               predictionAutoTrainMinimumArchiveAgeMinutes:
                 prediction.autoTrainMinimumArchiveAgeMinutes ?? 2,
+              predictionIncludeCompletedTradeFeedback:
+                prediction.includeCompletedTradeFeedback ?? true,
+              predictionRequireValidatedModel:
+                prediction.requireValidatedModel ?? true,
+              predictionMinimumRocAuc: prediction.minimumRocAuc ?? 0.52,
+              predictionMinimumBrierSkill: prediction.minimumBrierSkill ?? 0.01,
+              predictionMinimumTrainingSamplesForLive:
+                prediction.minimumTrainingSamplesForLive ?? 1000,
               predictionSimulationStartingCapital: prediction.simulationStartingCapital,
               predictionSimulationMaximumRiskPerTrade: prediction.simulationMaximumRiskPerTrade,
               predictionSimulationMaxCapitalPerTradePercent: prediction.simulationMaxCapitalPerTradePercent,
@@ -420,6 +433,13 @@ export class TradingSettingsComponent implements OnInit {
         autoTrainMinimumArchiveAgeMinutes: Number(
           v.predictionAutoTrainMinimumArchiveAgeMinutes,
         ),
+        includeCompletedTradeFeedback: !!v.predictionIncludeCompletedTradeFeedback,
+        requireValidatedModel: !!v.predictionRequireValidatedModel,
+        minimumRocAuc: Number(v.predictionMinimumRocAuc),
+        minimumBrierSkill: Number(v.predictionMinimumBrierSkill),
+        minimumTrainingSamplesForLive: Number(
+          v.predictionMinimumTrainingSamplesForLive,
+        ),
         simulationStartingCapital: Number(v.predictionSimulationStartingCapital),
         simulationMaximumRiskPerTrade: Number(v.predictionSimulationMaximumRiskPerTrade),
         simulationMaxCapitalPerTradePercent: Number(v.predictionSimulationMaxCapitalPerTradePercent),
@@ -535,8 +555,8 @@ export class TradingSettingsComponent implements OnInit {
       predictionSpacingSeconds: 5,
       maximumHistoryTicksPerSymbol: 120,
       maximumSamples: 1000000,
-      minimumBuyProbability: 0.25,
-      minimumHoldProbability: 0.15,
+      minimumBuyProbability: 0.7,
+      minimumHoldProbability: 0.5,
       liveHistoryTicks: 120,
       modelFileName: 'equity-prediction-model.json',
       trainingDataPath: 'RawMarketData',
@@ -545,6 +565,11 @@ export class TradingSettingsComponent implements OnInit {
       autoTrainCheckIntervalMinutes: 5,
       autoTrainStartupDelaySeconds: 10,
       autoTrainMinimumArchiveAgeMinutes: 2,
+      includeCompletedTradeFeedback: true,
+      requireValidatedModel: true,
+      minimumRocAuc: 0.52,
+      minimumBrierSkill: 0.01,
+      minimumTrainingSamplesForLive: 1000,
       simulationStartingCapital: 100000,
       simulationMaximumRiskPerTrade: 10000,
       simulationMaxCapitalPerTradePercent: 20,

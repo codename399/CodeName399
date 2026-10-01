@@ -37,6 +37,11 @@ export interface PredictionSettings {
   autoTrainCheckIntervalMinutes: number;
   autoTrainStartupDelaySeconds: number;
   autoTrainMinimumArchiveAgeMinutes: number;
+  includeCompletedTradeFeedback: boolean;
+  requireValidatedModel: boolean;
+  minimumRocAuc: number;
+  minimumBrierSkill: number;
+  minimumTrainingSamplesForLive: number;
   simulationStartingCapital: number;
   simulationMaximumRiskPerTrade: number;
   simulationMaxCapitalPerTradePercent: number;

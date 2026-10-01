@@ -175,6 +175,11 @@
         <label><span>Auto-train check interval minutes</span><input type="number" formControlName="predictionAutoTrainCheckIntervalMinutes" min="0"></label>
         <label><span>Auto-train startup delay seconds</span><input type="number" formControlName="predictionAutoTrainStartupDelaySeconds" min="0"></label>
         <label><span>Minimum archive age minutes</span><input type="number" formControlName="predictionAutoTrainMinimumArchiveAgeMinutes" min="0"></label>
+        <label class="toggle-field"><input type="checkbox" formControlName="predictionIncludeCompletedTradeFeedback"><span>Include completed-trade feedback</span></label>
+        <label class="toggle-field"><input type="checkbox" formControlName="predictionRequireValidatedModel"><span>Require validated model</span></label>
+        <label><span>Minimum ROC AUC</span><input type="number" formControlName="predictionMinimumRocAuc" min="0" max="1" step="0.01"></label>
+        <label><span>Minimum Brier skill</span><input type="number" formControlName="predictionMinimumBrierSkill" min="0" max="1" step="0.01"></label>
+        <label><span>Minimum training samples for live</span><input type="number" formControlName="predictionMinimumTrainingSamplesForLive" min="0"></label>
         <label><span>Simulation starting capital</span><input type="number" formControlName="predictionSimulationStartingCapital" min="0"></label>
         <label><span>Simulation maximum risk per trade</span><input type="number" formControlName="predictionSimulationMaximumRiskPerTrade" min="0"></label>
         <label><span>Simulation max capital per trade %</span><input type="number" formControlName="predictionSimulationMaxCapitalPerTradePercent" min="0" max="100" step="0.1"></label>
