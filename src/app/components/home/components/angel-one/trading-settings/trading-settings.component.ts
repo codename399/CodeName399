@@ -108,6 +108,7 @@ export class TradingSettingsComponent implements OnInit {
 
     autoSquareOff: [true],
     paperTradingBalance: [100000, [Validators.required, Validators.min(0)]],
+    paperTradingLiveBalance: [false],
 
     researchDataVersion: ['v1', Validators.required],
 
@@ -268,6 +269,7 @@ export class TradingSettingsComponent implements OnInit {
 
               autoSquareOff: config?.autoSquareOff ?? true,
               paperTradingBalance: config?.paperTradingBalance ?? 100000,
+              paperTradingLiveBalance: config?.paperTradingLiveBalance ?? false,
 
               researchDataVersion: config?.researchDataVersion ?? 'v1',
 
@@ -383,6 +385,7 @@ export class TradingSettingsComponent implements OnInit {
 
       autoSquareOff: !!v.autoSquareOff,
       paperTradingBalance: Number(v.paperTradingBalance),
+      paperTradingLiveBalance: !!v.paperTradingLiveBalance,
 
       researchDataVersion: String(v.researchDataVersion),
 

@@ -110,6 +110,7 @@ export interface TradingConfiguration {
 
   autoSquareOff: boolean;
   paperTradingBalance: number;
+  paperTradingLiveBalance: boolean;
 
   researchDataVersion: string;
   exit: ExitSettings;
