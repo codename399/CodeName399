@@ -23,13 +23,14 @@
       </label>
     </div>
 
-    <section class="settings-card" *ngIf="sectionMatches('trading', 'auto trading', 'paper trading', 'trade emails', 'auto square-off')">
+    <section class="settings-card" *ngIf="sectionMatches('trading', 'auto trading', 'paper trading', 'paper trading as live', 'trade emails', 'auto square-off')">
       <div class="card-header">
-        <button type="button" class="accordion-trigger" (click)="toggleSection('trading')" [attr.aria-expanded]="openSection === 'trading'"><span><h2>Trading</h2><p>API: <code>EnableAutoTrading</code>, <code>PaperTrading</code>, <code>EnableNotification</code>, <code>AutoSquareOff</code>.</p></span><span class="accordion-icon">{{ openSection === 'trading' ? '−' : '+' }}</span></button>
+        <button type="button" class="accordion-trigger" (click)="toggleSection('trading')" [attr.aria-expanded]="openSection === 'trading'"><span><h2>Trading</h2><p>API: <code>EnableAutoTrading</code>, <code>PaperTrading</code>, <code>PaperTradingAsLive</code>, <code>EnableNotification</code>, <code>AutoSquareOff</code>.</p></span><span class="accordion-icon">{{ openSection === 'trading' ? '−' : '+' }}</span></button>
       </div>
       <div class="grid-4" *ngIf="openSection === 'trading'">
         <label class="toggle-field"><input type="checkbox" formControlName="enableAutoTrading"><span>Auto trading</span></label>
         <label class="toggle-field"><input type="checkbox" formControlName="paperTrading"><span>Paper trading</span></label>
+        <label class="toggle-field"><input type="checkbox" formControlName="paperTradingAsLive"><span>Paper trading as live</span></label>
         <label class="toggle-field"><input type="checkbox" formControlName="enableNotification"><span>Trade emails</span></label>
         <label class="toggle-field"><input type="checkbox" formControlName="autoSquareOff"><span>Auto square-off</span></label>
       </div>

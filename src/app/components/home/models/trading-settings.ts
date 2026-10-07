@@ -59,6 +59,7 @@ export interface TradingConfiguration {
   id: string;
   enableAutoTrading: boolean;
   paperTrading: boolean;
+  paperTradingAsLive: boolean;
   enableNotification: boolean;
 
   equity: InstrumentTradingSettings;
