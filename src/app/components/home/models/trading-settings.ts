@@ -18,36 +18,6 @@ export interface ExitSettings {
   trailingProfitRetentionPercent: number;
 }
 
-export interface PredictionSettings {
-  enabled: boolean;
-  targetNetPercent: number;
-  roundTripCostPercent: number;
-  futureWindowSeconds: number;
-  minimumHistoryTicks: number;
-  predictionSpacingSeconds: number;
-  maximumHistoryTicksPerSymbol: number;
-  maximumSamples: number;
-  minimumBuyProbability: number;
-  minimumHoldProbability: number;
-  liveHistoryTicks: number;
-  modelFileName: string;
-  trainingDataPath: string;
-  trainFraction: number;
-  autoTrainModel: boolean;
-  autoTrainCheckIntervalMinutes: number;
-  autoTrainStartupDelaySeconds: number;
-  autoTrainMinimumArchiveAgeMinutes: number;
-  includeCompletedTradeFeedback: boolean;
-  requireValidatedModel: boolean;
-  minimumRocAuc: number;
-  minimumBrierSkill: number;
-  minimumTrainingSamplesForLive: number;
-  simulationStartingCapital: number;
-  simulationMaximumRiskPerTrade: number;
-  simulationMaxCapitalPerTradePercent: number;
-  simulationProtectiveStopPercent: number;
-}
-
 export interface RawMarketDataSettings {
   enabled: boolean;
   storagePath: string;
@@ -70,7 +40,7 @@ export interface TradingConfiguration {
   equity: InstrumentTradingSettings;
 
   riskPercentage: number;
-  maxLossPercent: number;
+  riskRewardRatio: number;
   maxCapitalPerTradePercent: number;
   maxBrokerFailuresBeforeKillSwitch: number;
   brokerFailureWindowMinutes: number;
@@ -92,6 +62,15 @@ export interface TradingConfiguration {
   casPriceBandPercent: number;
 
   watchListRefreshMinutes: number;
+  minimumPriceChangePercent: number;
+  minimumVolume: number;
+  requireRisingFromDayOpen: boolean;
+  candidateObservationSeconds: number;
+  minimumSteadyProgressPercent: number;
+  minimumSteadyPositiveTickRatio: number;
+  maximumSteadyPullbackPercent: number;
+  minimumFluctuationRangePercent: number;
+  minimumFluctuationPullbackPercent: number;
   excludedSymbols: string[];
   maxCandidates: number;
   lastDailySummarySent: string | null;
@@ -118,8 +97,6 @@ export interface TradingConfiguration {
   autoSquareOff: boolean;
   paperTradingBalance: number;
 
-  researchDataVersion: string;
   exit: ExitSettings;
-  prediction: PredictionSettings;
   rawMarketData: RawMarketDataSettings;
 }

@@ -36,13 +36,13 @@
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('risk capital', 'risk per trade', 'max loss', 'capital', 'broker failures', 'open risk', 'reservation')">
+    <section class="settings-card" *ngIf="sectionMatches('risk capital', 'risk per trade', 'risk reward', 'capital', 'broker failures', 'open risk', 'reservation')">
       <div class="card-header">
         <button type="button" class="accordion-trigger" (click)="toggleSection('risk')" [attr.aria-expanded]="openSection === 'risk'"><span><h2>Risk &amp; Capital</h2><p>Risk, capital allocation and broker failure controls.</p></span><span class="accordion-icon">{{ openSection === 'risk' ? '−' : '+' }}</span></button>
       </div>
       <div class="grid-4" *ngIf="openSection === 'risk'">
         <label><span>Risk per trade %</span><input type="number" formControlName="riskPercentage" min="0" step="0.01"></label>
-        <label><span>Max loss %</span><input type="number" formControlName="maxLossPercent" min="0" step="0.01"></label>
+        <label><span>Risk/reward ratio</span><input type="number" formControlName="riskRewardRatio" min="0" step="0.1"></label>
         <label><span>Maximum capital per trade %</span><input type="number" formControlName="maxCapitalPerTradePercent" min="0" max="100" step="0.1"></label>
         <label><span>Maximum total open risk</span><input type="number" formControlName="maximumTotalOpenRisk" min="0" step="1"></label>
         <label><span>Risk reservation seconds</span><input type="number" formControlName="riskReservationSeconds" min="0"></label>
@@ -112,13 +112,22 @@
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('discovery', 'universe', 'watch-list', 'candidates', 'excluded symbols')">
+    <section class="settings-card" *ngIf="sectionMatches('discovery', 'universe', 'watch-list', 'candidates', 'excluded symbols', 'price change', 'volume', 'rising', 'steady progress', 'pullback', 'fluctuation')">
       <div class="card-header">
         <button type="button" class="accordion-trigger" (click)="toggleSection('discovery')" [attr.aria-expanded]="openSection === 'discovery'"><span><h2>Discovery &amp; Universe</h2><p>Watch-list refresh, candidate limits and symbol exclusions.</p></span><span class="accordion-icon">{{ openSection === 'discovery' ? '−' : '+' }}</span></button>
       </div>
       <div class="grid-4" *ngIf="openSection === 'discovery'">
-        <label><span>Watch-list refresh minutes</span><input type="number" formControlName="watchListRefreshMinutes" min="0"></label>
         <label><span>Maximum candidates</span><input type="number" formControlName="maxCandidates" min="0"></label>
+        <label><span>Watch-list refresh minutes</span><input type="number" formControlName="watchListRefreshMinutes" min="0"></label>
+        <label><span>Minimum price change %</span><input type="number" formControlName="minimumPriceChangePercent" min="0" step="0.01"></label>
+        <label><span>Minimum volume</span><input type="number" formControlName="minimumVolume" min="0" step="1"></label>
+        <label class="toggle-field"><input type="checkbox" formControlName="requireRisingFromDayOpen"><span>Require rising from day open</span></label>
+        <label><span>Candidate observation seconds</span><input type="number" formControlName="candidateObservationSeconds" min="0"></label>
+        <label><span>Minimum steady progress %</span><input type="number" formControlName="minimumSteadyProgressPercent" min="0" step="0.01"></label>
+        <label><span>Minimum steady positive tick ratio</span><input type="number" formControlName="minimumSteadyPositiveTickRatio" min="0" max="1" step="0.01"></label>
+        <label><span>Maximum steady pullback %</span><input type="number" formControlName="maximumSteadyPullbackPercent" min="0" step="0.01"></label>
+        <label><span>Minimum fluctuation range %</span><input type="number" formControlName="minimumFluctuationRangePercent" min="0" step="0.01"></label>
+        <label><span>Minimum fluctuation pullback %</span><input type="number" formControlName="minimumFluctuationPullbackPercent" min="0" step="0.01"></label>
         <label class="wide-field"><span>Excluded symbols (comma separated)</span><input type="text" formControlName="excludedSymbols"></label>
       </div>
     </section>
@@ -140,50 +149,6 @@
         <label><span>Buy trading interval ms</span><input type="number" formControlName="buyTradingInterval" min="0"></label>
         <label><span>Sell trading interval ms</span><input type="number" formControlName="sellTradingInterval" min="0"></label>
         <label><span>Market time zone</span><input type="text" formControlName="marketTimeZoneId"></label>
-      </div>
-    </section>
-
-    <section class="settings-card" *ngIf="sectionMatches('research', 'research data version')">
-      <div class="card-header">
-        <button type="button" class="accordion-trigger" (click)="toggleSection('research')" [attr.aria-expanded]="openSection === 'research'"><span><h2>Research</h2><p>Research data version from the API configuration.</p></span><span class="accordion-icon">{{ openSection === 'research' ? '−' : '+' }}</span></button>
-      </div>
-      <div class="grid-4" *ngIf="openSection === 'research'">
-        <label><span>Research data version</span><input type="text" formControlName="researchDataVersion"></label>
-      </div>
-    </section>
-
-    <section class="settings-card" *ngIf="sectionMatches('prediction', 'model', 'simulation', 'probability', 'training')">
-      <div class="card-header">
-        <button type="button" class="accordion-trigger" (click)="toggleSection('prediction')" [attr.aria-expanded]="openSection === 'prediction'"><span><h2>Prediction</h2><p>Prediction model, history, thresholds and simulation settings.</p></span><span class="accordion-icon">{{ openSection === 'prediction' ? '−' : '+' }}</span></button>
-      </div>
-      <div class="grid-4" *ngIf="openSection === 'prediction'">
-        <label class="toggle-field"><input type="checkbox" formControlName="predictionEnabled"><span>Prediction enabled</span></label>
-        <label><span>Target net %</span><input type="number" formControlName="predictionTargetNetPercent" min="0" step="0.01"></label>
-        <label><span>Round-trip cost %</span><input type="number" formControlName="predictionRoundTripCostPercent" min="0" step="0.01"></label>
-        <label><span>Future window seconds</span><input type="number" formControlName="predictionFutureWindowSeconds" min="0"></label>
-        <label><span>Minimum history ticks</span><input type="number" formControlName="predictionMinimumHistoryTicks" min="0"></label>
-        <label><span>Prediction spacing seconds</span><input type="number" formControlName="predictionSpacingSeconds" min="0"></label>
-        <label><span>Maximum history ticks per symbol</span><input type="number" formControlName="predictionMaximumHistoryTicksPerSymbol" min="0"></label>
-        <label><span>Maximum samples</span><input type="number" formControlName="predictionMaximumSamples" min="0"></label>
-        <label><span>Minimum buy probability</span><input type="number" formControlName="predictionMinimumBuyProbability" min="0" max="1" step="0.01"></label>
-        <label><span>Minimum hold probability</span><input type="number" formControlName="predictionMinimumHoldProbability" min="0" max="1" step="0.01"></label>
-        <label><span>Live history ticks</span><input type="number" formControlName="predictionLiveHistoryTicks" min="0"></label>
-        <label><span>Model file name</span><input type="text" formControlName="predictionModelFileName"></label>
-        <label><span>Training data path</span><input type="text" formControlName="predictionTrainingDataPath"></label>
-        <label><span>Train fraction</span><input type="number" formControlName="predictionTrainFraction" min="0" max="1" step="0.01"></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="predictionAutoTrainModel"><span>Automatic model training</span></label>
-        <label><span>Auto-train check interval minutes</span><input type="number" formControlName="predictionAutoTrainCheckIntervalMinutes" min="0"></label>
-        <label><span>Auto-train startup delay seconds</span><input type="number" formControlName="predictionAutoTrainStartupDelaySeconds" min="0"></label>
-        <label><span>Minimum archive age minutes</span><input type="number" formControlName="predictionAutoTrainMinimumArchiveAgeMinutes" min="0"></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="predictionIncludeCompletedTradeFeedback"><span>Include completed-trade feedback</span></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="predictionRequireValidatedModel"><span>Require validated model</span></label>
-        <label><span>Minimum ROC AUC</span><input type="number" formControlName="predictionMinimumRocAuc" min="0" max="1" step="0.01"></label>
-        <label><span>Minimum Brier skill</span><input type="number" formControlName="predictionMinimumBrierSkill" min="0" max="1" step="0.01"></label>
-        <label><span>Minimum training samples for live</span><input type="number" formControlName="predictionMinimumTrainingSamplesForLive" min="0"></label>
-        <label><span>Simulation starting capital</span><input type="number" formControlName="predictionSimulationStartingCapital" min="0"></label>
-        <label><span>Simulation maximum risk per trade</span><input type="number" formControlName="predictionSimulationMaximumRiskPerTrade" min="0"></label>
-        <label><span>Simulation max capital per trade %</span><input type="number" formControlName="predictionSimulationMaxCapitalPerTradePercent" min="0" max="100" step="0.1"></label>
-        <label><span>Simulation protective stop %</span><input type="number" formControlName="predictionSimulationProtectiveStopPercent" min="0" step="0.01"></label>
       </div>
     </section>
 
