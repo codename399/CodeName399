@@ -65,7 +65,8 @@ export interface TradingConfiguration {
   minimumPriceChangePercent: number;
   minimumVolume: number;
   requireRisingFromDayOpen: boolean;
-  candidateObservationSeconds: number;
+  candidateObservationSeconds?: number;
+  candidateObservationTicks?: number;
   minimumSteadyProgressPercent: number;
   minimumSteadyPositiveTickRatio: number;
   maximumSteadyPullbackPercent: number;

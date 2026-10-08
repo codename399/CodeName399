@@ -52,7 +52,7 @@ export class TradingSettingsComponent implements OnInit {
     duration: ['DAY', Validators.required],
     atrStopMultiplier: [1.2, [Validators.required, Validators.min(0)]],
     minimumStopPercent: [0.5, [Validators.required, Validators.min(0)]],
-    maximumStopPercent: [1.5, [Validators.required, Validators.min(0)]],
+    maximumStopPercent: [1, [Validators.required, Validators.min(0)]],
     allowLong: [true],
     exitOrderTimeoutSeconds: [10, [Validators.required, Validators.min(0)]],
     maxMarketDataAgeSeconds: [15, [Validators.required, Validators.min(0)]],
@@ -68,9 +68,9 @@ export class TradingSettingsComponent implements OnInit {
     ignoreMarketHours: [false],
     marketOpenTime: ['09:15:00', Validators.required],
     marketCloseTime: ['15:30:00', Validators.required],
-    intradayEntryCutoffTime: ['15:20:00', Validators.required],
-    equityMisAutoSquareOffTime: ['15:10:00', Validators.required],
-    roboAutoSquareOffTime: ['15:05:00', Validators.required],
+    intradayEntryCutoffTime: ['15:00:00', Validators.required],
+    equityMisAutoSquareOffTime: ['15:30:00', Validators.required],
+    roboAutoSquareOffTime: ['15:30:00', Validators.required],
 
     casTransitionStart: ['15:15:00', Validators.required],
     casOrderEntryStart: ['15:20:00', Validators.required],
@@ -85,7 +85,7 @@ export class TradingSettingsComponent implements OnInit {
     minimumPriceChangePercent: [0.05, [Validators.required, Validators.min(0)]],
     minimumVolume: [100000, [Validators.required, Validators.min(0)]],
     requireRisingFromDayOpen: [true],
-    candidateObservationSeconds: [60, [Validators.required, Validators.min(0)]],
+    candidateObservationTicks: [30, [Validators.required, Validators.min(0)]],
     minimumSteadyProgressPercent: [0.1, [Validators.required, Validators.min(0)]],
     minimumSteadyPositiveTickRatio: [
       0.6,
@@ -190,15 +190,15 @@ export class TradingSettingsComponent implements OnInit {
               marketCloseTime: this.time(config?.marketCloseTime, '15:30:00'),
               intradayEntryCutoffTime: this.time(
                 config?.intradayEntryCutoffTime,
-                '15:20:00',
+                '15:00:00',
               ),
               equityMisAutoSquareOffTime: this.time(
                 config?.equityMisAutoSquareOffTime,
-                '15:10:00',
+                '15:30:00',
               ),
               roboAutoSquareOffTime: this.time(
                 config?.roboAutoSquareOffTime,
-                '15:05:00',
+                '15:30:00',
               ),
 
               casTransitionStart: this.time(
@@ -223,7 +223,10 @@ export class TradingSettingsComponent implements OnInit {
               minimumPriceChangePercent: config?.minimumPriceChangePercent ?? 0.05,
               minimumVolume: config?.minimumVolume ?? 100000,
               requireRisingFromDayOpen: config?.requireRisingFromDayOpen ?? true,
-              candidateObservationSeconds: config?.candidateObservationSeconds ?? 60,
+              candidateObservationTicks:
+                config?.candidateObservationTicks ??
+                config?.candidateObservationSeconds ??
+                30,
               minimumSteadyProgressPercent: config?.minimumSteadyProgressPercent ?? 0.1,
               minimumSteadyPositiveTickRatio:
                 config?.minimumSteadyPositiveTickRatio ?? 0.6,
@@ -337,7 +340,7 @@ export class TradingSettingsComponent implements OnInit {
       minimumPriceChangePercent: Number(v.minimumPriceChangePercent),
       minimumVolume: Number(v.minimumVolume),
       requireRisingFromDayOpen: !!v.requireRisingFromDayOpen,
-      candidateObservationSeconds: Number(v.candidateObservationSeconds),
+      candidateObservationTicks: Number(v.candidateObservationTicks),
       minimumSteadyProgressPercent: Number(v.minimumSteadyProgressPercent),
       minimumSteadyPositiveTickRatio: Number(
         v.minimumSteadyPositiveTickRatio,
@@ -457,7 +460,7 @@ export class TradingSettingsComponent implements OnInit {
       duration: 'DAY',
       atrStopMultiplier: 1.2,
       minimumStopPercent: 0.5,
-      maximumStopPercent: 1.5,
+      maximumStopPercent: 1,
       allowLong: true,
       exitOrderTimeoutSeconds: 10,
       maxMarketDataAgeSeconds: 15,
