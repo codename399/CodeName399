@@ -14,6 +14,7 @@ export interface InstrumentTradingSettings {
 }
 
 export interface ExitSettings {
+  enableStopLoss: boolean;
   trailingStopAtrMultiplier: number;
   trailingProfitRetentionPercent: number;
 }
@@ -67,11 +68,16 @@ export interface TradingConfiguration {
   requireRisingFromDayOpen: boolean;
   candidateObservationSeconds?: number;
   candidateObservationTicks?: number;
+  minimumCandidateObservationTicks: number;
+  requirePullbackForEntry: boolean;
   minimumSteadyProgressPercent: number;
   minimumSteadyPositiveTickRatio: number;
   maximumSteadyPullbackPercent: number;
   minimumFluctuationRangePercent: number;
   minimumFluctuationPullbackPercent: number;
+  minimumPullbackRecoveryPercent: number;
+  minimumPullbackRecoveryPositiveTickRatio: number;
+  maximumEntryExtensionFromPullbackLowPercent: number;
   excludedSymbols: string[];
   maxCandidates: number;
   lastDailySummarySent: string | null;

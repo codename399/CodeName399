@@ -33,7 +33,7 @@ export class TradingSettingsComponent implements OnInit {
     enableNotification: [true],
 
     riskPercentage: [0.5, [Validators.required, Validators.min(0)]],
-    riskRewardRatio: [2, [Validators.required, Validators.min(0)]],
+    riskRewardRatio: [1.5, [Validators.required, Validators.min(0)]],
     maxCapitalPerTradePercent: [
       10,
       [Validators.required, Validators.min(0), Validators.max(100)],
@@ -59,6 +59,7 @@ export class TradingSettingsComponent implements OnInit {
     maximumExitRetries: [5, [Validators.required, Validators.min(0)]],
     maximumOpenPositions: [3, [Validators.required, Validators.min(0)]],
 
+    enableStopLoss: [true],
     trailingStopAtrMultiplier: [0.6, [Validators.required, Validators.min(0)]],
     trailingProfitRetentionPercent: [
       70,
@@ -86,16 +87,27 @@ export class TradingSettingsComponent implements OnInit {
     minimumVolume: [100000, [Validators.required, Validators.min(0)]],
     requireRisingFromDayOpen: [true],
     candidateObservationTicks: [30, [Validators.required, Validators.min(0)]],
-    minimumSteadyProgressPercent: [0.1, [Validators.required, Validators.min(0)]],
+    minimumCandidateObservationTicks: [6, [Validators.required, Validators.min(0)]],
+    requirePullbackForEntry: [true],
+    minimumSteadyProgressPercent: [0.07, [Validators.required, Validators.min(0)]],
     minimumSteadyPositiveTickRatio: [
-      0.6,
+      0.55,
       [Validators.required, Validators.min(0), Validators.max(1)],
     ],
-    maximumSteadyPullbackPercent: [0.05, [Validators.required, Validators.min(0)]],
-    minimumFluctuationRangePercent: [0.3, [Validators.required, Validators.min(0)]],
+    maximumSteadyPullbackPercent: [0.1, [Validators.required, Validators.min(0)]],
+    minimumFluctuationRangePercent: [0.25, [Validators.required, Validators.min(0)]],
     minimumFluctuationPullbackPercent: [0.05, [Validators.required, Validators.min(0)]],
+    minimumPullbackRecoveryPercent: [0.03, [Validators.required, Validators.min(0)]],
+    minimumPullbackRecoveryPositiveTickRatio: [
+      0.55,
+      [Validators.required, Validators.min(0), Validators.max(1)],
+    ],
+    maximumEntryExtensionFromPullbackLowPercent: [
+      0.15,
+      [Validators.required, Validators.min(0)],
+    ],
     excludedSymbols: ['TATSILV-EQ, AONEGOLD-EQ, ACUTAAS-EQ, IDEA-EQ'],
-    maxCandidates: [500, [Validators.required, Validators.min(0)]],
+    maxCandidates: [3000, [Validators.required, Validators.min(0)]],
 
     marketTimeZoneId: ['Asia/Kolkata', Validators.required],
     tradingHolidays: [''],
@@ -158,7 +170,7 @@ export class TradingSettingsComponent implements OnInit {
               enableNotification: config?.enableNotification ?? true,
 
               riskPercentage: config?.riskPercentage ?? 0.5,
-              riskRewardRatio: config?.riskRewardRatio ?? 2,
+              riskRewardRatio: config?.riskRewardRatio ?? 1.5,
               maxCapitalPerTradePercent:
                 config?.maxCapitalPerTradePercent ?? 10,
               maxBrokerFailuresBeforeKillSwitch:
@@ -181,6 +193,7 @@ export class TradingSettingsComponent implements OnInit {
               maximumExitRetries: equity.maximumExitRetries,
               maximumOpenPositions: equity.maximumOpenPositions,
 
+              enableStopLoss: exit.enableStopLoss,
               trailingStopAtrMultiplier: exit.trailingStopAtrMultiplier,
               trailingProfitRetentionPercent:
                 exit.trailingProfitRetentionPercent,
@@ -227,17 +240,26 @@ export class TradingSettingsComponent implements OnInit {
                 config?.candidateObservationTicks ??
                 config?.candidateObservationSeconds ??
                 30,
-              minimumSteadyProgressPercent: config?.minimumSteadyProgressPercent ?? 0.1,
+              minimumCandidateObservationTicks:
+                config?.minimumCandidateObservationTicks ?? 6,
+              requirePullbackForEntry: config?.requirePullbackForEntry ?? true,
+              minimumSteadyProgressPercent: config?.minimumSteadyProgressPercent ?? 0.07,
               minimumSteadyPositiveTickRatio:
-                config?.minimumSteadyPositiveTickRatio ?? 0.6,
+                config?.minimumSteadyPositiveTickRatio ?? 0.55,
               maximumSteadyPullbackPercent:
-                config?.maximumSteadyPullbackPercent ?? 0.05,
+                config?.maximumSteadyPullbackPercent ?? 0.1,
               minimumFluctuationRangePercent:
-                config?.minimumFluctuationRangePercent ?? 0.3,
+                config?.minimumFluctuationRangePercent ?? 0.25,
               minimumFluctuationPullbackPercent:
                 config?.minimumFluctuationPullbackPercent ?? 0.05,
+              minimumPullbackRecoveryPercent:
+                config?.minimumPullbackRecoveryPercent ?? 0.03,
+              minimumPullbackRecoveryPositiveTickRatio:
+                config?.minimumPullbackRecoveryPositiveTickRatio ?? 0.55,
+              maximumEntryExtensionFromPullbackLowPercent:
+                config?.maximumEntryExtensionFromPullbackLowPercent ?? 0.15,
               excludedSymbols: (config?.excludedSymbols ?? []).join(', '),
-              maxCandidates: config?.maxCandidates ?? 500,
+              maxCandidates: config?.maxCandidates ?? 3000,
 
               marketTimeZoneId: config?.marketTimeZoneId ?? 'Asia/Kolkata',
               tradingHolidays: (config?.tradingHolidays ?? []).join(', '),
@@ -341,6 +363,10 @@ export class TradingSettingsComponent implements OnInit {
       minimumVolume: Number(v.minimumVolume),
       requireRisingFromDayOpen: !!v.requireRisingFromDayOpen,
       candidateObservationTicks: Number(v.candidateObservationTicks),
+      minimumCandidateObservationTicks: Number(
+        v.minimumCandidateObservationTicks,
+      ),
+      requirePullbackForEntry: !!v.requirePullbackForEntry,
       minimumSteadyProgressPercent: Number(v.minimumSteadyProgressPercent),
       minimumSteadyPositiveTickRatio: Number(
         v.minimumSteadyPositiveTickRatio,
@@ -351,6 +377,13 @@ export class TradingSettingsComponent implements OnInit {
       ),
       minimumFluctuationPullbackPercent: Number(
         v.minimumFluctuationPullbackPercent,
+      ),
+      minimumPullbackRecoveryPercent: Number(v.minimumPullbackRecoveryPercent),
+      minimumPullbackRecoveryPositiveTickRatio: Number(
+        v.minimumPullbackRecoveryPositiveTickRatio,
+      ),
+      maximumEntryExtensionFromPullbackLowPercent: Number(
+        v.maximumEntryExtensionFromPullbackLowPercent,
       ),
       excludedSymbols: this.csv(v.excludedSymbols),
       maxCandidates: Number(v.maxCandidates),
@@ -404,6 +437,7 @@ export class TradingSettingsComponent implements OnInit {
       },
 
       exit: {
+        enableStopLoss: !!v.enableStopLoss,
         trailingStopAtrMultiplier: Number(v.trailingStopAtrMultiplier),
         trailingProfitRetentionPercent: Number(
           v.trailingProfitRetentionPercent,
@@ -471,6 +505,7 @@ export class TradingSettingsComponent implements OnInit {
 
   private defaultExit() {
     return {
+      enableStopLoss: true,
       trailingStopAtrMultiplier: 0.6,
       trailingProfitRetentionPercent: 70,
     };

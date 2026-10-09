@@ -72,11 +72,12 @@
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('exit protection', 'trailing', 'profit retention')">
+    <section class="settings-card" *ngIf="sectionMatches('exit protection', 'stop loss', 'trailing', 'profit retention')">
       <div class="card-header">
         <button type="button" class="accordion-trigger" (click)="toggleSection('exit')" [attr.aria-expanded]="openSection === 'exit'"><span><h2>Exit Protection</h2><p>Maps to <code>Exit</code>.</p></span><span class="accordion-icon">{{ openSection === 'exit' ? '−' : '+' }}</span></button>
       </div>
       <div class="grid-4" *ngIf="openSection === 'exit'">
+        <label class="toggle-field"><input type="checkbox" formControlName="enableStopLoss"><span>Stop loss enabled</span></label>
         <label><span>Trailing ATR multiplier</span><input type="number" formControlName="trailingStopAtrMultiplier" min="0" step="0.01"></label>
         <label><span>Peak profit retention %</span><input type="number" formControlName="trailingProfitRetentionPercent" min="0" max="100" step="1"></label>
       </div>
@@ -112,7 +113,7 @@
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('discovery', 'universe', 'watch-list', 'candidates', 'excluded symbols', 'price change', 'volume', 'rising', 'steady progress', 'pullback', 'fluctuation')">
+    <section class="settings-card" *ngIf="sectionMatches('discovery', 'universe', 'watch-list', 'candidates', 'excluded symbols', 'price change', 'volume', 'rising', 'steady progress', 'pullback', 'recovery', 'fluctuation')">
       <div class="card-header">
         <button type="button" class="accordion-trigger" (click)="toggleSection('discovery')" [attr.aria-expanded]="openSection === 'discovery'"><span><h2>Discovery &amp; Universe</h2><p>Watch-list refresh, candidate limits and symbol exclusions.</p></span><span class="accordion-icon">{{ openSection === 'discovery' ? '−' : '+' }}</span></button>
       </div>
@@ -123,11 +124,16 @@
         <label><span>Minimum volume</span><input type="number" formControlName="minimumVolume" min="0" step="1"></label>
         <label class="toggle-field"><input type="checkbox" formControlName="requireRisingFromDayOpen"><span>Require rising from day open</span></label>
         <label><span>Candidate observation ticks</span><input type="number" formControlName="candidateObservationTicks" min="0"></label>
+        <label><span>Minimum candidate observation ticks</span><input type="number" formControlName="minimumCandidateObservationTicks" min="0"></label>
+        <label class="toggle-field"><input type="checkbox" formControlName="requirePullbackForEntry"><span>Require pullback for entry</span></label>
         <label><span>Minimum steady progress %</span><input type="number" formControlName="minimumSteadyProgressPercent" min="0" step="0.01"></label>
         <label><span>Minimum steady positive tick ratio</span><input type="number" formControlName="minimumSteadyPositiveTickRatio" min="0" max="1" step="0.01"></label>
         <label><span>Maximum steady pullback %</span><input type="number" formControlName="maximumSteadyPullbackPercent" min="0" step="0.01"></label>
         <label><span>Minimum fluctuation range %</span><input type="number" formControlName="minimumFluctuationRangePercent" min="0" step="0.01"></label>
         <label><span>Minimum fluctuation pullback %</span><input type="number" formControlName="minimumFluctuationPullbackPercent" min="0" step="0.01"></label>
+        <label><span>Minimum pullback recovery %</span><input type="number" formControlName="minimumPullbackRecoveryPercent" min="0" step="0.01"></label>
+        <label><span>Minimum recovery positive tick ratio</span><input type="number" formControlName="minimumPullbackRecoveryPositiveTickRatio" min="0" max="1" step="0.01"></label>
+        <label><span>Maximum entry extension from pullback low %</span><input type="number" formControlName="maximumEntryExtensionFromPullbackLowPercent" min="0" step="0.01"></label>
         <label class="wide-field"><span>Excluded symbols (comma separated)</span><input type="text" formControlName="excludedSymbols"></label>
       </div>
     </section>
