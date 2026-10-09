@@ -131,6 +131,14 @@
         <label class="toggle-field"><input type="checkbox" formControlName="requireRisingFromDayOpen"><span>Require rising from day open</span></label>
         <label><span>Candidate observation ticks</span><input type="number" formControlName="candidateObservationTicks" min="0"></label>
         <label><span>Minimum candidate observation ticks</span><input type="number" formControlName="minimumCandidateObservationTicks" min="0"></label>
+        <label class="toggle-field"><input type="checkbox" formControlName="enableVolumeConfirmation"><span>Enable volume confirmation</span></label>
+        <label><span>Volume lookback seconds</span><input type="number" formControlName="volumeLookbackSeconds" min="0"></label>
+        <label><span>Minimum recent volume</span><input type="number" formControlName="minimumRecentVolume" min="0"></label>
+        <label><span>Minimum relative volume</span><input type="number" formControlName="minimumRelativeVolume" min="0" step="0.01"></label>
+        <label><span>Minimum up-move volume ratio</span><input type="number" formControlName="minimumUpMoveVolumeRatio" min="0" max="1" step="0.01"></label>
+        <label><span>Volume baseline lookback candles</span><input type="number" formControlName="volumeBaselineLookbackCandles" min="0"></label>
+        <label><span>Minimum volume baseline candles</span><input type="number" formControlName="minimumVolumeBaselineCandles" min="0"></label>
+        <label class="toggle-field"><input type="checkbox" formControlName="requireHistoricalVolumeBaseline"><span>Require historical volume baseline</span></label>
         <label class="toggle-field"><input type="checkbox" formControlName="requirePullbackForEntry"><span>Require pullback for entry</span></label>
         <label><span>Minimum steady progress %</span><input type="number" formControlName="minimumSteadyProgressPercent" min="0" step="0.01"></label>
         <label><span>Minimum steady positive tick ratio</span><input type="number" formControlName="minimumSteadyPositiveTickRatio" min="0" max="1" step="0.01"></label>

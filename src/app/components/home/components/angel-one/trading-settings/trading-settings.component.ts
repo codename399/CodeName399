@@ -96,26 +96,34 @@ export class TradingSettingsComponent implements OnInit {
 
     watchListRefreshMinutes: [1, [Validators.required, Validators.min(0)]],
     minimumPriceChangePercent: [0.05, [Validators.required, Validators.min(0)]],
-    minimumVolume: [100000, [Validators.required, Validators.min(0)]],
+    minimumVolume: [50000, [Validators.required, Validators.min(0)]],
     requireRisingFromDayOpen: [true],
-    candidateObservationTicks: [30, [Validators.required, Validators.min(0)]],
-    minimumCandidateObservationTicks: [6, [Validators.required, Validators.min(0)]],
-    requirePullbackForEntry: [true],
+    candidateObservationTicks: [20, [Validators.required, Validators.min(0)]],
+    minimumCandidateObservationTicks: [5, [Validators.required, Validators.min(0)]],
+    enableVolumeConfirmation: [true],
+    volumeLookbackSeconds: [60, [Validators.required, Validators.min(0)]],
+    minimumRecentVolume: [50, [Validators.required, Validators.min(0)]],
+    minimumRelativeVolume: [0.8, [Validators.required, Validators.min(0)]],
+    minimumUpMoveVolumeRatio: [0.4, [Validators.required, Validators.min(0), Validators.max(1)]],
+    volumeBaselineLookbackCandles: [20, [Validators.required, Validators.min(0)]],
+    minimumVolumeBaselineCandles: [5, [Validators.required, Validators.min(0)]],
+    requireHistoricalVolumeBaseline: [false],
+    requirePullbackForEntry: [false],
     minimumSteadyProgressPercent: [0.07, [Validators.required, Validators.min(0)]],
     minimumSteadyPositiveTickRatio: [
-      0.55,
+      0.52,
       [Validators.required, Validators.min(0), Validators.max(1)],
     ],
-    maximumSteadyPullbackPercent: [0.1, [Validators.required, Validators.min(0)]],
-    minimumFluctuationRangePercent: [0.25, [Validators.required, Validators.min(0)]],
-    minimumFluctuationPullbackPercent: [0.05, [Validators.required, Validators.min(0)]],
-    minimumPullbackRecoveryPercent: [0.03, [Validators.required, Validators.min(0)]],
+    maximumSteadyPullbackPercent: [0.08, [Validators.required, Validators.min(0)]],
+    minimumFluctuationRangePercent: [0.2, [Validators.required, Validators.min(0)]],
+    minimumFluctuationPullbackPercent: [0.04, [Validators.required, Validators.min(0)]],
+    minimumPullbackRecoveryPercent: [0.02, [Validators.required, Validators.min(0)]],
     minimumPullbackRecoveryPositiveTickRatio: [
-      0.55,
+      0.5,
       [Validators.required, Validators.min(0), Validators.max(1)],
     ],
     maximumEntryExtensionFromPullbackLowPercent: [
-      0.15,
+      0.18,
       [Validators.required, Validators.min(0)],
     ],
     excludedSymbols: ['TATSILV-EQ, AONEGOLD-EQ, ACUTAAS-EQ, IDEA-EQ'],
@@ -257,30 +265,44 @@ export class TradingSettingsComponent implements OnInit {
 
               watchListRefreshMinutes: config?.watchListRefreshMinutes ?? 1,
               minimumPriceChangePercent: config?.minimumPriceChangePercent ?? 0.05,
-              minimumVolume: config?.minimumVolume ?? 100000,
+              minimumVolume: config?.minimumVolume ?? 50000,
               requireRisingFromDayOpen: config?.requireRisingFromDayOpen ?? true,
               candidateObservationTicks:
                 config?.candidateObservationTicks ??
                 config?.candidateObservationSeconds ??
-                30,
+                20,
               minimumCandidateObservationTicks:
-                config?.minimumCandidateObservationTicks ?? 6,
-              requirePullbackForEntry: config?.requirePullbackForEntry ?? true,
+                config?.minimumCandidateObservationTicks ?? 5,
+              enableVolumeConfirmation:
+                config?.enableVolumeConfirmation ?? true,
+              volumeLookbackSeconds: config?.volumeLookbackSeconds ?? 60,
+              minimumRecentVolume: config?.minimumRecentVolume ?? 50,
+              minimumRelativeVolume: config?.minimumRelativeVolume ?? 0.8,
+              minimumUpMoveVolumeRatio:
+                config?.minimumUpMoveVolumeRatio ?? 0.4,
+              volumeBaselineLookbackCandles:
+                config?.volumeBaselineLookbackCandles ?? 20,
+              minimumVolumeBaselineCandles:
+                config?.minimumVolumeBaselineCandles ?? 5,
+              requireHistoricalVolumeBaseline:
+                config?.requireHistoricalVolumeBaseline ?? false,
+              requirePullbackForEntry:
+                config?.requirePullbackForEntry ?? false,
               minimumSteadyProgressPercent: config?.minimumSteadyProgressPercent ?? 0.07,
               minimumSteadyPositiveTickRatio:
-                config?.minimumSteadyPositiveTickRatio ?? 0.55,
+                config?.minimumSteadyPositiveTickRatio ?? 0.52,
               maximumSteadyPullbackPercent:
-                config?.maximumSteadyPullbackPercent ?? 0.1,
+                config?.maximumSteadyPullbackPercent ?? 0.08,
               minimumFluctuationRangePercent:
-                config?.minimumFluctuationRangePercent ?? 0.25,
+                config?.minimumFluctuationRangePercent ?? 0.2,
               minimumFluctuationPullbackPercent:
-                config?.minimumFluctuationPullbackPercent ?? 0.05,
+                config?.minimumFluctuationPullbackPercent ?? 0.04,
               minimumPullbackRecoveryPercent:
-                config?.minimumPullbackRecoveryPercent ?? 0.03,
+                config?.minimumPullbackRecoveryPercent ?? 0.02,
               minimumPullbackRecoveryPositiveTickRatio:
-                config?.minimumPullbackRecoveryPositiveTickRatio ?? 0.55,
+                config?.minimumPullbackRecoveryPositiveTickRatio ?? 0.5,
               maximumEntryExtensionFromPullbackLowPercent:
-                config?.maximumEntryExtensionFromPullbackLowPercent ?? 0.15,
+                config?.maximumEntryExtensionFromPullbackLowPercent ?? 0.18,
               excludedSymbols: (config?.excludedSymbols ?? []).join(', '),
               maxCandidates: config?.maxCandidates ?? 3000,
 
@@ -397,6 +419,14 @@ export class TradingSettingsComponent implements OnInit {
       minimumCandidateObservationTicks: Number(
         v.minimumCandidateObservationTicks,
       ),
+      enableVolumeConfirmation: !!v.enableVolumeConfirmation,
+      volumeLookbackSeconds: Number(v.volumeLookbackSeconds),
+      minimumRecentVolume: Number(v.minimumRecentVolume),
+      minimumRelativeVolume: Number(v.minimumRelativeVolume),
+      minimumUpMoveVolumeRatio: Number(v.minimumUpMoveVolumeRatio),
+      volumeBaselineLookbackCandles: Number(v.volumeBaselineLookbackCandles),
+      minimumVolumeBaselineCandles: Number(v.minimumVolumeBaselineCandles),
+      requireHistoricalVolumeBaseline: !!v.requireHistoricalVolumeBaseline,
       requirePullbackForEntry: !!v.requirePullbackForEntry,
       minimumSteadyProgressPercent: Number(v.minimumSteadyProgressPercent),
       minimumSteadyPositiveTickRatio: Number(

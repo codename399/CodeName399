@@ -75,6 +75,14 @@ export interface TradingConfiguration {
   candidateObservationSeconds?: number;
   candidateObservationTicks?: number;
   minimumCandidateObservationTicks: number;
+  enableVolumeConfirmation: boolean;
+  volumeLookbackSeconds: number;
+  minimumRecentVolume: number;
+  minimumRelativeVolume: number;
+  minimumUpMoveVolumeRatio: number;
+  volumeBaselineLookbackCandles: number;
+  minimumVolumeBaselineCandles: number;
+  requireHistoricalVolumeBaseline: boolean;
   requirePullbackForEntry: boolean;
   minimumSteadyProgressPercent: number;
   minimumSteadyPositiveTickRatio: number;
