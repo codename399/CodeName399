@@ -15,6 +15,8 @@ export interface InstrumentTradingSettings {
 
 export interface ExitSettings {
   enableStopLoss: boolean;
+  enableTrailingStop: boolean;
+  triggerProtectiveExitWhenLastPriceBreachedAndDataStale: boolean;
   trailingStopAtrMultiplier: number;
   trailingProfitRetentionPercent: number;
 }
@@ -41,6 +43,10 @@ export interface TradingConfiguration {
   equity: InstrumentTradingSettings;
 
   riskPercentage: number;
+  maximumLossPercentOfInvestment: number;
+  maximumEntrySpreadPercent: number;
+  maximumEntryPriceDeviationFromLtpPercent: number;
+  requireValidBidAskForEntry: boolean;
   riskRewardRatio: number;
   maxCapitalPerTradePercent: number;
   maxBrokerFailuresBeforeKillSwitch: number;

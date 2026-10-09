@@ -36,12 +36,16 @@
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('risk capital', 'risk per trade', 'risk reward', 'capital', 'broker failures', 'open risk', 'reservation')">
+    <section class="settings-card" *ngIf="sectionMatches('risk capital', 'risk per trade', 'maximum loss', 'entry spread', 'price deviation', 'bid ask', 'risk reward', 'capital', 'broker failures', 'open risk', 'reservation')">
       <div class="card-header">
         <button type="button" class="accordion-trigger" (click)="toggleSection('risk')" [attr.aria-expanded]="openSection === 'risk'"><span><h2>Risk &amp; Capital</h2><p>Risk, capital allocation and broker failure controls.</p></span><span class="accordion-icon">{{ openSection === 'risk' ? '−' : '+' }}</span></button>
       </div>
       <div class="grid-4" *ngIf="openSection === 'risk'">
         <label><span>Risk per trade %</span><input type="number" formControlName="riskPercentage" min="0" step="0.01"></label>
+        <label><span>Maximum loss of investment %</span><input type="number" formControlName="maximumLossPercentOfInvestment" min="0" step="0.01"></label>
+        <label><span>Maximum entry spread %</span><input type="number" formControlName="maximumEntrySpreadPercent" min="0" step="0.01"></label>
+        <label><span>Maximum entry price deviation from LTP %</span><input type="number" formControlName="maximumEntryPriceDeviationFromLtpPercent" min="0" step="0.01"></label>
+        <label class="toggle-field"><input type="checkbox" formControlName="requireValidBidAskForEntry"><span>Require valid bid/ask for entry</span></label>
         <label><span>Risk/reward ratio</span><input type="number" formControlName="riskRewardRatio" min="0" step="0.1"></label>
         <label><span>Maximum capital per trade %</span><input type="number" formControlName="maxCapitalPerTradePercent" min="0" max="100" step="0.1"></label>
         <label><span>Maximum total open risk</span><input type="number" formControlName="maximumTotalOpenRisk" min="0" step="1"></label>
@@ -72,12 +76,14 @@
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('exit protection', 'stop loss', 'trailing', 'profit retention')">
+    <section class="settings-card" *ngIf="sectionMatches('exit protection', 'stop loss', 'trailing', 'protective exit', 'stale data', 'profit retention')">
       <div class="card-header">
         <button type="button" class="accordion-trigger" (click)="toggleSection('exit')" [attr.aria-expanded]="openSection === 'exit'"><span><h2>Exit Protection</h2><p>Maps to <code>Exit</code>.</p></span><span class="accordion-icon">{{ openSection === 'exit' ? '−' : '+' }}</span></button>
       </div>
       <div class="grid-4" *ngIf="openSection === 'exit'">
         <label class="toggle-field"><input type="checkbox" formControlName="enableStopLoss"><span>Stop loss enabled</span></label>
+        <label class="toggle-field"><input type="checkbox" formControlName="enableTrailingStop"><span>Trailing stop enabled</span></label>
+        <label class="toggle-field"><input type="checkbox" formControlName="triggerProtectiveExitWhenLastPriceBreachedAndDataStale"><span>Trigger protective exit when last price breached and data is stale</span></label>
         <label><span>Trailing ATR multiplier</span><input type="number" formControlName="trailingStopAtrMultiplier" min="0" step="0.01"></label>
         <label><span>Peak profit retention %</span><input type="number" formControlName="trailingProfitRetentionPercent" min="0" max="100" step="1"></label>
       </div>

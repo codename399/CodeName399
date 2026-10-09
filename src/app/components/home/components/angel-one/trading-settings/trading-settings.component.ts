@@ -33,6 +33,16 @@ export class TradingSettingsComponent implements OnInit {
     enableNotification: [true],
 
     riskPercentage: [0.5, [Validators.required, Validators.min(0)]],
+    maximumLossPercentOfInvestment: [
+      0.5,
+      [Validators.required, Validators.min(0)],
+    ],
+    maximumEntrySpreadPercent: [0.5, [Validators.required, Validators.min(0)]],
+    maximumEntryPriceDeviationFromLtpPercent: [
+      0.25,
+      [Validators.required, Validators.min(0)],
+    ],
+    requireValidBidAskForEntry: [true],
     riskRewardRatio: [1.5, [Validators.required, Validators.min(0)]],
     maxCapitalPerTradePercent: [
       10,
@@ -60,6 +70,8 @@ export class TradingSettingsComponent implements OnInit {
     maximumOpenPositions: [3, [Validators.required, Validators.min(0)]],
 
     enableStopLoss: [true],
+    enableTrailingStop: [false],
+    triggerProtectiveExitWhenLastPriceBreachedAndDataStale: [true],
     trailingStopAtrMultiplier: [0.6, [Validators.required, Validators.min(0)]],
     trailingProfitRetentionPercent: [
       70,
@@ -170,6 +182,14 @@ export class TradingSettingsComponent implements OnInit {
               enableNotification: config?.enableNotification ?? true,
 
               riskPercentage: config?.riskPercentage ?? 0.5,
+              maximumLossPercentOfInvestment:
+                config?.maximumLossPercentOfInvestment ?? 0.5,
+              maximumEntrySpreadPercent:
+                config?.maximumEntrySpreadPercent ?? 0.5,
+              maximumEntryPriceDeviationFromLtpPercent:
+                config?.maximumEntryPriceDeviationFromLtpPercent ?? 0.25,
+              requireValidBidAskForEntry:
+                config?.requireValidBidAskForEntry ?? true,
               riskRewardRatio: config?.riskRewardRatio ?? 1.5,
               maxCapitalPerTradePercent:
                 config?.maxCapitalPerTradePercent ?? 10,
@@ -194,6 +214,9 @@ export class TradingSettingsComponent implements OnInit {
               maximumOpenPositions: equity.maximumOpenPositions,
 
               enableStopLoss: exit.enableStopLoss,
+              enableTrailingStop: exit.enableTrailingStop,
+              triggerProtectiveExitWhenLastPriceBreachedAndDataStale:
+                exit.triggerProtectiveExitWhenLastPriceBreachedAndDataStale,
               trailingStopAtrMultiplier: exit.trailingStopAtrMultiplier,
               trailingProfitRetentionPercent:
                 exit.trailingProfitRetentionPercent,
@@ -333,6 +356,14 @@ export class TradingSettingsComponent implements OnInit {
       enableNotification: !!v.enableNotification,
 
       riskPercentage: Number(v.riskPercentage),
+      maximumLossPercentOfInvestment: Number(
+        v.maximumLossPercentOfInvestment,
+      ),
+      maximumEntrySpreadPercent: Number(v.maximumEntrySpreadPercent),
+      maximumEntryPriceDeviationFromLtpPercent: Number(
+        v.maximumEntryPriceDeviationFromLtpPercent,
+      ),
+      requireValidBidAskForEntry: !!v.requireValidBidAskForEntry,
       riskRewardRatio: Number(v.riskRewardRatio),
       maxCapitalPerTradePercent: Number(v.maxCapitalPerTradePercent),
       maxBrokerFailuresBeforeKillSwitch: Number(
@@ -438,6 +469,9 @@ export class TradingSettingsComponent implements OnInit {
 
       exit: {
         enableStopLoss: !!v.enableStopLoss,
+        enableTrailingStop: !!v.enableTrailingStop,
+        triggerProtectiveExitWhenLastPriceBreachedAndDataStale:
+          !!v.triggerProtectiveExitWhenLastPriceBreachedAndDataStale,
         trailingStopAtrMultiplier: Number(v.trailingStopAtrMultiplier),
         trailingProfitRetentionPercent: Number(
           v.trailingProfitRetentionPercent,
@@ -506,6 +540,8 @@ export class TradingSettingsComponent implements OnInit {
   private defaultExit() {
     return {
       enableStopLoss: true,
+      enableTrailingStop: false,
+      triggerProtectiveExitWhenLastPriceBreachedAndDataStale: true,
       trailingStopAtrMultiplier: 0.6,
       trailingProfitRetentionPercent: 70,
     };
