@@ -95,11 +95,11 @@
       </div>
       <div class="grid-4" *ngIf="openSection === 'hours'">
         <label class="toggle-field"><input type="checkbox" formControlName="ignoreMarketHours"><span>Ignore market hours</span></label>
-        <label><span>Market open</span><input type="time" formControlName="marketOpenTime"></label>
-        <label><span>Market close</span><input type="time" formControlName="marketCloseTime"></label>
-        <label><span>Intraday entry cutoff</span><input type="time" formControlName="intradayEntryCutoffTime"></label>
-        <label><span>Equity MIS auto square-off</span><input type="time" formControlName="equityMisAutoSquareOffTime"></label>
-        <label><span>Robo auto square-off</span><input type="time" formControlName="roboAutoSquareOffTime"></label>
+        <label><span>Market open</span><input type="time" step="1" formControlName="marketOpenTime"></label>
+        <label><span>Market close</span><input type="time" step="1" formControlName="marketCloseTime"></label>
+        <label><span>Intraday entry cutoff</span><input type="time" step="1" formControlName="intradayEntryCutoffTime"></label>
+        <label><span>Equity MIS auto square-off</span><input type="time" step="1" formControlName="equityMisAutoSquareOffTime"></label>
+        <label><span>Robo auto square-off</span><input type="time" step="1" formControlName="roboAutoSquareOffTime"></label>
       </div>
     </section>
 
@@ -108,13 +108,13 @@
         <button type="button" class="accordion-trigger" (click)="toggleSection('cas')" [attr.aria-expanded]="openSection === 'cas'"><span><h2>CAS Window</h2><p>All CAS timing and price-band fields from the API configuration.</p></span><span class="accordion-icon">{{ openSection === 'cas' ? '−' : '+' }}</span></button>
       </div>
       <div class="grid-4" *ngIf="openSection === 'cas'">
-        <label><span>Transition start</span><input type="time" formControlName="casTransitionStart"></label>
-        <label><span>Order entry start</span><input type="time" formControlName="casOrderEntryStart"></label>
-        <label><span>Market-only end</span><input type="time" formControlName="casMarketOnlyEnd"></label>
-        <label><span>Limit-only end</span><input type="time" formControlName="casLimitOnlyEnd"></label>
-        <label><span>Random-close safety cutoff</span><input type="time" formControlName="casRandomCloseSafetyCutoff"></label>
-        <label><span>CAS end</span><input type="time" formControlName="casEnd"></label>
-        <label><span>Post-close end</span><input type="time" formControlName="casPostCloseEnd"></label>
+        <label><span>Transition start</span><input type="time" step="1" formControlName="casTransitionStart"></label>
+        <label><span>Order entry start</span><input type="time" step="1" formControlName="casOrderEntryStart"></label>
+        <label><span>Market-only end</span><input type="time" step="1" formControlName="casMarketOnlyEnd"></label>
+        <label><span>Limit-only end</span><input type="time" step="1" formControlName="casLimitOnlyEnd"></label>
+        <label><span>Random-close safety cutoff</span><input type="time" step="1" formControlName="casRandomCloseSafetyCutoff"></label>
+        <label><span>CAS end</span><input type="time" step="1" formControlName="casEnd"></label>
+        <label><span>Post-close end</span><input type="time" step="1" formControlName="casPostCloseEnd"></label>
         <label><span>Price band %</span><input type="number" formControlName="casPriceBandPercent" min="0" step="0.1"></label>
       </div>
     </section>
