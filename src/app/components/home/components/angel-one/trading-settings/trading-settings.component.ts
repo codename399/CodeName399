@@ -98,6 +98,25 @@ export class TradingSettingsComponent implements OnInit {
     minimumPriceChangePercent: [0.05, [Validators.required, Validators.min(0)]],
     minimumVolume: [50000, [Validators.required, Validators.min(0)]],
     requireRisingFromDayOpen: [true],
+    enableSidewaysMarketFilter: [false],
+    sidewaysMaximumRangePercent: [0.15, [Validators.required, Validators.min(0)]],
+    sidewaysMaximumNetProgressPercent: [0.03, [Validators.required, Validators.min(0)]],
+    sidewaysMaximumDirectionalEfficiency: [
+      0.2,
+      [Validators.required, Validators.min(0), Validators.max(1)],
+    ],
+    sidewaysMaximumRangeForEfficiencyCheckPercent: [
+      0.35,
+      [Validators.required, Validators.min(0)],
+    ],
+    sidewaysBreakoutMinimumProgressPercent: [
+      0.03,
+      [Validators.required, Validators.min(0)],
+    ],
+    sidewaysBreakoutMinimumPositiveTickRatio: [
+      0.55,
+      [Validators.required, Validators.min(0), Validators.max(1)],
+    ],
     candidateObservationTicks: [20, [Validators.required, Validators.min(0)]],
     minimumCandidateObservationTicks: [5, [Validators.required, Validators.min(0)]],
     enableVolumeConfirmation: [true],
@@ -267,6 +286,20 @@ export class TradingSettingsComponent implements OnInit {
               minimumPriceChangePercent: config?.minimumPriceChangePercent ?? 0.05,
               minimumVolume: config?.minimumVolume ?? 50000,
               requireRisingFromDayOpen: config?.requireRisingFromDayOpen ?? true,
+              enableSidewaysMarketFilter:
+                config?.enableSidewaysMarketFilter ?? false,
+              sidewaysMaximumRangePercent:
+                config?.sidewaysMaximumRangePercent ?? 0.15,
+              sidewaysMaximumNetProgressPercent:
+                config?.sidewaysMaximumNetProgressPercent ?? 0.03,
+              sidewaysMaximumDirectionalEfficiency:
+                config?.sidewaysMaximumDirectionalEfficiency ?? 0.2,
+              sidewaysMaximumRangeForEfficiencyCheckPercent:
+                config?.sidewaysMaximumRangeForEfficiencyCheckPercent ?? 0.35,
+              sidewaysBreakoutMinimumProgressPercent:
+                config?.sidewaysBreakoutMinimumProgressPercent ?? 0.03,
+              sidewaysBreakoutMinimumPositiveTickRatio:
+                config?.sidewaysBreakoutMinimumPositiveTickRatio ?? 0.55,
               candidateObservationTicks:
                 config?.candidateObservationTicks ??
                 config?.candidateObservationSeconds ??
@@ -415,6 +448,23 @@ export class TradingSettingsComponent implements OnInit {
       minimumPriceChangePercent: Number(v.minimumPriceChangePercent),
       minimumVolume: Number(v.minimumVolume),
       requireRisingFromDayOpen: !!v.requireRisingFromDayOpen,
+      enableSidewaysMarketFilter: !!v.enableSidewaysMarketFilter,
+      sidewaysMaximumRangePercent: Number(v.sidewaysMaximumRangePercent),
+      sidewaysMaximumNetProgressPercent: Number(
+        v.sidewaysMaximumNetProgressPercent,
+      ),
+      sidewaysMaximumDirectionalEfficiency: Number(
+        v.sidewaysMaximumDirectionalEfficiency,
+      ),
+      sidewaysMaximumRangeForEfficiencyCheckPercent: Number(
+        v.sidewaysMaximumRangeForEfficiencyCheckPercent,
+      ),
+      sidewaysBreakoutMinimumProgressPercent: Number(
+        v.sidewaysBreakoutMinimumProgressPercent,
+      ),
+      sidewaysBreakoutMinimumPositiveTickRatio: Number(
+        v.sidewaysBreakoutMinimumPositiveTickRatio,
+      ),
       candidateObservationTicks: Number(v.candidateObservationTicks),
       minimumCandidateObservationTicks: Number(
         v.minimumCandidateObservationTicks,

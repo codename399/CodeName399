@@ -72,6 +72,13 @@ export interface TradingConfiguration {
   minimumPriceChangePercent: number;
   minimumVolume: number;
   requireRisingFromDayOpen: boolean;
+  enableSidewaysMarketFilter: boolean;
+  sidewaysMaximumRangePercent: number;
+  sidewaysMaximumNetProgressPercent: number;
+  sidewaysMaximumDirectionalEfficiency: number;
+  sidewaysMaximumRangeForEfficiencyCheckPercent: number;
+  sidewaysBreakoutMinimumProgressPercent: number;
+  sidewaysBreakoutMinimumPositiveTickRatio: number;
   candidateObservationSeconds?: number;
   candidateObservationTicks?: number;
   minimumCandidateObservationTicks: number;
