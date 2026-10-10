@@ -79,6 +79,14 @@ export interface TradingConfiguration {
   sidewaysMaximumRangeForEfficiencyCheckPercent: number;
   sidewaysBreakoutMinimumProgressPercent: number;
   sidewaysBreakoutMinimumPositiveTickRatio: number;
+  enableAmdEntryStrategy: boolean;
+  amdMinimumAccumulationTicks: number;
+  amdMaximumAccumulationRangePercent: number;
+  amdMinimumLiquiditySweepPercent: number;
+  amdMinimumDistributionTicks: number;
+  amdMinimumStructureBreakPercent: number;
+  amdMinimumPositiveTickRatio: number;
+  amdMaximumSetupAgeMinutes: number;
   candidateObservationSeconds?: number;
   candidateObservationTicks?: number;
   minimumCandidateObservationTicks: number;

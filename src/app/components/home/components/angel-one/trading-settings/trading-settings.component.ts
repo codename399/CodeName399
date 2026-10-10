@@ -117,6 +117,35 @@ export class TradingSettingsComponent implements OnInit {
       0.55,
       [Validators.required, Validators.min(0), Validators.max(1)],
     ],
+    enableAmdEntryStrategy: [false],
+    amdMinimumAccumulationTicks: [
+      8,
+      [Validators.required, Validators.min(0)],
+    ],
+    amdMaximumAccumulationRangePercent: [
+      0.35,
+      [Validators.required, Validators.min(0)],
+    ],
+    amdMinimumLiquiditySweepPercent: [
+      0.03,
+      [Validators.required, Validators.min(0)],
+    ],
+    amdMinimumDistributionTicks: [
+      3,
+      [Validators.required, Validators.min(0)],
+    ],
+    amdMinimumStructureBreakPercent: [
+      0.02,
+      [Validators.required, Validators.min(0)],
+    ],
+    amdMinimumPositiveTickRatio: [
+      0.55,
+      [Validators.required, Validators.min(0), Validators.max(1)],
+    ],
+    amdMaximumSetupAgeMinutes: [
+      30,
+      [Validators.required, Validators.min(0)],
+    ],
     candidateObservationTicks: [20, [Validators.required, Validators.min(0)]],
     minimumCandidateObservationTicks: [5, [Validators.required, Validators.min(0)]],
     enableVolumeConfirmation: [true],
@@ -300,6 +329,21 @@ export class TradingSettingsComponent implements OnInit {
                 config?.sidewaysBreakoutMinimumProgressPercent ?? 0.03,
               sidewaysBreakoutMinimumPositiveTickRatio:
                 config?.sidewaysBreakoutMinimumPositiveTickRatio ?? 0.55,
+              enableAmdEntryStrategy: config?.enableAmdEntryStrategy ?? false,
+              amdMinimumAccumulationTicks:
+                config?.amdMinimumAccumulationTicks ?? 8,
+              amdMaximumAccumulationRangePercent:
+                config?.amdMaximumAccumulationRangePercent ?? 0.35,
+              amdMinimumLiquiditySweepPercent:
+                config?.amdMinimumLiquiditySweepPercent ?? 0.03,
+              amdMinimumDistributionTicks:
+                config?.amdMinimumDistributionTicks ?? 3,
+              amdMinimumStructureBreakPercent:
+                config?.amdMinimumStructureBreakPercent ?? 0.02,
+              amdMinimumPositiveTickRatio:
+                config?.amdMinimumPositiveTickRatio ?? 0.55,
+              amdMaximumSetupAgeMinutes:
+                config?.amdMaximumSetupAgeMinutes ?? 30,
               candidateObservationTicks:
                 config?.candidateObservationTicks ??
                 config?.candidateObservationSeconds ??
@@ -465,6 +509,20 @@ export class TradingSettingsComponent implements OnInit {
       sidewaysBreakoutMinimumPositiveTickRatio: Number(
         v.sidewaysBreakoutMinimumPositiveTickRatio,
       ),
+      enableAmdEntryStrategy: !!v.enableAmdEntryStrategy,
+      amdMinimumAccumulationTicks: Number(v.amdMinimumAccumulationTicks),
+      amdMaximumAccumulationRangePercent: Number(
+        v.amdMaximumAccumulationRangePercent,
+      ),
+      amdMinimumLiquiditySweepPercent: Number(
+        v.amdMinimumLiquiditySweepPercent,
+      ),
+      amdMinimumDistributionTicks: Number(v.amdMinimumDistributionTicks),
+      amdMinimumStructureBreakPercent: Number(
+        v.amdMinimumStructureBreakPercent,
+      ),
+      amdMinimumPositiveTickRatio: Number(v.amdMinimumPositiveTickRatio),
+      amdMaximumSetupAgeMinutes: Number(v.amdMaximumSetupAgeMinutes),
       candidateObservationTicks: Number(v.candidateObservationTicks),
       minimumCandidateObservationTicks: Number(
         v.minimumCandidateObservationTicks,
