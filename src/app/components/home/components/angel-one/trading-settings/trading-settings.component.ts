@@ -98,7 +98,7 @@ export class TradingSettingsComponent implements OnInit {
     minimumPriceChangePercent: [0.05, [Validators.required, Validators.min(0)]],
     minimumVolume: [50000, [Validators.required, Validators.min(0)]],
     requireRisingFromDayOpen: [true],
-    enableSidewaysMarketFilter: [false],
+    enableSidewaysMarketFilter: [true],
     sidewaysMaximumRangePercent: [0.15, [Validators.required, Validators.min(0)]],
     sidewaysMaximumNetProgressPercent: [0.03, [Validators.required, Validators.min(0)]],
     sidewaysMaximumDirectionalEfficiency: [
@@ -117,7 +117,7 @@ export class TradingSettingsComponent implements OnInit {
       0.55,
       [Validators.required, Validators.min(0), Validators.max(1)],
     ],
-    enableAmdEntryStrategy: [false],
+    enableAmdEntryStrategy: [true],
     amdMinimumAccumulationTicks: [
       8,
       [Validators.required, Validators.min(0)],
@@ -156,7 +156,7 @@ export class TradingSettingsComponent implements OnInit {
     volumeBaselineLookbackCandles: [20, [Validators.required, Validators.min(0)]],
     minimumVolumeBaselineCandles: [5, [Validators.required, Validators.min(0)]],
     requireHistoricalVolumeBaseline: [false],
-    requirePullbackForEntry: [false],
+    requirePullbackForEntry: [true],
     minimumSteadyProgressPercent: [0.07, [Validators.required, Validators.min(0)]],
     minimumSteadyPositiveTickRatio: [
       0.52,
@@ -316,7 +316,7 @@ export class TradingSettingsComponent implements OnInit {
               minimumVolume: config?.minimumVolume ?? 50000,
               requireRisingFromDayOpen: config?.requireRisingFromDayOpen ?? true,
               enableSidewaysMarketFilter:
-                config?.enableSidewaysMarketFilter ?? false,
+                config?.enableSidewaysMarketFilter ?? true,
               sidewaysMaximumRangePercent:
                 config?.sidewaysMaximumRangePercent ?? 0.15,
               sidewaysMaximumNetProgressPercent:
@@ -329,7 +329,7 @@ export class TradingSettingsComponent implements OnInit {
                 config?.sidewaysBreakoutMinimumProgressPercent ?? 0.03,
               sidewaysBreakoutMinimumPositiveTickRatio:
                 config?.sidewaysBreakoutMinimumPositiveTickRatio ?? 0.55,
-              enableAmdEntryStrategy: config?.enableAmdEntryStrategy ?? false,
+              enableAmdEntryStrategy: config?.enableAmdEntryStrategy ?? true,
               amdMinimumAccumulationTicks:
                 config?.amdMinimumAccumulationTicks ?? 8,
               amdMaximumAccumulationRangePercent:
@@ -364,7 +364,7 @@ export class TradingSettingsComponent implements OnInit {
               requireHistoricalVolumeBaseline:
                 config?.requireHistoricalVolumeBaseline ?? false,
               requirePullbackForEntry:
-                config?.requirePullbackForEntry ?? false,
+                config?.requirePullbackForEntry ?? true,
               minimumSteadyProgressPercent: config?.minimumSteadyProgressPercent ?? 0.07,
               minimumSteadyPositiveTickRatio:
                 config?.minimumSteadyPositiveTickRatio ?? 0.52,
