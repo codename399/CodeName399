@@ -3,6 +3,12 @@ export interface InstrumentTradingSettings {
   productType: string;
   orderType: string;
   duration: string;
+  minimumPrice: number;
+  minimumPositiveChangePercent: number;
+  minimumDayVolume: number;
+  minimumTurnover: number;
+  maximumSpreadPercent: number;
+  maximumGainerCandidates: number;
   atrStopMultiplier: number;
   exitOrderTimeoutSeconds: number;
   maxMarketDataAgeSeconds: number;

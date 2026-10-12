@@ -129,6 +129,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
     { key: 'risk', label: 'Risk', defaultVisible: true },
     { key: 'atr', label: 'ATR', defaultVisible: true },
     { key: 'stopLoss', label: 'SL', defaultVisible: true },
+    { key: 'target', label: 'Target', defaultVisible: true },
     { key: 'reason', label: 'Reason', defaultVisible: true },
     { key: 'suggestion', label: 'Suggestion', defaultVisible: true },
     { key: 'upperCircuitLimit', label: 'Upper Circuit Limit', defaultVisible: false },

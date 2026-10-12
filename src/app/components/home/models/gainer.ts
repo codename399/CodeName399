@@ -37,6 +37,7 @@ export interface Gainer {
   isSubscribed: boolean;
 
   stopLoss: number;
+  target?: number;
 
   isOwned: boolean;
   quantity: number;
