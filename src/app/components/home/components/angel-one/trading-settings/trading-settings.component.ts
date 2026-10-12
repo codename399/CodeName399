@@ -33,17 +33,7 @@ export class TradingSettingsComponent implements OnInit {
     enableNotification: [true],
 
     riskPercentage: [0.5, [Validators.required, Validators.min(0)]],
-    maximumLossPercentOfInvestment: [
-      0.5,
-      [Validators.required, Validators.min(0)],
-    ],
-    maximumEntrySpreadPercent: [0.5, [Validators.required, Validators.min(0)]],
-    maximumEntryPriceDeviationFromLtpPercent: [
-      0.25,
-      [Validators.required, Validators.min(0)],
-    ],
-    requireValidBidAskForEntry: [true],
-    riskRewardRatio: [1.5, [Validators.required, Validators.min(0)]],
+    riskRewardRatio: [2, [Validators.required, Validators.min(0)]],
     maxCapitalPerTradePercent: [
       10,
       [Validators.required, Validators.min(0), Validators.max(100)],
@@ -53,30 +43,17 @@ export class TradingSettingsComponent implements OnInit {
       [Validators.required, Validators.min(0)],
     ],
     brokerFailureWindowMinutes: [2, [Validators.required, Validators.min(0)]],
-    maximumTotalOpenRisk: [10000, [Validators.required, Validators.min(0)]],
-    riskReservationSeconds: [10, [Validators.required, Validators.min(0)]],
 
     exchange: ['NSE', Validators.required],
     productType: ['INTRADAY', Validators.required],
     orderType: ['MARKET', Validators.required],
     duration: ['DAY', Validators.required],
     atrStopMultiplier: [1.2, [Validators.required, Validators.min(0)]],
-    minimumStopPercent: [0.5, [Validators.required, Validators.min(0)]],
-    maximumStopPercent: [1, [Validators.required, Validators.min(0)]],
-    allowLong: [true],
     exitOrderTimeoutSeconds: [10, [Validators.required, Validators.min(0)]],
     maxMarketDataAgeSeconds: [15, [Validators.required, Validators.min(0)]],
     maximumExitRetries: [5, [Validators.required, Validators.min(0)]],
-    maximumOpenPositions: [3, [Validators.required, Validators.min(0)]],
 
-    enableStopLoss: [true],
-    enableTrailingStop: [false],
     triggerProtectiveExitWhenLastPriceBreachedAndDataStale: [true],
-    trailingStopAtrMultiplier: [0.6, [Validators.required, Validators.min(0)]],
-    trailingProfitRetentionPercent: [
-      70,
-      [Validators.required, Validators.min(0), Validators.max(100)],
-    ],
 
     ignoreMarketHours: [false],
     marketOpenTime: ['09:15:00', Validators.required],
@@ -95,87 +72,6 @@ export class TradingSettingsComponent implements OnInit {
     casPriceBandPercent: [3, [Validators.required, Validators.min(0)]],
 
     watchListRefreshMinutes: [1, [Validators.required, Validators.min(0)]],
-    minimumPriceChangePercent: [0.05, [Validators.required, Validators.min(0)]],
-    minimumVolume: [50000, [Validators.required, Validators.min(0)]],
-    requireRisingFromDayOpen: [true],
-    enableSidewaysMarketFilter: [true],
-    sidewaysMaximumRangePercent: [0.15, [Validators.required, Validators.min(0)]],
-    sidewaysMaximumNetProgressPercent: [0.03, [Validators.required, Validators.min(0)]],
-    sidewaysMaximumDirectionalEfficiency: [
-      0.2,
-      [Validators.required, Validators.min(0), Validators.max(1)],
-    ],
-    sidewaysMaximumRangeForEfficiencyCheckPercent: [
-      0.35,
-      [Validators.required, Validators.min(0)],
-    ],
-    sidewaysBreakoutMinimumProgressPercent: [
-      0.03,
-      [Validators.required, Validators.min(0)],
-    ],
-    sidewaysBreakoutMinimumPositiveTickRatio: [
-      0.55,
-      [Validators.required, Validators.min(0), Validators.max(1)],
-    ],
-    enableAmdEntryStrategy: [true],
-    amdMinimumAccumulationTicks: [
-      8,
-      [Validators.required, Validators.min(0)],
-    ],
-    amdMaximumAccumulationRangePercent: [
-      0.35,
-      [Validators.required, Validators.min(0)],
-    ],
-    amdMinimumLiquiditySweepPercent: [
-      0.03,
-      [Validators.required, Validators.min(0)],
-    ],
-    amdMinimumDistributionTicks: [
-      3,
-      [Validators.required, Validators.min(0)],
-    ],
-    amdMinimumStructureBreakPercent: [
-      0.02,
-      [Validators.required, Validators.min(0)],
-    ],
-    amdMinimumPositiveTickRatio: [
-      0.55,
-      [Validators.required, Validators.min(0), Validators.max(1)],
-    ],
-    amdMaximumSetupAgeMinutes: [
-      30,
-      [Validators.required, Validators.min(0)],
-    ],
-    candidateObservationTicks: [20, [Validators.required, Validators.min(0)]],
-    minimumCandidateObservationTicks: [5, [Validators.required, Validators.min(0)]],
-    enableVolumeConfirmation: [true],
-    volumeLookbackSeconds: [60, [Validators.required, Validators.min(0)]],
-    minimumRecentVolume: [50, [Validators.required, Validators.min(0)]],
-    minimumRelativeVolume: [0.8, [Validators.required, Validators.min(0)]],
-    minimumUpMoveVolumeRatio: [0.4, [Validators.required, Validators.min(0), Validators.max(1)]],
-    volumeBaselineLookbackCandles: [20, [Validators.required, Validators.min(0)]],
-    minimumVolumeBaselineCandles: [5, [Validators.required, Validators.min(0)]],
-    requireHistoricalVolumeBaseline: [false],
-    requirePullbackForEntry: [true],
-    minimumSteadyProgressPercent: [0.07, [Validators.required, Validators.min(0)]],
-    minimumSteadyPositiveTickRatio: [
-      0.52,
-      [Validators.required, Validators.min(0), Validators.max(1)],
-    ],
-    maximumSteadyPullbackPercent: [0.08, [Validators.required, Validators.min(0)]],
-    minimumFluctuationRangePercent: [0.2, [Validators.required, Validators.min(0)]],
-    minimumFluctuationPullbackPercent: [0.04, [Validators.required, Validators.min(0)]],
-    minimumPullbackRecoveryPercent: [0.02, [Validators.required, Validators.min(0)]],
-    minimumPullbackRecoveryPositiveTickRatio: [
-      0.5,
-      [Validators.required, Validators.min(0), Validators.max(1)],
-    ],
-    maximumEntryExtensionFromPullbackLowPercent: [
-      0.18,
-      [Validators.required, Validators.min(0)],
-    ],
-    excludedSymbols: ['TATSILV-EQ, AONEGOLD-EQ, ACUTAAS-EQ, IDEA-EQ'],
-    maxCandidates: [3000, [Validators.required, Validators.min(0)]],
 
     marketTimeZoneId: ['Asia/Kolkata', Validators.required],
     tradingHolidays: [''],
@@ -196,7 +92,6 @@ export class TradingSettingsComponent implements OnInit {
       [Validators.required, Validators.min(0)],
     ],
     squareOffRetryDelaySeconds: [1, [Validators.required, Validators.min(0)]],
-    stopLossConfirmationSeconds: [2, [Validators.required, Validators.min(0)]],
 
     buyTradingInterval: [1000, [Validators.required, Validators.min(0)]],
     sellTradingInterval: [1000, [Validators.required, Validators.min(0)]],
@@ -238,44 +133,25 @@ export class TradingSettingsComponent implements OnInit {
               enableNotification: config?.enableNotification ?? true,
 
               riskPercentage: config?.riskPercentage ?? 0.5,
-              maximumLossPercentOfInvestment:
-                config?.maximumLossPercentOfInvestment ?? 0.5,
-              maximumEntrySpreadPercent:
-                config?.maximumEntrySpreadPercent ?? 0.5,
-              maximumEntryPriceDeviationFromLtpPercent:
-                config?.maximumEntryPriceDeviationFromLtpPercent ?? 0.25,
-              requireValidBidAskForEntry:
-                config?.requireValidBidAskForEntry ?? true,
-              riskRewardRatio: config?.riskRewardRatio ?? 1.5,
+              riskRewardRatio: config?.riskRewardRatio ?? 2,
               maxCapitalPerTradePercent:
                 config?.maxCapitalPerTradePercent ?? 10,
               maxBrokerFailuresBeforeKillSwitch:
                 config?.maxBrokerFailuresBeforeKillSwitch ?? 5,
               brokerFailureWindowMinutes:
                 config?.brokerFailureWindowMinutes ?? 2,
-              maximumTotalOpenRisk: config?.maximumTotalOpenRisk ?? 10000,
-              riskReservationSeconds: config?.riskReservationSeconds ?? 10,
 
               exchange: equity.exchange,
               productType: equity.productType,
               orderType: equity.orderType,
               duration: equity.duration,
               atrStopMultiplier: equity.atrStopMultiplier,
-              minimumStopPercent: equity.minimumStopPercent,
-              maximumStopPercent: equity.maximumStopPercent,
-              allowLong: equity.allowLong,
               exitOrderTimeoutSeconds: equity.exitOrderTimeoutSeconds,
               maxMarketDataAgeSeconds: equity.maxMarketDataAgeSeconds,
               maximumExitRetries: equity.maximumExitRetries,
-              maximumOpenPositions: equity.maximumOpenPositions,
 
-              enableStopLoss: exit.enableStopLoss,
-              enableTrailingStop: exit.enableTrailingStop,
               triggerProtectiveExitWhenLastPriceBreachedAndDataStale:
                 exit.triggerProtectiveExitWhenLastPriceBreachedAndDataStale,
-              trailingStopAtrMultiplier: exit.trailingStopAtrMultiplier,
-              trailingProfitRetentionPercent:
-                exit.trailingProfitRetentionPercent,
 
               ignoreMarketHours: config?.ignoreMarketHours ?? false,
               marketOpenTime: this.time(config?.marketOpenTime, '09:15:00'),
@@ -312,76 +188,6 @@ export class TradingSettingsComponent implements OnInit {
               casPriceBandPercent: config?.casPriceBandPercent ?? 3,
 
               watchListRefreshMinutes: config?.watchListRefreshMinutes ?? 1,
-              minimumPriceChangePercent: config?.minimumPriceChangePercent ?? 0.05,
-              minimumVolume: config?.minimumVolume ?? 50000,
-              requireRisingFromDayOpen: config?.requireRisingFromDayOpen ?? true,
-              enableSidewaysMarketFilter:
-                config?.enableSidewaysMarketFilter ?? true,
-              sidewaysMaximumRangePercent:
-                config?.sidewaysMaximumRangePercent ?? 0.15,
-              sidewaysMaximumNetProgressPercent:
-                config?.sidewaysMaximumNetProgressPercent ?? 0.03,
-              sidewaysMaximumDirectionalEfficiency:
-                config?.sidewaysMaximumDirectionalEfficiency ?? 0.2,
-              sidewaysMaximumRangeForEfficiencyCheckPercent:
-                config?.sidewaysMaximumRangeForEfficiencyCheckPercent ?? 0.35,
-              sidewaysBreakoutMinimumProgressPercent:
-                config?.sidewaysBreakoutMinimumProgressPercent ?? 0.03,
-              sidewaysBreakoutMinimumPositiveTickRatio:
-                config?.sidewaysBreakoutMinimumPositiveTickRatio ?? 0.55,
-              enableAmdEntryStrategy: config?.enableAmdEntryStrategy ?? true,
-              amdMinimumAccumulationTicks:
-                config?.amdMinimumAccumulationTicks ?? 8,
-              amdMaximumAccumulationRangePercent:
-                config?.amdMaximumAccumulationRangePercent ?? 0.35,
-              amdMinimumLiquiditySweepPercent:
-                config?.amdMinimumLiquiditySweepPercent ?? 0.03,
-              amdMinimumDistributionTicks:
-                config?.amdMinimumDistributionTicks ?? 3,
-              amdMinimumStructureBreakPercent:
-                config?.amdMinimumStructureBreakPercent ?? 0.02,
-              amdMinimumPositiveTickRatio:
-                config?.amdMinimumPositiveTickRatio ?? 0.55,
-              amdMaximumSetupAgeMinutes:
-                config?.amdMaximumSetupAgeMinutes ?? 30,
-              candidateObservationTicks:
-                config?.candidateObservationTicks ??
-                config?.candidateObservationSeconds ??
-                20,
-              minimumCandidateObservationTicks:
-                config?.minimumCandidateObservationTicks ?? 5,
-              enableVolumeConfirmation:
-                config?.enableVolumeConfirmation ?? true,
-              volumeLookbackSeconds: config?.volumeLookbackSeconds ?? 60,
-              minimumRecentVolume: config?.minimumRecentVolume ?? 50,
-              minimumRelativeVolume: config?.minimumRelativeVolume ?? 0.8,
-              minimumUpMoveVolumeRatio:
-                config?.minimumUpMoveVolumeRatio ?? 0.4,
-              volumeBaselineLookbackCandles:
-                config?.volumeBaselineLookbackCandles ?? 20,
-              minimumVolumeBaselineCandles:
-                config?.minimumVolumeBaselineCandles ?? 5,
-              requireHistoricalVolumeBaseline:
-                config?.requireHistoricalVolumeBaseline ?? false,
-              requirePullbackForEntry:
-                config?.requirePullbackForEntry ?? true,
-              minimumSteadyProgressPercent: config?.minimumSteadyProgressPercent ?? 0.07,
-              minimumSteadyPositiveTickRatio:
-                config?.minimumSteadyPositiveTickRatio ?? 0.52,
-              maximumSteadyPullbackPercent:
-                config?.maximumSteadyPullbackPercent ?? 0.08,
-              minimumFluctuationRangePercent:
-                config?.minimumFluctuationRangePercent ?? 0.2,
-              minimumFluctuationPullbackPercent:
-                config?.minimumFluctuationPullbackPercent ?? 0.04,
-              minimumPullbackRecoveryPercent:
-                config?.minimumPullbackRecoveryPercent ?? 0.02,
-              minimumPullbackRecoveryPositiveTickRatio:
-                config?.minimumPullbackRecoveryPositiveTickRatio ?? 0.5,
-              maximumEntryExtensionFromPullbackLowPercent:
-                config?.maximumEntryExtensionFromPullbackLowPercent ?? 0.18,
-              excludedSymbols: (config?.excludedSymbols ?? []).join(', '),
-              maxCandidates: config?.maxCandidates ?? 3000,
 
               marketTimeZoneId: config?.marketTimeZoneId ?? 'Asia/Kolkata',
               tradingHolidays: (config?.tradingHolidays ?? []).join(', '),
@@ -403,8 +209,6 @@ export class TradingSettingsComponent implements OnInit {
                 config?.brokerPositionConfirmationDelaySeconds ?? 1,
               squareOffRetryDelaySeconds:
                 config?.squareOffRetryDelaySeconds ?? 1,
-              stopLossConfirmationSeconds:
-                config?.stopLossConfirmationSeconds ?? 2,
 
               buyTradingInterval: config?.buyTradingInterval ?? 1000,
               sellTradingInterval: config?.sellTradingInterval ?? 1000,
@@ -455,22 +259,12 @@ export class TradingSettingsComponent implements OnInit {
       enableNotification: !!v.enableNotification,
 
       riskPercentage: Number(v.riskPercentage),
-      maximumLossPercentOfInvestment: Number(
-        v.maximumLossPercentOfInvestment,
-      ),
-      maximumEntrySpreadPercent: Number(v.maximumEntrySpreadPercent),
-      maximumEntryPriceDeviationFromLtpPercent: Number(
-        v.maximumEntryPriceDeviationFromLtpPercent,
-      ),
-      requireValidBidAskForEntry: !!v.requireValidBidAskForEntry,
       riskRewardRatio: Number(v.riskRewardRatio),
       maxCapitalPerTradePercent: Number(v.maxCapitalPerTradePercent),
       maxBrokerFailuresBeforeKillSwitch: Number(
         v.maxBrokerFailuresBeforeKillSwitch,
       ),
       brokerFailureWindowMinutes: Number(v.brokerFailureWindowMinutes),
-      maximumTotalOpenRisk: Number(v.maximumTotalOpenRisk),
-      riskReservationSeconds: Number(v.riskReservationSeconds),
 
       ignoreMarketHours: !!v.ignoreMarketHours,
       marketOpenTime: this.toTimeSpan(v.marketOpenTime),
@@ -489,74 +283,6 @@ export class TradingSettingsComponent implements OnInit {
       casPriceBandPercent: Number(v.casPriceBandPercent),
 
       watchListRefreshMinutes: Number(v.watchListRefreshMinutes),
-      minimumPriceChangePercent: Number(v.minimumPriceChangePercent),
-      minimumVolume: Number(v.minimumVolume),
-      requireRisingFromDayOpen: !!v.requireRisingFromDayOpen,
-      enableSidewaysMarketFilter: !!v.enableSidewaysMarketFilter,
-      sidewaysMaximumRangePercent: Number(v.sidewaysMaximumRangePercent),
-      sidewaysMaximumNetProgressPercent: Number(
-        v.sidewaysMaximumNetProgressPercent,
-      ),
-      sidewaysMaximumDirectionalEfficiency: Number(
-        v.sidewaysMaximumDirectionalEfficiency,
-      ),
-      sidewaysMaximumRangeForEfficiencyCheckPercent: Number(
-        v.sidewaysMaximumRangeForEfficiencyCheckPercent,
-      ),
-      sidewaysBreakoutMinimumProgressPercent: Number(
-        v.sidewaysBreakoutMinimumProgressPercent,
-      ),
-      sidewaysBreakoutMinimumPositiveTickRatio: Number(
-        v.sidewaysBreakoutMinimumPositiveTickRatio,
-      ),
-      enableAmdEntryStrategy: !!v.enableAmdEntryStrategy,
-      amdMinimumAccumulationTicks: Number(v.amdMinimumAccumulationTicks),
-      amdMaximumAccumulationRangePercent: Number(
-        v.amdMaximumAccumulationRangePercent,
-      ),
-      amdMinimumLiquiditySweepPercent: Number(
-        v.amdMinimumLiquiditySweepPercent,
-      ),
-      amdMinimumDistributionTicks: Number(v.amdMinimumDistributionTicks),
-      amdMinimumStructureBreakPercent: Number(
-        v.amdMinimumStructureBreakPercent,
-      ),
-      amdMinimumPositiveTickRatio: Number(v.amdMinimumPositiveTickRatio),
-      amdMaximumSetupAgeMinutes: Number(v.amdMaximumSetupAgeMinutes),
-      candidateObservationTicks: Number(v.candidateObservationTicks),
-      minimumCandidateObservationTicks: Number(
-        v.minimumCandidateObservationTicks,
-      ),
-      enableVolumeConfirmation: !!v.enableVolumeConfirmation,
-      volumeLookbackSeconds: Number(v.volumeLookbackSeconds),
-      minimumRecentVolume: Number(v.minimumRecentVolume),
-      minimumRelativeVolume: Number(v.minimumRelativeVolume),
-      minimumUpMoveVolumeRatio: Number(v.minimumUpMoveVolumeRatio),
-      volumeBaselineLookbackCandles: Number(v.volumeBaselineLookbackCandles),
-      minimumVolumeBaselineCandles: Number(v.minimumVolumeBaselineCandles),
-      requireHistoricalVolumeBaseline: !!v.requireHistoricalVolumeBaseline,
-      requirePullbackForEntry: !!v.requirePullbackForEntry,
-      minimumSteadyProgressPercent: Number(v.minimumSteadyProgressPercent),
-      minimumSteadyPositiveTickRatio: Number(
-        v.minimumSteadyPositiveTickRatio,
-      ),
-      maximumSteadyPullbackPercent: Number(v.maximumSteadyPullbackPercent),
-      minimumFluctuationRangePercent: Number(
-        v.minimumFluctuationRangePercent,
-      ),
-      minimumFluctuationPullbackPercent: Number(
-        v.minimumFluctuationPullbackPercent,
-      ),
-      minimumPullbackRecoveryPercent: Number(v.minimumPullbackRecoveryPercent),
-      minimumPullbackRecoveryPositiveTickRatio: Number(
-        v.minimumPullbackRecoveryPositiveTickRatio,
-      ),
-      maximumEntryExtensionFromPullbackLowPercent: Number(
-        v.maximumEntryExtensionFromPullbackLowPercent,
-      ),
-      excludedSymbols: this.csv(v.excludedSymbols),
-      maxCandidates: Number(v.maxCandidates),
-
       marketTimeZoneId: String(v.marketTimeZoneId),
       tradingHolidays: this.csv(v.tradingHolidays),
       lastDailySummarySent: this.nullIfBlank(v.lastDailySummarySent),
@@ -573,7 +299,6 @@ export class TradingSettingsComponent implements OnInit {
         v.brokerPositionConfirmationDelaySeconds,
       ),
       squareOffRetryDelaySeconds: Number(v.squareOffRetryDelaySeconds),
-      stopLossConfirmationSeconds: Number(v.stopLossConfirmationSeconds),
 
       buyTradingInterval: Number(v.buyTradingInterval),
       sellTradingInterval: Number(v.sellTradingInterval),
@@ -596,24 +321,14 @@ export class TradingSettingsComponent implements OnInit {
         orderType: String(v.orderType),
         duration: String(v.duration),
         atrStopMultiplier: Number(v.atrStopMultiplier),
-        minimumStopPercent: Number(v.minimumStopPercent),
-        maximumStopPercent: Number(v.maximumStopPercent),
-        allowLong: !!v.allowLong,
         exitOrderTimeoutSeconds: Number(v.exitOrderTimeoutSeconds),
         maxMarketDataAgeSeconds: Number(v.maxMarketDataAgeSeconds),
         maximumExitRetries: Number(v.maximumExitRetries),
-        maximumOpenPositions: Number(v.maximumOpenPositions),
       },
 
       exit: {
-        enableStopLoss: !!v.enableStopLoss,
-        enableTrailingStop: !!v.enableTrailingStop,
         triggerProtectiveExitWhenLastPriceBreachedAndDataStale:
           !!v.triggerProtectiveExitWhenLastPriceBreachedAndDataStale,
-        trailingStopAtrMultiplier: Number(v.trailingStopAtrMultiplier),
-        trailingProfitRetentionPercent: Number(
-          v.trailingProfitRetentionPercent,
-        ),
       },
     };
 
@@ -665,23 +380,15 @@ export class TradingSettingsComponent implements OnInit {
       orderType: 'MARKET',
       duration: 'DAY',
       atrStopMultiplier: 1.2,
-      minimumStopPercent: 0.5,
-      maximumStopPercent: 1,
-      allowLong: true,
       exitOrderTimeoutSeconds: 10,
       maxMarketDataAgeSeconds: 15,
       maximumExitRetries: 5,
-      maximumOpenPositions: 3,
     };
   }
 
   private defaultExit() {
     return {
-      enableStopLoss: true,
-      enableTrailingStop: false,
       triggerProtectiveExitWhenLastPriceBreachedAndDataStale: true,
-      trailingStopAtrMultiplier: 0.6,
-      trailingProfitRetentionPercent: 70,
     };
   }
 

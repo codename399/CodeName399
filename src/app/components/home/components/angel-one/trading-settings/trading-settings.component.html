@@ -36,27 +36,21 @@
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('risk capital', 'risk per trade', 'maximum loss', 'entry spread', 'price deviation', 'bid ask', 'risk reward', 'capital', 'broker failures', 'open risk', 'reservation')">
+    <section class="settings-card" *ngIf="sectionMatches('risk capital', 'risk per trade', 'risk reward', 'capital', 'broker failures', 'paper trading balance')">
       <div class="card-header">
         <button type="button" class="accordion-trigger" (click)="toggleSection('risk')" [attr.aria-expanded]="openSection === 'risk'"><span><h2>Risk &amp; Capital</h2><p>Risk, capital allocation and broker failure controls.</p></span><span class="accordion-icon">{{ openSection === 'risk' ? '−' : '+' }}</span></button>
       </div>
       <div class="grid-4" *ngIf="openSection === 'risk'">
         <label><span>Risk per trade %</span><input type="number" formControlName="riskPercentage" min="0" step="0.01"></label>
-        <label><span>Maximum loss of investment %</span><input type="number" formControlName="maximumLossPercentOfInvestment" min="0" step="0.01"></label>
-        <label><span>Maximum entry spread %</span><input type="number" formControlName="maximumEntrySpreadPercent" min="0" step="0.01"></label>
-        <label><span>Maximum entry price deviation from LTP %</span><input type="number" formControlName="maximumEntryPriceDeviationFromLtpPercent" min="0" step="0.01"></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="requireValidBidAskForEntry"><span>Require valid bid/ask for entry</span></label>
         <label><span>Risk/reward ratio</span><input type="number" formControlName="riskRewardRatio" min="0" step="0.1"></label>
         <label><span>Maximum capital per trade %</span><input type="number" formControlName="maxCapitalPerTradePercent" min="0" max="100" step="0.1"></label>
-        <label><span>Maximum total open risk</span><input type="number" formControlName="maximumTotalOpenRisk" min="0" step="1"></label>
-        <label><span>Risk reservation seconds</span><input type="number" formControlName="riskReservationSeconds" min="0"></label>
         <label><span>Max broker failures before kill switch</span><input type="number" formControlName="maxBrokerFailuresBeforeKillSwitch" min="0"></label>
         <label><span>Broker failure window minutes</span><input type="number" formControlName="brokerFailureWindowMinutes" min="0"></label>
         <label><span>Paper trading balance</span><input type="number" formControlName="paperTradingBalance" min="0" step="100"></label>
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('equity execution', 'exchange', 'product type', 'order type', 'duration', 'stop', 'positions', 'exit retries')">
+    <section class="settings-card" *ngIf="sectionMatches('equity execution', 'exchange', 'product type', 'order type', 'duration', 'atr stop multiplier', 'exit retries')">
       <div class="card-header">
         <button type="button" class="accordion-trigger" (click)="toggleSection('equity')" [attr.aria-expanded]="openSection === 'equity'"><span><h2>Equity Execution</h2><p>Maps field-for-field to <code>TradingConfiguration.Equity</code>.</p></span><span class="accordion-icon">{{ openSection === 'equity' ? '−' : '+' }}</span></button>
       </div>
@@ -66,26 +60,18 @@
         <label><span>Order type</span><input type="text" formControlName="orderType"></label>
         <label><span>Duration</span><input type="text" formControlName="duration"></label>
         <label><span>ATR stop multiplier</span><input type="number" formControlName="atrStopMultiplier" min="0" step="0.01"></label>
-        <label><span>Minimum stop %</span><input type="number" formControlName="minimumStopPercent" min="0" step="0.01"></label>
-        <label><span>Maximum stop %</span><input type="number" formControlName="maximumStopPercent" min="0" step="0.01"></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="allowLong"><span>Allow long equity entries</span></label>
         <label><span>Exit order timeout seconds</span><input type="number" formControlName="exitOrderTimeoutSeconds" min="0"></label>
         <label><span>Max market data age seconds</span><input type="number" formControlName="maxMarketDataAgeSeconds" min="0"></label>
         <label><span>Maximum exit retries</span><input type="number" formControlName="maximumExitRetries" min="0"></label>
-        <label><span>Maximum open positions</span><input type="number" formControlName="maximumOpenPositions" min="0"></label>
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('exit protection', 'stop loss', 'trailing', 'protective exit', 'stale data', 'profit retention')">
+    <section class="settings-card" *ngIf="sectionMatches('exit protection', 'protective exit', 'stale data')">
       <div class="card-header">
         <button type="button" class="accordion-trigger" (click)="toggleSection('exit')" [attr.aria-expanded]="openSection === 'exit'"><span><h2>Exit Protection</h2><p>Maps to <code>Exit</code>.</p></span><span class="accordion-icon">{{ openSection === 'exit' ? '−' : '+' }}</span></button>
       </div>
       <div class="grid-4" *ngIf="openSection === 'exit'">
-        <label class="toggle-field"><input type="checkbox" formControlName="enableStopLoss"><span>Stop loss enabled</span></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="enableTrailingStop"><span>Trailing stop enabled</span></label>
         <label class="toggle-field"><input type="checkbox" formControlName="triggerProtectiveExitWhenLastPriceBreachedAndDataStale"><span>Trigger protective exit when last price breached and data is stale</span></label>
-        <label><span>Trailing ATR multiplier</span><input type="number" formControlName="trailingStopAtrMultiplier" min="0" step="0.01"></label>
-        <label><span>Peak profit retention %</span><input type="number" formControlName="trailingProfitRetentionPercent" min="0" max="100" step="1"></label>
       </div>
     </section>
 
@@ -119,51 +105,12 @@
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('discovery', 'universe', 'watch-list', 'candidates', 'excluded symbols', 'price change', 'volume', 'rising', 'sideways', 'directional efficiency', 'breakout', 'amd', 'accumulation', 'distribution', 'liquidity sweep', 'structure break', 'setup age', 'steady progress', 'pullback', 'recovery', 'fluctuation')">
+    <section class="settings-card" *ngIf="sectionMatches('discovery', 'watch-list', 'refresh')">
       <div class="card-header">
-        <button type="button" class="accordion-trigger" (click)="toggleSection('discovery')" [attr.aria-expanded]="openSection === 'discovery'"><span><h2>Discovery &amp; Universe</h2><p>Watch-list refresh, candidate limits and symbol exclusions.</p></span><span class="accordion-icon">{{ openSection === 'discovery' ? '−' : '+' }}</span></button>
+        <button type="button" class="accordion-trigger" (click)="toggleSection('discovery')" [attr.aria-expanded]="openSection === 'discovery'"><span><h2>Watch-list</h2><p>Watch-list refresh interval.</p></span><span class="accordion-icon">{{ openSection === 'discovery' ? '−' : '+' }}</span></button>
       </div>
       <div class="grid-4" *ngIf="openSection === 'discovery'">
-        <label><span>Maximum candidates</span><input type="number" formControlName="maxCandidates" min="0"></label>
         <label><span>Watch-list refresh minutes</span><input type="number" formControlName="watchListRefreshMinutes" min="0"></label>
-        <label><span>Minimum price change %</span><input type="number" formControlName="minimumPriceChangePercent" min="0" step="0.01"></label>
-        <label><span>Minimum volume</span><input type="number" formControlName="minimumVolume" min="0" step="1"></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="requireRisingFromDayOpen"><span>Require rising from day open</span></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="enableSidewaysMarketFilter"><span>Enable sideways market filter</span></label>
-        <label><span>Sideways maximum range %</span><input type="number" formControlName="sidewaysMaximumRangePercent" min="0" step="0.01"></label>
-        <label><span>Sideways maximum net progress %</span><input type="number" formControlName="sidewaysMaximumNetProgressPercent" min="0" step="0.01"></label>
-        <label><span>Sideways maximum directional efficiency</span><input type="number" formControlName="sidewaysMaximumDirectionalEfficiency" min="0" max="1" step="0.01"></label>
-        <label><span>Sideways maximum range for efficiency check %</span><input type="number" formControlName="sidewaysMaximumRangeForEfficiencyCheckPercent" min="0" step="0.01"></label>
-        <label><span>Sideways breakout minimum progress %</span><input type="number" formControlName="sidewaysBreakoutMinimumProgressPercent" min="0" step="0.01"></label>
-        <label><span>Sideways breakout minimum positive tick ratio</span><input type="number" formControlName="sidewaysBreakoutMinimumPositiveTickRatio" min="0" max="1" step="0.01"></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="enableAmdEntryStrategy"><span>Enable AMD entry strategy</span></label>
-        <label><span>AMD minimum accumulation ticks</span><input type="number" formControlName="amdMinimumAccumulationTicks" min="0"></label>
-        <label><span>AMD maximum accumulation range %</span><input type="number" formControlName="amdMaximumAccumulationRangePercent" min="0" step="0.01"></label>
-        <label><span>AMD minimum liquidity sweep %</span><input type="number" formControlName="amdMinimumLiquiditySweepPercent" min="0" step="0.01"></label>
-        <label><span>AMD minimum distribution ticks</span><input type="number" formControlName="amdMinimumDistributionTicks" min="0"></label>
-        <label><span>AMD minimum structure break %</span><input type="number" formControlName="amdMinimumStructureBreakPercent" min="0" step="0.01"></label>
-        <label><span>AMD minimum positive tick ratio</span><input type="number" formControlName="amdMinimumPositiveTickRatio" min="0" max="1" step="0.01"></label>
-        <label><span>AMD maximum setup age minutes</span><input type="number" formControlName="amdMaximumSetupAgeMinutes" min="0"></label>
-        <label><span>Candidate observation ticks</span><input type="number" formControlName="candidateObservationTicks" min="0"></label>
-        <label><span>Minimum candidate observation ticks</span><input type="number" formControlName="minimumCandidateObservationTicks" min="0"></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="enableVolumeConfirmation"><span>Enable volume confirmation</span></label>
-        <label><span>Volume lookback seconds</span><input type="number" formControlName="volumeLookbackSeconds" min="0"></label>
-        <label><span>Minimum recent volume</span><input type="number" formControlName="minimumRecentVolume" min="0"></label>
-        <label><span>Minimum relative volume</span><input type="number" formControlName="minimumRelativeVolume" min="0" step="0.01"></label>
-        <label><span>Minimum up-move volume ratio</span><input type="number" formControlName="minimumUpMoveVolumeRatio" min="0" max="1" step="0.01"></label>
-        <label><span>Volume baseline lookback candles</span><input type="number" formControlName="volumeBaselineLookbackCandles" min="0"></label>
-        <label><span>Minimum volume baseline candles</span><input type="number" formControlName="minimumVolumeBaselineCandles" min="0"></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="requireHistoricalVolumeBaseline"><span>Require historical volume baseline</span></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="requirePullbackForEntry"><span>Require pullback for entry</span></label>
-        <label><span>Minimum steady progress %</span><input type="number" formControlName="minimumSteadyProgressPercent" min="0" step="0.01"></label>
-        <label><span>Minimum steady positive tick ratio</span><input type="number" formControlName="minimumSteadyPositiveTickRatio" min="0" max="1" step="0.01"></label>
-        <label><span>Maximum steady pullback %</span><input type="number" formControlName="maximumSteadyPullbackPercent" min="0" step="0.01"></label>
-        <label><span>Minimum fluctuation range %</span><input type="number" formControlName="minimumFluctuationRangePercent" min="0" step="0.01"></label>
-        <label><span>Minimum fluctuation pullback %</span><input type="number" formControlName="minimumFluctuationPullbackPercent" min="0" step="0.01"></label>
-        <label><span>Minimum pullback recovery %</span><input type="number" formControlName="minimumPullbackRecoveryPercent" min="0" step="0.01"></label>
-        <label><span>Minimum recovery positive tick ratio</span><input type="number" formControlName="minimumPullbackRecoveryPositiveTickRatio" min="0" max="1" step="0.01"></label>
-        <label><span>Maximum entry extension from pullback low %</span><input type="number" formControlName="maximumEntryExtensionFromPullbackLowPercent" min="0" step="0.01"></label>
-        <label class="wide-field"><span>Excluded symbols (comma separated)</span><input type="text" formControlName="excludedSymbols"></label>
       </div>
     </section>
 
@@ -180,7 +127,6 @@
         <label><span>Websocket retry max seconds</span><input type="number" formControlName="webSocketRetryMaxSeconds" min="0"></label>
         <label><span>Broker position confirmation delay</span><input type="number" formControlName="brokerPositionConfirmationDelaySeconds" min="0"></label>
         <label><span>Square-off retry delay</span><input type="number" formControlName="squareOffRetryDelaySeconds" min="0"></label>
-        <label><span>Stop-loss confirmation seconds</span><input type="number" formControlName="stopLossConfirmationSeconds" min="0"></label>
         <label><span>Buy trading interval ms</span><input type="number" formControlName="buyTradingInterval" min="0"></label>
         <label><span>Sell trading interval ms</span><input type="number" formControlName="sellTradingInterval" min="0"></label>
         <label><span>Market time zone</span><input type="text" formControlName="marketTimeZoneId"></label>

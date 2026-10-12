@@ -4,21 +4,13 @@ export interface InstrumentTradingSettings {
   orderType: string;
   duration: string;
   atrStopMultiplier: number;
-  maximumStopPercent: number;
-  minimumStopPercent: number;
-  allowLong: boolean;
   exitOrderTimeoutSeconds: number;
   maxMarketDataAgeSeconds: number;
   maximumExitRetries: number;
-  maximumOpenPositions: number;
 }
 
 export interface ExitSettings {
-  enableStopLoss: boolean;
-  enableTrailingStop: boolean;
   triggerProtectiveExitWhenLastPriceBreachedAndDataStale: boolean;
-  trailingStopAtrMultiplier: number;
-  trailingProfitRetentionPercent: number;
 }
 
 export interface RawMarketDataSettings {
@@ -43,15 +35,13 @@ export interface TradingConfiguration {
   equity: InstrumentTradingSettings;
 
   riskPercentage: number;
-  maximumLossPercentOfInvestment: number;
-  maximumEntrySpreadPercent: number;
-  maximumEntryPriceDeviationFromLtpPercent: number;
-  requireValidBidAskForEntry: boolean;
   riskRewardRatio: number;
   maxCapitalPerTradePercent: number;
   maxBrokerFailuresBeforeKillSwitch: number;
   brokerFailureWindowMinutes: number;
   ignoreMarketHours: boolean;
+  autoSquareOff: boolean;
+  paperTradingBalance: number;
 
   marketOpenTime: string;
   marketCloseTime: string;
@@ -69,53 +59,11 @@ export interface TradingConfiguration {
   casPriceBandPercent: number;
 
   watchListRefreshMinutes: number;
-  minimumPriceChangePercent: number;
-  minimumVolume: number;
-  requireRisingFromDayOpen: boolean;
-  enableSidewaysMarketFilter: boolean;
-  sidewaysMaximumRangePercent: number;
-  sidewaysMaximumNetProgressPercent: number;
-  sidewaysMaximumDirectionalEfficiency: number;
-  sidewaysMaximumRangeForEfficiencyCheckPercent: number;
-  sidewaysBreakoutMinimumProgressPercent: number;
-  sidewaysBreakoutMinimumPositiveTickRatio: number;
-  enableAmdEntryStrategy: boolean;
-  amdMinimumAccumulationTicks: number;
-  amdMaximumAccumulationRangePercent: number;
-  amdMinimumLiquiditySweepPercent: number;
-  amdMinimumDistributionTicks: number;
-  amdMinimumStructureBreakPercent: number;
-  amdMinimumPositiveTickRatio: number;
-  amdMaximumSetupAgeMinutes: number;
-  candidateObservationSeconds?: number;
-  candidateObservationTicks?: number;
-  minimumCandidateObservationTicks: number;
-  enableVolumeConfirmation: boolean;
-  volumeLookbackSeconds: number;
-  minimumRecentVolume: number;
-  minimumRelativeVolume: number;
-  minimumUpMoveVolumeRatio: number;
-  volumeBaselineLookbackCandles: number;
-  minimumVolumeBaselineCandles: number;
-  requireHistoricalVolumeBaseline: boolean;
-  requirePullbackForEntry: boolean;
-  minimumSteadyProgressPercent: number;
-  minimumSteadyPositiveTickRatio: number;
-  maximumSteadyPullbackPercent: number;
-  minimumFluctuationRangePercent: number;
-  minimumFluctuationPullbackPercent: number;
-  minimumPullbackRecoveryPercent: number;
-  minimumPullbackRecoveryPositiveTickRatio: number;
-  maximumEntryExtensionFromPullbackLowPercent: number;
-  excludedSymbols: string[];
-  maxCandidates: number;
   lastDailySummarySent: string | null;
   instrumentLoadedAt: string | null;
   marketTimeZoneId: string;
   tradingHolidays: string[];
 
-  maximumTotalOpenRisk: number;
-  riskReservationSeconds: number;
   enableEntryExecutionAudit: boolean;
   enableScripConsentForCashOrders: boolean;
   webSocketHeartbeatSeconds: number;
@@ -124,14 +72,10 @@ export interface TradingConfiguration {
   webSocketRetryMaxSeconds: number;
   brokerPositionConfirmationDelaySeconds: number;
   squareOffRetryDelaySeconds: number;
-  stopLossConfirmationSeconds: number;
 
   buyTradingInterval: number;
   sellTradingInterval: number;
   visibleColumns: string[];
-
-  autoSquareOff: boolean;
-  paperTradingBalance: number;
 
   exit: ExitSettings;
   rawMarketData: RawMarketDataSettings;
