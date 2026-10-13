@@ -2,7 +2,7 @@
   <div class="page-header">
     <div>
       <h1>Trading Settings</h1>
-      <p>Field-for-field UI mapping to the API <code>TradingConfiguration</code>. Values returned by the API are loaded into the matching UI field and the same field is written back on save.</p>
+      <p>Settings map to the API <code>TradingConfiguration</code>. Values returned by the API are loaded into the matching UI field and written back on save.</p>
     </div>
     <div class="actions">
       <button type="button" class="secondary-button" (click)="downloadJson()" [disabled]="loading || saving">Download JSON</button>
@@ -50,7 +50,7 @@
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('equity execution', 'exchange', 'product type', 'order type', 'duration', 'minimum price', 'positive change', 'day volume', 'turnover', 'spread', 'gainer candidates', 'atr stop multiplier', 'exit retries')">
+    <section class="settings-card" *ngIf="sectionMatches('equity execution', 'exchange', 'product type', 'order type', 'duration', 'spread', 'order book liquidity', 'atr stop multiplier', 'exit retries')">
       <div class="card-header">
         <button type="button" class="accordion-trigger" (click)="toggleSection('equity')" [attr.aria-expanded]="openSection === 'equity'"><span><h2>Equity Execution</h2><p>Maps field-for-field to <code>TradingConfiguration.Equity</code>.</p></span><span class="accordion-icon">{{ openSection === 'equity' ? '−' : '+' }}</span></button>
       </div>
@@ -59,25 +59,13 @@
         <label><span>Product type</span><input type="text" formControlName="productType"></label>
         <label><span>Order type</span><input type="text" formControlName="orderType"></label>
         <label><span>Duration</span><input type="text" formControlName="duration"></label>
-        <label><span>Minimum price</span><input type="number" formControlName="minimumPrice" min="0" step="0.01"></label>
-        <label><span>Minimum positive change %</span><input type="number" formControlName="minimumPositiveChangePercent" min="0" step="0.01"></label>
-        <label><span>Minimum day volume</span><input type="number" formControlName="minimumDayVolume" min="0" step="1"></label>
-        <label><span>Minimum turnover</span><input type="number" formControlName="minimumTurnover" min="0" step="1"></label>
         <label><span>Maximum spread %</span><input type="number" formControlName="maximumSpreadPercent" min="0" step="0.01"></label>
-        <label><span>Maximum gainer candidates</span><input type="number" formControlName="maximumGainerCandidates" min="0" step="1"></label>
         <label><span>ATR stop multiplier</span><input type="number" formControlName="atrStopMultiplier" min="0" step="0.01"></label>
+        <label><span>Minimum order book liquidity coverage ratio</span><input type="number" formControlName="minimumOrderBookLiquidityCoverageRatio" min="0" step="0.01"></label>
+        <label class="toggle-field"><input type="checkbox" formControlName="requireOrderBookLiquidityData"><span>Require order book liquidity data</span></label>
         <label><span>Exit order timeout seconds</span><input type="number" formControlName="exitOrderTimeoutSeconds" min="0"></label>
         <label><span>Max market data age seconds</span><input type="number" formControlName="maxMarketDataAgeSeconds" min="0"></label>
         <label><span>Maximum exit retries</span><input type="number" formControlName="maximumExitRetries" min="0"></label>
-      </div>
-    </section>
-
-    <section class="settings-card" *ngIf="sectionMatches('exit protection', 'protective exit', 'stale data')">
-      <div class="card-header">
-        <button type="button" class="accordion-trigger" (click)="toggleSection('exit')" [attr.aria-expanded]="openSection === 'exit'"><span><h2>Exit Protection</h2><p>Maps to <code>Exit</code>.</p></span><span class="accordion-icon">{{ openSection === 'exit' ? '−' : '+' }}</span></button>
-      </div>
-      <div class="grid-4" *ngIf="openSection === 'exit'">
-        <label class="toggle-field"><input type="checkbox" formControlName="triggerProtectiveExitWhenLastPriceBreachedAndDataStale"><span>Trigger protective exit when last price breached and data is stale</span></label>
       </div>
     </section>
 

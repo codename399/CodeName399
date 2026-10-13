@@ -25,6 +25,8 @@ export interface Gainer {
 
   currentPrice: number;
   previousClose: number;
+  ema9?: number;
+  ema21?: number;
   changePercent: number;
   atr: number;
   recoveryScore: number;

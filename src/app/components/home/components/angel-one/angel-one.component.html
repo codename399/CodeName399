@@ -204,6 +204,8 @@
                 <th *ngIf="visibleColumnSet().has('signal')">Signal</th>
                 <th *ngIf="visibleColumnSet().has('risk')">Risk</th>
                 <th *ngIf="visibleColumnSet().has('atr')">ATR</th>
+                <th *ngIf="visibleColumnSet().has('ema9')">EMA 9</th>
+                <th *ngIf="visibleColumnSet().has('ema21')">EMA 21</th>
                 <th *ngIf="visibleColumnSet().has('reason')">Reason</th>
                 <th *ngIf="visibleColumnSet().has('suggestion')">Suggestion</th>
                 <th *ngIf="visibleColumnSet().has('upperCircuitLimit')">
@@ -338,6 +340,14 @@
 
                 <td *ngIf="visibleColumnSet().has('atr')">
                   ₹{{ stock.atr | number: "1.2-2" }}
+                </td>
+
+                <td *ngIf="visibleColumnSet().has('ema9')">
+                  {{ stock.ema9 != null ? (stock.ema9 | number: "1.2-2") : "-" }}
+                </td>
+
+                <td *ngIf="visibleColumnSet().has('ema21')">
+                  {{ stock.ema21 != null ? (stock.ema21 | number: "1.2-2") : "-" }}
                 </td>
 
                 <td class="reason" *ngIf="visibleColumnSet().has('reason')">

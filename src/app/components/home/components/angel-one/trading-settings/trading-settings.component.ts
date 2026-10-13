@@ -48,21 +48,16 @@ export class TradingSettingsComponent implements OnInit {
     productType: ['INTRADAY', Validators.required],
     orderType: ['MARKET', Validators.required],
     duration: ['DAY', Validators.required],
-    minimumPrice: [50, [Validators.required, Validators.min(0)]],
-    minimumPositiveChangePercent: [
-      0.05,
+    atrStopMultiplier: [1.2, [Validators.required, Validators.min(0)]],
+    maximumSpreadPercent: [0.5, [Validators.required, Validators.min(0)]],
+    minimumOrderBookLiquidityCoverageRatio: [
+      1,
       [Validators.required, Validators.min(0)],
     ],
-    minimumDayVolume: [500000, [Validators.required, Validators.min(0)]],
-    minimumTurnover: [200000000, [Validators.required, Validators.min(0)]],
-    maximumSpreadPercent: [0.3, [Validators.required, Validators.min(0)]],
-    maximumGainerCandidates: [20, [Validators.required, Validators.min(0)]],
-    atrStopMultiplier: [1.2, [Validators.required, Validators.min(0)]],
+    requireOrderBookLiquidityData: [false],
     exitOrderTimeoutSeconds: [10, [Validators.required, Validators.min(0)]],
     maxMarketDataAgeSeconds: [15, [Validators.required, Validators.min(0)]],
     maximumExitRetries: [5, [Validators.required, Validators.min(0)]],
-
-    triggerProtectiveExitWhenLastPriceBreachedAndDataStale: [true],
 
     ignoreMarketHours: [false],
     marketOpenTime: ['09:15:00', Validators.required],
@@ -104,7 +99,7 @@ export class TradingSettingsComponent implements OnInit {
 
     buyTradingInterval: [1000, [Validators.required, Validators.min(0)]],
     sellTradingInterval: [1000, [Validators.required, Validators.min(0)]],
-    visibleColumns: ['star, symbol, stopLoss, target, reason, suggestion'],
+    visibleColumns: ['star, symbol, stopLoss, target, ema9, ema21'],
 
     autoSquareOff: [true],
     paperTradingBalance: [100000, [Validators.required, Validators.min(0)]],
@@ -131,7 +126,6 @@ export class TradingSettingsComponent implements OnInit {
           this.currentConfiguration = config ?? null;
 
           const equity = config?.equity ?? this.defaultEquity();
-          const exit = config?.exit ?? this.defaultExit();
           const rawMarketData = config?.rawMarketData ?? this.defaultRawMarketData();
 
           this.form.patchValue(
@@ -154,20 +148,14 @@ export class TradingSettingsComponent implements OnInit {
               productType: equity.productType,
               orderType: equity.orderType,
               duration: equity.duration,
-              minimumPrice: equity.minimumPrice ?? 50,
-              minimumPositiveChangePercent:
-                equity.minimumPositiveChangePercent ?? 0.05,
-              minimumDayVolume: equity.minimumDayVolume ?? 500000,
-              minimumTurnover: equity.minimumTurnover ?? 200000000,
-              maximumSpreadPercent: equity.maximumSpreadPercent ?? 0.3,
-              maximumGainerCandidates: equity.maximumGainerCandidates ?? 20,
               atrStopMultiplier: equity.atrStopMultiplier,
+              maximumSpreadPercent: equity.maximumSpreadPercent,
+              minimumOrderBookLiquidityCoverageRatio:
+                equity.minimumOrderBookLiquidityCoverageRatio,
+              requireOrderBookLiquidityData: equity.requireOrderBookLiquidityData,
               exitOrderTimeoutSeconds: equity.exitOrderTimeoutSeconds,
               maxMarketDataAgeSeconds: equity.maxMarketDataAgeSeconds,
               maximumExitRetries: equity.maximumExitRetries,
-
-              triggerProtectiveExitWhenLastPriceBreachedAndDataStale:
-                exit.triggerProtectiveExitWhenLastPriceBreachedAndDataStale,
 
               ignoreMarketHours: config?.ignoreMarketHours ?? false,
               marketOpenTime: this.time(config?.marketOpenTime, '09:15:00'),
@@ -228,15 +216,13 @@ export class TradingSettingsComponent implements OnInit {
 
               buyTradingInterval: config?.buyTradingInterval ?? 1000,
               sellTradingInterval: config?.sellTradingInterval ?? 1000,
-              visibleColumns: (
+              visibleColumns: this.ensureEmaColumns(
                 config?.visibleColumns ?? [
                   'star',
                   'symbol',
                   'stopLoss',
                   'target',
-                  'reason',
-                  'suggestion',
-                ]
+                ],
               ).join(', '),
 
               autoSquareOff: config?.autoSquareOff ?? true,
@@ -337,21 +323,15 @@ export class TradingSettingsComponent implements OnInit {
         productType: String(v.productType),
         orderType: String(v.orderType),
         duration: String(v.duration),
-        minimumPrice: Number(v.minimumPrice),
-        minimumPositiveChangePercent: Number(v.minimumPositiveChangePercent),
-        minimumDayVolume: Number(v.minimumDayVolume),
-        minimumTurnover: Number(v.minimumTurnover),
-        maximumSpreadPercent: Number(v.maximumSpreadPercent),
-        maximumGainerCandidates: Number(v.maximumGainerCandidates),
         atrStopMultiplier: Number(v.atrStopMultiplier),
+        maximumSpreadPercent: Number(v.maximumSpreadPercent),
+        minimumOrderBookLiquidityCoverageRatio: Number(
+          v.minimumOrderBookLiquidityCoverageRatio,
+        ),
+        requireOrderBookLiquidityData: !!v.requireOrderBookLiquidityData,
         exitOrderTimeoutSeconds: Number(v.exitOrderTimeoutSeconds),
         maxMarketDataAgeSeconds: Number(v.maxMarketDataAgeSeconds),
         maximumExitRetries: Number(v.maximumExitRetries),
-      },
-
-      exit: {
-        triggerProtectiveExitWhenLastPriceBreachedAndDataStale:
-          !!v.triggerProtectiveExitWhenLastPriceBreachedAndDataStale,
       },
     };
 
@@ -402,22 +382,13 @@ export class TradingSettingsComponent implements OnInit {
       productType: 'INTRADAY',
       orderType: 'MARKET',
       duration: 'DAY',
-      minimumPrice: 50,
-      minimumPositiveChangePercent: 0.05,
-      minimumDayVolume: 500000,
-      minimumTurnover: 200000000,
-      maximumSpreadPercent: 0.3,
-      maximumGainerCandidates: 20,
       atrStopMultiplier: 1.2,
+      maximumSpreadPercent: 0.5,
+      minimumOrderBookLiquidityCoverageRatio: 1,
+      requireOrderBookLiquidityData: false,
       exitOrderTimeoutSeconds: 10,
       maxMarketDataAgeSeconds: 15,
       maximumExitRetries: 5,
-    };
-  }
-
-  private defaultExit() {
-    return {
-      triggerProtectiveExitWhenLastPriceBreachedAndDataStale: true,
     };
   }
 
@@ -454,6 +425,10 @@ export class TradingSettingsComponent implements OnInit {
       .split(',')
       .map((x) => x.trim())
       .filter(Boolean);
+  }
+
+  private ensureEmaColumns(columns: string[]): string[] {
+    return [...new Set([...columns, 'ema9', 'ema21'])];
   }
 
   private nullIfBlank(value: string | null | undefined): string | null {

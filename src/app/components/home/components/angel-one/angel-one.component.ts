@@ -128,6 +128,8 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
     { key: 'signal', label: 'Signal', defaultVisible: true },
     { key: 'risk', label: 'Risk', defaultVisible: true },
     { key: 'atr', label: 'ATR', defaultVisible: true },
+    { key: 'ema9', label: 'EMA 9', defaultVisible: true },
+    { key: 'ema21', label: 'EMA 21', defaultVisible: true },
     { key: 'stopLoss', label: 'SL', defaultVisible: true },
     { key: 'target', label: 'Target', defaultVisible: true },
     { key: 'reason', label: 'Reason', defaultVisible: true },
@@ -394,7 +396,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
     );
 
     const nextColumns = configuredColumns?.length
-      ? configuredColumns
+      ? [...new Set([...configuredColumns, 'ema9', 'ema21'])]
       : this.getDefaultVisibleColumnKeys();
 
     this.visibleColumns.set(nextColumns);

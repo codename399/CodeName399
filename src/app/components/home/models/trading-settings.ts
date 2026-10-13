@@ -3,20 +3,13 @@ export interface InstrumentTradingSettings {
   productType: string;
   orderType: string;
   duration: string;
-  minimumPrice: number;
-  minimumPositiveChangePercent: number;
-  minimumDayVolume: number;
-  minimumTurnover: number;
-  maximumSpreadPercent: number;
-  maximumGainerCandidates: number;
   atrStopMultiplier: number;
+  maximumSpreadPercent: number;
+  minimumOrderBookLiquidityCoverageRatio: number;
+  requireOrderBookLiquidityData: boolean;
   exitOrderTimeoutSeconds: number;
   maxMarketDataAgeSeconds: number;
   maximumExitRetries: number;
-}
-
-export interface ExitSettings {
-  triggerProtectiveExitWhenLastPriceBreachedAndDataStale: boolean;
 }
 
 export interface RawMarketDataSettings {
@@ -83,6 +76,5 @@ export interface TradingConfiguration {
   sellTradingInterval: number;
   visibleColumns: string[];
 
-  exit: ExitSettings;
   rawMarketData: RawMarketDataSettings;
 }
