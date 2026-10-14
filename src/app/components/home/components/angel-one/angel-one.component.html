@@ -158,62 +158,46 @@
     </aside>
 
     <main class="page-main" [class.sidebar-open]="showSettings()">
-      <div class="page-top">
-        <div class="search-box" *ngIf="filteredGainers().length > 0">
-          <input
-            type="text"
-            placeholder="Search symbol"
-            [value]="searchText()"
-            (input)="searchText.set($any($event.target).value)"
-          />
+      <div class="page-top gainer-toolbar">
+        <div class="gainer-heading">
+          <h1>Equity Gainers</h1>
+          <p>Live quotes · SignalR search and pagination</p>
+        </div>
+        <div class="gainer-tools">
+          <label class="search-box" aria-label="Search gainers">
+            <span class="material-icons">search</span>
+            <input type="search" placeholder="Search stock symbol…" [value]="searchText()" (input)="onSearchChanged($any($event.target).value)" />
+          </label>
+          <button class="pill-button" type="button" (click)="refresh()" title="Refresh gainers"><span class="material-icons">refresh</span> Refresh</button>
         </div>
       </div>
 
       <section class="table-shell">
-        <div class="subscription-loading" *ngIf="isWaitingForSubscriptions(); else subscribedStockTable">
-          <div class="subscription-loading-text">Waiting for market data subscriptions...</div>
-          <div class="subscription-loading-hint">Stocks will appear here after their live market-data subscription is active.</div>
+        <div class="table-header gainer-table-header">
+          <div><strong>{{ totalCount() }}</strong> stocks <span class="muted">· page {{ page() }} of {{ totalPages() }}</span></div>
+          <label class="page-size">Rows <select [value]="pageSize()" (change)="changePageSize($any($event.target).value)"><option value="10">10</option><option value="20">20</option><option value="50">50</option></select></label>
         </div>
-
-        <ng-template #subscribedStockTable>
-          <div class="table-header">
-            <div>{{ filteredGainers().length }} symbols found</div>
-            <div>Top candidates based on current scan</div>
-          </div>
+        <div class="loading-bar" *ngIf="isLoadingGainers()"><span></span></div>
+        <div class="empty-state" *ngIf="!isLoadingGainers() && filteredGainers().length === 0">
+          <span class="material-icons">query_stats</span><strong>No gainers found</strong><span>Try another symbol or refresh the list.</span>
+        </div>
+        <ng-container>
           <div class="table-scroll">
             <table>
             <thead>
               <tr>
-                <th *ngIf="visibleColumnSet().has('star')">⭐</th>
-                <th *ngIf="visibleColumnSet().has('symbol')">
-                  Symbol
-                  <span
-                    class="cursor-pointer"
-                    appTooltip="Details order: P/L • Change% • LTP • Qty • Avg • Invested • Current"
-                    tooltipPosition="bottom"
-                    >ℹ️</span
-                  >
-                </th>
-                <th *ngIf="visibleColumnSet().has('stopLoss')">SL</th>
-                <th *ngIf="visibleColumnSet().has('token')">Token</th>
-                <th *ngIf="visibleColumnSet().has('exchange')">Exchange</th>
-                <th *ngIf="visibleColumnSet().has('prevClose')">Prev Close</th>
-                <th *ngIf="visibleColumnSet().has('recovery')">Recovery</th>
-                <th *ngIf="visibleColumnSet().has('priceChange')">Price Change %</th>
-                <th *ngIf="visibleColumnSet().has('breakout')">Breakout</th>
-                <th *ngIf="visibleColumnSet().has('signal')">Signal</th>
-                <th *ngIf="visibleColumnSet().has('risk')">Risk</th>
-                <th *ngIf="visibleColumnSet().has('atr')">ATR</th>
-                <th *ngIf="visibleColumnSet().has('ema9')">EMA 9</th>
-                <th *ngIf="visibleColumnSet().has('ema21')">EMA 21</th>
-                <th *ngIf="visibleColumnSet().has('reason')">Reason</th>
-                <th *ngIf="visibleColumnSet().has('suggestion')">Suggestion</th>
-                <th *ngIf="visibleColumnSet().has('upperCircuitLimit')">
-                  Upper Circuit Limit
-                </th>
-                <th *ngIf="visibleColumnSet().has('lowerCircuitLimit')">
-                  Lower Circuit Limit
-                </th>
+                <th>Stock</th>
+                <th>LTP</th>
+                <th *ngIf="visibleColumnSet().has('stock')">Stock</th>
+                <th *ngIf="visibleColumnSet().has('ltp')">LTP</th>
+                <th *ngIf="visibleColumnSet().has('minimumQuantity')">Min. Qty</th>
+                <th *ngIf="visibleColumnSet().has('charges')">Charges</th>
+                <th *ngIf="visibleColumnSet().has('investmentWithCharges')">Investment + Charges</th>
+                <th *ngIf="visibleColumnSet().has('profitLoss')">P/L if Owned</th>
+                <th *ngIf="visibleColumnSet().has('pullback')">Pullback</th>
+                <th *ngIf="visibleColumnSet().has('funds')">Funds</th>
+                <th *ngIf="visibleColumnSet().has('subscription')">Subscription</th>
+                <th *ngIf="visibleColumnSet().has('action')">Action</th>
               </tr>
             </thead>
 
@@ -228,148 +212,38 @@
                   'signal-row-setup': stock.signal === 'SETUP',
                 }"
               >
-                <td class="center-cell" *ngIf="visibleColumnSet().has('star')">
-                  <span *ngIf="stock.isOwned">★</span>
+                <td class="primary-stock-cell" *ngIf="visibleColumnSet().has('stock')">
+                  <div class="stock-primary">{{ stock.symbol }}</div>
+                  <div class="stock-secondary">{{ stock.exchange || stock.quote.exchange || 'NSE' }} · {{ stock.changePercent | number:'1.2-2' }}%</div>
                 </td>
-
-                <td class="symbol" *ngIf="visibleColumnSet().has('symbol')">
-                  <div class="symbol-content">
-                    <div class="symbol-name">
-                      <span
-                        class="subscription-indicator"
-                        [class.subscribed]="stock.isSubscribed"
-                        [class.not-subscribed]="!stock.isSubscribed"
-                        [title]="
-                          stock.isSubscribed
-                            ? 'Live market data subscribed'
-                            : 'Not subscribed'
-                        "
-                        [attr.aria-label]="
-                          stock.isSubscribed
-                            ? 'Live market data subscribed'
-                            : 'Not subscribed'
-                        "
-                      ></span>
-
-                      <span>{{ stock.symbol }}</span>
-                    </div>
-                    <div class="symbol-meta">
-                      <span
-                        class="symbol-meta-item"
-                        [class.positive]="stock.profitLoss >= 0"
-                        [class.negative]="stock.profitLoss < 0"
-                      >
-                        {{ stock.profitLoss | number: "1.2-2" }}
-                      </span>
-                      <span
-                        class="symbol-meta-item"
-                        [class.positive]="stock.changePercent >= 0"
-                        [class.negative]="stock.changePercent < 0"
-                      >
-                        {{ stock.changePercent | number: "1.2-2" }}%
-                      </span>
-                      <span class="symbol-meta-item">
-                        ₹{{ stock.currentPrice | number: "1.2-2" }}
-                      </span>
-                      <span class="symbol-meta-item">{{ stock.quantity }}</span>
-                      <span class="symbol-meta-item">
-                        ₹{{ stock.averagePrice | number: "1.2-2" }}
-                      </span>
-                      <span class="symbol-meta-item">
-                        ₹{{ stock.investedAmount | number: "1.2-2" }}
-                      </span>
-                      <span class="symbol-meta-item">
-                        ₹{{ stock.currentValue | number: "1.2-2" }}
-                      </span>
-                    </div>
-                  </div>
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('stopLoss')">
-                  ₹{{ stock.stopLoss | number: "1.2-2" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('target')">
-                  ₹{{ stock.target != null ? (stock.target | number: "1.2-2") : "-" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('token')">
-                  {{ stock.symbolToken || "-" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('exchange')">
-                  {{ stock.exchange || stock.quote.exchange || "-" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('prevClose')">
-                  ₹{{ stock.previousClose | number: "1.2-2" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('recovery')">
-                  {{ stock.recoveryScore | number: "1.1-1" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('priceChange')">
-                  {{ stock.changePercent | number: "1.2-2" }}%
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('breakout')">
-                  {{ stock.breakoutStrength | number: "1.1-1" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('signal')">
-                  <div
-                    class="signal-pill"
-                    [ngClass]="{
-                      buy: stock.signal === 'BUY',
-                      sell: stock.signal === 'SELL',
-                      hold: stock.signal === 'HOLD',
-                      setup: stock.signal === 'SETUP',
-                    }"
-                  >
-                    <span class="signal-dot"></span>
-                    <span class="signal-label">
-                      {{ stock.signal }}
-                    </span>
-                  </div>
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('risk')">
-                  {{ stock.risk }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('atr')">
-                  ₹{{ stock.atr | number: "1.2-2" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('ema9')">
-                  {{ stock.ema9 != null ? (stock.ema9 | number: "1.2-2") : "-" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('ema21')">
-                  {{ stock.ema21 != null ? (stock.ema21 | number: "1.2-2") : "-" }}
-                </td>
-
-                <td class="reason" *ngIf="visibleColumnSet().has('reason')">
-                  {{ stock.reason }}
-                </td>
-
-                <td class="reason" *ngIf="visibleColumnSet().has('suggestion')">
-                  {{ stock.suggestion }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('upperCircuitLimit')">
-                  ₹{{ stock.upperCircuitLimit | number: "1.2-2" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('lowerCircuitLimit')">
-                  ₹{{ stock.lowerCircuitLimit | number: "1.2-2" }}
+                <td class="numeric-cell" *ngIf="visibleColumnSet().has('ltp')">₹{{ stock.currentPrice | number:'1.2-2' }}</td>
+                <td class="numeric-cell" *ngIf="visibleColumnSet().has('minimumQuantity')">{{ stock.minimumBuyQuantity ?? '—' }}</td>
+                <td class="numeric-cell" *ngIf="visibleColumnSet().has('charges')">{{ stock.estimatedCharges != null ? ('₹' + (stock.estimatedCharges | number:'1.2-2')) : '—' }}</td>
+                <td class="numeric-cell" *ngIf="visibleColumnSet().has('investmentWithCharges')">{{ stock.minimumInvestmentWithCharges != null ? ('₹' + (stock.minimumInvestmentWithCharges | number:'1.2-2')) : '—' }}</td>
+                <td class="numeric-cell" *ngIf="visibleColumnSet().has('profitLoss')" [class.positive]="stock.profitLoss >= 0" [class.negative]="stock.profitLoss < 0">{{ stock.isOwned ? ('₹' + (stock.profitLoss | number:'1.2-2')) : '—' }}</td>
+                <td *ngIf="visibleColumnSet().has('pullback')"><span class="status-chip" [class.status-good]="stock.pullbackDetected">{{ stock.pullbackDetected ? 'Detected' : '—' }}</span></td>
+                <td *ngIf="visibleColumnSet().has('funds')"><span class="status-chip" [class.status-good]="hasSufficientFunds(stock)" [class.status-bad]="!hasSufficientFunds(stock)">{{ hasSufficientFunds(stock) ? 'Available' : 'Insufficient' }}</span></td>
+                <td *ngIf="visibleColumnSet().has('subscription')"><button class="icon-action" type="button" [disabled]="actionInProgress() === stock.symbolToken || stock.isOwned" (click)="toggleSubscription(stock)" [title]="stock.isSubscribed ? 'Unsubscribe' : 'Subscribe'"><span class="material-icons">{{ stock.isSubscribed ? 'notifications_active' : 'notifications_off' }}</span><span>{{ stock.isSubscribed ? 'Subscribed' : 'Subscribe' }}</span></button></td>
+                <td class="action-cell" *ngIf="visibleColumnSet().has('action')">
+                  <button *ngIf="!stock.isOwned" class="trade-action buy-action" type="button" [disabled]="!isMarketOpenForOrders() || actionInProgress() === stock.symbolToken || !hasSufficientFunds(stock) || !(stock.minimumBuyQuantity ?? 0)" (click)="executeManualOrder(stock, 'buy')" title="Buy stock"><span class="material-icons">shopping_cart</span> Buy</button>
+                  <button *ngIf="stock.isOwned" class="trade-action sell-action" type="button" [disabled]="!isMarketOpenForOrders() || actionInProgress() === stock.symbolToken || stock.quantity < 1" (click)="executeManualOrder(stock, 'sell')" title="Sell owned stock"><span class="material-icons">sell</span> Sell</button>
+                  <small *ngIf="!isMarketOpenForOrders()" class="market-closed-note">Market closed</small>
                 </td>
               </tr>
             </tbody>
             </table>
           </div>
-        </ng-template>
+          <div class="pagination-bar">
+            <span>Showing {{ firstRowNumber() }}–{{ lastRowNumber() }} of {{ totalCount() }}</span>
+            <div class="pagination-buttons">
+              <button type="button" class="page-button" [disabled]="page() <= 1 || isLoadingGainers()" (click)="changePage(1)" aria-label="First page"><span class="material-icons">first_page</span></button>
+              <button type="button" class="page-button" [disabled]="page() <= 1 || isLoadingGainers()" (click)="changePage(page() - 1)" aria-label="Previous page"><span class="material-icons">chevron_left</span></button>
+              <span class="page-indicator">{{ page() }} / {{ totalPages() }}</span>
+              <button type="button" class="page-button" [disabled]="page() >= totalPages() || isLoadingGainers()" (click)="changePage(page() + 1)" aria-label="Next page"><span class="material-icons">chevron_right</span></button>
+              <button type="button" class="page-button" [disabled]="page() >= totalPages() || isLoadingGainers()" (click)="changePage(totalPages())" aria-label="Last page"><span class="material-icons">last_page</span></button>
+            </div>
+          </div>
+        </ng-container>
       </section>
 
 

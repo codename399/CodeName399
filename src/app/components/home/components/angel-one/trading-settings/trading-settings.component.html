@@ -83,22 +83,6 @@
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('cas window', 'transition', 'order entry', 'market-only', 'limit-only', 'price band')">
-      <div class="card-header">
-        <button type="button" class="accordion-trigger" (click)="toggleSection('cas')" [attr.aria-expanded]="openSection === 'cas'"><span><h2>CAS Window</h2><p>All CAS timing and price-band fields from the API configuration.</p></span><span class="accordion-icon">{{ openSection === 'cas' ? '−' : '+' }}</span></button>
-      </div>
-      <div class="grid-4" *ngIf="openSection === 'cas'">
-        <label><span>Transition start</span><input type="time" step="1" formControlName="casTransitionStart"></label>
-        <label><span>Order entry start</span><input type="time" step="1" formControlName="casOrderEntryStart"></label>
-        <label><span>Market-only end</span><input type="time" step="1" formControlName="casMarketOnlyEnd"></label>
-        <label><span>Limit-only end</span><input type="time" step="1" formControlName="casLimitOnlyEnd"></label>
-        <label><span>Random-close safety cutoff</span><input type="time" step="1" formControlName="casRandomCloseSafetyCutoff"></label>
-        <label><span>CAS end</span><input type="time" step="1" formControlName="casEnd"></label>
-        <label><span>Post-close end</span><input type="time" step="1" formControlName="casPostCloseEnd"></label>
-        <label><span>Price band %</span><input type="number" formControlName="casPriceBandPercent" min="0" step="0.1"></label>
-      </div>
-    </section>
-
     <section class="settings-card" *ngIf="sectionMatches('discovery', 'watch-list', 'refresh')">
       <div class="card-header">
         <button type="button" class="accordion-trigger" (click)="toggleSection('discovery')" [attr.aria-expanded]="openSection === 'discovery'"><span><h2>Watch-list</h2><p>Watch-list refresh interval.</p></span><span class="accordion-icon">{{ openSection === 'discovery' ? '−' : '+' }}</span></button>

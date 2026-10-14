@@ -57,6 +57,11 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   marketTimer = signal('');
 
   searchText = signal('');
+  page = signal(1);
+  pageSize = signal(10);
+  totalCount = computed(() => this.getMatchingGainers().length);
+  isLoadingGainers = signal(false);
+  actionInProgress = signal<string | null>(null);
 
   // ======================================================
   // Configuration
@@ -116,26 +121,18 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
     button.style.setProperty('opacity', '1', 'important');
   };
 
+  // Only expose columns that belong to the current gainer grid.
   readonly columnDefinitions = [
-    { key: 'star', label: '⭐', defaultVisible: true },
-    { key: 'symbol', label: 'Symbol', defaultVisible: true },
-    { key: 'exchange', label: 'Exchange', defaultVisible: false },
-    { key: 'token', label: 'Token', defaultVisible: false },
-    { key: 'prevClose', label: 'Prev Close', defaultVisible: true },
-    { key: 'recovery', label: 'Recovery', defaultVisible: true },
-    { key: 'priceChange', label: 'Price Change %', defaultVisible: true },
-    { key: 'breakout', label: 'Breakout', defaultVisible: true },
-    { key: 'signal', label: 'Signal', defaultVisible: true },
-    { key: 'risk', label: 'Risk', defaultVisible: true },
-    { key: 'atr', label: 'ATR', defaultVisible: true },
-    { key: 'ema9', label: 'EMA 9', defaultVisible: true },
-    { key: 'ema21', label: 'EMA 21', defaultVisible: true },
-    { key: 'stopLoss', label: 'SL', defaultVisible: true },
-    { key: 'target', label: 'Target', defaultVisible: true },
-    { key: 'reason', label: 'Reason', defaultVisible: true },
-    { key: 'suggestion', label: 'Suggestion', defaultVisible: true },
-    { key: 'upperCircuitLimit', label: 'Upper Circuit Limit', defaultVisible: false },
-    { key: 'lowerCircuitLimit', label: 'Lower Circuit Limit', defaultVisible: false },
+    { key: 'stock', label: 'Stock', defaultVisible: true },
+    { key: 'ltp', label: 'LTP', defaultVisible: true },
+    { key: 'minimumQuantity', label: 'Minimum Quantity', defaultVisible: true },
+    { key: 'charges', label: 'Charges', defaultVisible: true },
+    { key: 'investmentWithCharges', label: 'Investment + Charges', defaultVisible: true },
+    { key: 'profitLoss', label: 'P/L if Owned', defaultVisible: true },
+    { key: 'pullback', label: 'Pullback', defaultVisible: true },
+    { key: 'funds', label: 'Available Funds', defaultVisible: true },
+    { key: 'subscription', label: 'Subscription', defaultVisible: true },
+    { key: 'action', label: 'Buy / Sell', defaultVisible: true },
   ];
 
   visibleColumns = signal<string[]>([]);
@@ -157,24 +154,20 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
     () => this.subscribedGainers().length === 0,
   );
 
+  // SignalR owns the complete list. Search and pagination are performed locally;
+  // no REST request is made to load or page gainers.
   filteredGainers = computed(() => {
-    const search = this.searchText().trim().toLowerCase();
-
-    const filtered = this.subscribedGainers().filter((stock) =>
-      stock.symbol.toLowerCase().includes(search),
+    const matching = this.getMatchingGainers().sort((a, b) =>
+      this.getGainerSortBucket(a) - this.getGainerSortBucket(b) ||
+      String(a.symbol ?? '').localeCompare(String(b.symbol ?? ''))
     );
-
-    return filtered.sort((left, right) => {
-      const leftBucket = this.getGainerSortBucket(left);
-      const rightBucket = this.getGainerSortBucket(right);
-
-      if (leftBucket !== rightBucket) {
-        return leftBucket - rightBucket;
-      }
-
-      return left.symbol.localeCompare(right.symbol);
-    });
+    const start = (this.page() - 1) * this.pageSize();
+    return matching.slice(start, start + this.pageSize());
   });
+
+  totalPages = computed(() => Math.max(1, Math.ceil(this.totalCount() / this.pageSize())));
+  firstRowNumber = computed(() => this.totalCount() === 0 ? 0 : (this.page() - 1) * this.pageSize() + 1);
+  lastRowNumber = computed(() => Math.min(this.page() * this.pageSize(), this.totalCount()));
 
   // ======================================================
   // Computed Dashboard
@@ -276,6 +269,9 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   toggleColumn(columnKey: string): void {
+    if (!this.columnDefinitions.some((column) => column.key === columnKey)) {
+      return;
+    }
     const current = this.visibleColumns();
     const next = current.includes(columnKey)
       ? current.filter((key) => key !== columnKey)
@@ -390,16 +386,16 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   private applyVisibleColumns(
     configuration: TradingConfiguration | null,
   ): void {
-    const configuredColumns = configuration?.['visibleColumns']?.filter(
-      (columnKey: string) =>
-        this.columnDefinitions.some((column) => column.key === columnKey),
+    // Ignore legacy saved keys (EMA, stop-loss, target, recovery, etc.).
+    const allowedKeys = new Set(this.columnDefinitions.map((column) => column.key));
+    const configuredColumns = (configuration?.['visibleColumns'] ?? [])
+      .filter((columnKey: string) => allowedKeys.has(columnKey));
+
+    this.visibleColumns.set(
+      configuredColumns.length
+        ? [...new Set(configuredColumns)]
+        : this.getDefaultVisibleColumnKeys(),
     );
-
-    const nextColumns = configuredColumns?.length
-      ? [...new Set([...configuredColumns, 'ema9', 'ema21'])]
-      : this.getDefaultVisibleColumnKeys();
-
-    this.visibleColumns.set(nextColumns);
   }
 
   private persistVisibleColumns(visibleColumns: string[]): void {
@@ -436,13 +432,14 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
     // from OnConnectedAsync; subscribing afterwards can miss that one-shot
     // snapshot and leave the dashboard empty until the next market update.
     this.subscription?.unsubscribe();
-    this.subscription = this.#market.gainers$.subscribe((data: Gainer[]) => {
-      // SignalR can deliver a stale SELL after the authoritative snapshot.
-      // The UI must never present SELL for an unowned equity, even if an old
-      // event arrives after the corrected API snapshot. Owned equities retain
-      // SELL because they may legitimately need an exit.
-      const normalized = data.map((stock) => this.normalizeGainerForDisplay(stock));
-      this.gainers.set(normalized);
+    this.isLoadingGainers.set(true);
+    this.subscription = this.#market.gainers$.subscribe((data: Gainer[] | null) => {
+      if (data === null) return; // SignalR has not delivered its initial snapshot yet.
+      const snapshot = data.map((stock) => this.normalizeGainerForDisplay(stock));
+      this.gainers.set(snapshot);
+      this.isLoadingGainers.set(false);
+      const lastPage = Math.max(1, Math.ceil(this.totalCount() / this.pageSize()));
+      if (this.page() > lastPage) this.page.set(lastPage);
     });
 
     await this.#market.startConnection();
@@ -453,11 +450,78 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   // ======================================================
 
   refresh(): void {
-    // Close the left controls panel first, then refresh the dashboard data.
     this.showSettings.set(false);
-
     this.loadDashboard();
     this.loadConfiguration();
+    // Reconnect to trigger the hub's OnConnectedAsync snapshot. Gainers are
+    // never fetched through REST.
+    void this.#market.refreshGainersSnapshot();
+  }
+
+  onSearchChanged(value: string): void {
+    this.searchText.set(value);
+    this.page.set(1);
+  }
+
+  changePage(nextPage: number): void {
+    if (nextPage < 1 || nextPage > this.totalPages() || nextPage === this.page()) return;
+    this.page.set(nextPage);
+  }
+
+  changePageSize(value: string): void {
+    const size = Number(value);
+    if (!Number.isFinite(size) || size < 1) return;
+    this.pageSize.set(size);
+    this.page.set(1);
+  }
+
+  toggleSubscription(stock: Gainer): void {
+    const token = String(stock.symbolToken ?? '');
+    if (!token || this.actionInProgress()) return;
+    this.actionInProgress.set(token);
+    const request = stock.isSubscribed ? this.#angel.unsubscribeStock(token) : this.#angel.subscribeStock(token);
+    request.subscribe({
+      next: () => {
+        this.gainers.update(rows => rows.map(row => row.symbolToken === stock.symbolToken ? { ...row, isSubscribed: !stock.isSubscribed } : row));
+        this.#toast.success(stock.isSubscribed ? `${stock.symbol} unsubscribed` : `${stock.symbol} subscribed`);
+        this.actionInProgress.set(null);
+      },
+      error: error => {
+        this.actionInProgress.set(null);
+        this.#toast.error(error?.error?.message ?? `Unable to update subscription for ${stock.symbol}`);
+      }
+    });
+  }
+
+  executeManualOrder(stock: Gainer, side: 'buy' | 'sell'): void {
+    const token = String(stock.symbolToken ?? '');
+    const quantity = side === 'sell' ? Number(stock.quantity ?? 0) : Number(stock.minimumBuyQuantity ?? 0);
+    if (!token || quantity < 1 || this.actionInProgress()) {
+      this.#toast.error(side === 'buy' ? 'Minimum buy quantity is not available for this stock.' : 'No owned quantity is available to sell.');
+      return;
+    }
+    if (!this.isMarketOpenForOrders()) {
+      this.#toast.error('Buy and sell are available only during market hours.');
+      return;
+    }
+    this.actionInProgress.set(token);
+    const request = side === 'buy' ? this.#angel.buyStock(token, quantity) : this.#angel.sellStock(token, quantity);
+    request.subscribe({
+      next: () => { this.actionInProgress.set(null); this.#toast.success(`${side.toUpperCase()} request submitted for ${stock.symbol}`); this.loadDashboard(); },
+      error: error => { this.actionInProgress.set(null); this.#toast.error(error?.error?.message ?? `Unable to ${side} ${stock.symbol}`); }
+    });
+  }
+
+  isMarketOpenForOrders(): boolean {
+    if (this.configuration()?.ignoreMarketHours) return true;
+    const now = new Date();
+    return !this.isWeekend(now) && now >= this.getTodayOpen() && now < this.getTodayClose();
+  }
+
+  hasSufficientFunds(stock: Gainer): boolean {
+    if (stock.sufficientFunds != null) return stock.sufficientFunds;
+    const investment = stock.minimumInvestmentWithCharges ?? ((stock.minimumBuyQuantity ?? 0) * stock.currentPrice + (stock.estimatedCharges ?? 0));
+    return investment > 0 && this.availableCash() >= investment;
   }
 
   // ======================================================
@@ -571,6 +635,17 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   // Helpers
   // ======================================================
 
+  private getMatchingGainers(): Gainer[] {
+    const search = this.searchText().trim().toLocaleLowerCase();
+    const rows = this.gainers();
+    if (!search) return rows;
+    return rows.filter(stock =>
+      String(stock.symbol ?? '').toLocaleLowerCase().includes(search) ||
+      String(stock.exchange ?? '').toLocaleLowerCase().includes(search) ||
+      String(stock.symbolToken ?? '').toLocaleLowerCase().includes(search)
+    );
+  }
+
   private normalizeGainerForDisplay(stock: Gainer): Gainer {
     const signal = String(stock.signal ?? '').trim().toUpperCase();
     if (!stock.isOwned && signal === 'SELL') {
@@ -584,13 +659,17 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
       return 0;
     }
 
-    const signal = (stock.signal ?? '').toUpperCase();
-
-    if (signal === 'BUY' || signal === 'SETUP') {
+    if (stock.isSubscribed) {
       return 1;
     }
 
-    return 2;
+    if (stock.pullbackDetected === true) {
+      return 2;
+    }
+
+    const signal = (stock.signal ?? '').toUpperCase();
+    if (signal === 'BUY' || signal === 'SETUP') return 3;
+    return 4;
   }
 
   private getTodayOpen(): Date {
@@ -613,7 +692,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
     const date = new Date();
 
     const [hour, minute] = config?.marketCloseTime?.split(':').map(Number) ?? [
-      15, 30,
+      15, 0,
     ];
 
     date.setHours(hour, minute, 0, 0);

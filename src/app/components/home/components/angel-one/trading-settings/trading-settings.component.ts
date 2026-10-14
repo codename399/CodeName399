@@ -61,19 +61,10 @@ export class TradingSettingsComponent implements OnInit {
 
     ignoreMarketHours: [false],
     marketOpenTime: ['09:15:00', Validators.required],
-    marketCloseTime: ['15:30:00', Validators.required],
+    marketCloseTime: ['15:00:00', Validators.required],
     intradayEntryCutoffTime: ['15:00:00', Validators.required],
     equityMisAutoSquareOffTime: ['15:30:00', Validators.required],
     roboAutoSquareOffTime: ['15:30:00', Validators.required],
-
-    casTransitionStart: ['15:15:00', Validators.required],
-    casOrderEntryStart: ['15:20:00', Validators.required],
-    casMarketOnlyEnd: ['15:25:00', Validators.required],
-    casLimitOnlyEnd: ['15:30:00', Validators.required],
-    casRandomCloseSafetyCutoff: ['15:28:00', Validators.required],
-    casEnd: ['15:40:00', Validators.required],
-    casPostCloseEnd: ['16:00:00', Validators.required],
-    casPriceBandPercent: [3, [Validators.required, Validators.min(0)]],
 
     watchListRefreshMinutes: [1, [Validators.required, Validators.min(0)]],
 
@@ -99,7 +90,7 @@ export class TradingSettingsComponent implements OnInit {
 
     buyTradingInterval: [1000, [Validators.required, Validators.min(0)]],
     sellTradingInterval: [1000, [Validators.required, Validators.min(0)]],
-    visibleColumns: ['star, symbol, stopLoss, target, ema9, ema21'],
+    visibleColumns: ['stock, ltp, minimumQuantity, charges, investmentWithCharges, profitLoss, pullback, funds, subscription, action'],
 
     autoSquareOff: [true],
     paperTradingBalance: [100000, [Validators.required, Validators.min(0)]],
@@ -159,7 +150,7 @@ export class TradingSettingsComponent implements OnInit {
 
               ignoreMarketHours: config?.ignoreMarketHours ?? false,
               marketOpenTime: this.time(config?.marketOpenTime, '09:15:00'),
-              marketCloseTime: this.time(config?.marketCloseTime, '15:30:00'),
+              marketCloseTime: this.time(config?.marketCloseTime, '15:00:00'),
               intradayEntryCutoffTime: this.time(
                 config?.intradayEntryCutoffTime,
                 '15:00:00',
@@ -172,24 +163,6 @@ export class TradingSettingsComponent implements OnInit {
                 config?.roboAutoSquareOffTime,
                 '15:30:00',
               ),
-
-              casTransitionStart: this.time(
-                config?.casTransitionStart,
-                '15:15:00',
-              ),
-              casOrderEntryStart: this.time(
-                config?.casOrderEntryStart,
-                '15:20:00',
-              ),
-              casMarketOnlyEnd: this.time(config?.casMarketOnlyEnd, '15:25:00'),
-              casLimitOnlyEnd: this.time(config?.casLimitOnlyEnd, '15:30:00'),
-              casRandomCloseSafetyCutoff: this.time(
-                config?.casRandomCloseSafetyCutoff,
-                '15:28:00',
-              ),
-              casEnd: this.time(config?.casEnd, '15:40:00'),
-              casPostCloseEnd: this.time(config?.casPostCloseEnd, '16:00:00'),
-              casPriceBandPercent: config?.casPriceBandPercent ?? 3,
 
               watchListRefreshMinutes: config?.watchListRefreshMinutes ?? 1,
 
@@ -216,12 +189,11 @@ export class TradingSettingsComponent implements OnInit {
 
               buyTradingInterval: config?.buyTradingInterval ?? 1000,
               sellTradingInterval: config?.sellTradingInterval ?? 1000,
-              visibleColumns: this.ensureEmaColumns(
+              visibleColumns: this.sanitizeVisibleColumns(
                 config?.visibleColumns ?? [
-                  'star',
-                  'symbol',
-                  'stopLoss',
-                  'target',
+                  'stock', 'ltp', 'minimumQuantity', 'charges',
+                  'investmentWithCharges', 'profitLoss', 'pullback',
+                  'funds', 'subscription', 'action',
                 ],
               ).join(', '),
 
@@ -276,15 +248,6 @@ export class TradingSettingsComponent implements OnInit {
       equityMisAutoSquareOffTime: this.toTimeSpan(v.equityMisAutoSquareOffTime),
       roboAutoSquareOffTime: this.toTimeSpan(v.roboAutoSquareOffTime),
 
-      casTransitionStart: this.toTimeSpan(v.casTransitionStart),
-      casOrderEntryStart: this.toTimeSpan(v.casOrderEntryStart),
-      casMarketOnlyEnd: this.toTimeSpan(v.casMarketOnlyEnd),
-      casLimitOnlyEnd: this.toTimeSpan(v.casLimitOnlyEnd),
-      casRandomCloseSafetyCutoff: this.toTimeSpan(v.casRandomCloseSafetyCutoff),
-      casEnd: this.toTimeSpan(v.casEnd),
-      casPostCloseEnd: this.toTimeSpan(v.casPostCloseEnd),
-      casPriceBandPercent: Number(v.casPriceBandPercent),
-
       watchListRefreshMinutes: Number(v.watchListRefreshMinutes),
       marketTimeZoneId: String(v.marketTimeZoneId),
       tradingHolidays: this.csv(v.tradingHolidays),
@@ -305,7 +268,7 @@ export class TradingSettingsComponent implements OnInit {
 
       buyTradingInterval: Number(v.buyTradingInterval),
       sellTradingInterval: Number(v.sellTradingInterval),
-      visibleColumns: this.csv(v.visibleColumns),
+      visibleColumns: this.sanitizeVisibleColumns(this.csv(v.visibleColumns)),
 
       autoSquareOff: !!v.autoSquareOff,
       paperTradingBalance: Number(v.paperTradingBalance),
@@ -427,8 +390,13 @@ export class TradingSettingsComponent implements OnInit {
       .filter(Boolean);
   }
 
-  private ensureEmaColumns(columns: string[]): string[] {
-    return [...new Set([...columns, 'ema9', 'ema21'])];
+  private sanitizeVisibleColumns(columns: string[]): string[] {
+    const allowed = new Set([
+      'stock', 'ltp', 'minimumQuantity', 'charges',
+      'investmentWithCharges', 'profitLoss', 'pullback',
+      'funds', 'subscription', 'action',
+    ]);
+    return [...new Set(columns.filter((column) => allowed.has(column)))];
   }
 
   private nullIfBlank(value: string | null | undefined): string | null {

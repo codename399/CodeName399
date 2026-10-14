@@ -95,6 +95,22 @@ export class AngelOneService {
   }
 
 
+  subscribeStock(symbolToken: string) {
+    return this.#http.post(this.#api.getUrl(`/api/market/${encodeURIComponent(symbolToken)}/subscribe`, false), {});
+  }
+
+  unsubscribeStock(symbolToken: string) {
+    return this.#http.delete(this.#api.getUrl(`/api/market/${encodeURIComponent(symbolToken)}/subscribe`, false));
+  }
+
+  buyStock(symbolToken: string, quantity: number) {
+    return this.#http.post(this.#api.getUrl(`/api/market/${encodeURIComponent(symbolToken)}/buy`, false), { quantity });
+  }
+
+  sellStock(symbolToken: string, quantity: number) {
+    return this.#http.post(this.#api.getUrl(`/api/market/${encodeURIComponent(symbolToken)}/sell`, false), { quantity });
+  }
+
   get isAutoTradingEnabled(): boolean {
     return this.configuration()?.enableAutoTrading ?? false;
   }

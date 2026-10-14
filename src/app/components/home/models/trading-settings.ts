@@ -48,15 +48,6 @@ export interface TradingConfiguration {
   equityMisAutoSquareOffTime: string;
   roboAutoSquareOffTime: string;
 
-  casTransitionStart: string;
-  casOrderEntryStart: string;
-  casMarketOnlyEnd: string;
-  casLimitOnlyEnd: string;
-  casRandomCloseSafetyCutoff: string;
-  casEnd: string;
-  casPostCloseEnd: string;
-  casPriceBandPercent: number;
-
   watchListRefreshMinutes: number;
   lastDailySummarySent: string | null;
   instrumentLoadedAt: string | null;
