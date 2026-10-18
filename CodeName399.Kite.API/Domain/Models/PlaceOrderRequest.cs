@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace CodeName399.Kite.API.Models
 {
@@ -45,9 +45,6 @@ namespace CodeName399.Kite.API.Models
         [JsonPropertyName("scripconsent")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? ScripConsent { get; set; }
-
-        [JsonIgnore]
-        public bool IsCasEligible { get; set; }
 
         [JsonIgnore]
         public bool IsExitOrder { get; set; }

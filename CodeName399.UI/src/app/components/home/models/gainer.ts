@@ -37,12 +37,19 @@ export interface Gainer {
   reason: string;
   suggestion: string;
   isSubscribed: boolean;
+  isManuallySubscribed?: boolean;
+  isManuallyUnsubscribed?: boolean;
   pullbackDetected?: boolean;
   minimumBuyQuantity?: number;
   estimatedCharges?: number;
+  ownedEstimatedCharges?: number;
   minimumInvestmentWithCharges?: number;
-  sufficientFunds?: boolean;
+  sufficientFunds?: boolean | null;
   tickDayVolume?: number;
+  tickExchangeTime?: string;
+  lastTickUpdated?: string;
+  bid?: number;
+  ask?: number;
 
   stopLoss: number;
   target?: number;

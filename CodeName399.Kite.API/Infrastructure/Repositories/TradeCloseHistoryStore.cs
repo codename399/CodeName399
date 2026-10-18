@@ -39,11 +39,6 @@ public sealed class TradeCloseHistoryStore
             ExitTrigger = trade.ExitTrigger,
             EntryDecision = trade.EntryDecision,
             EntryReason = trade.EntryReason,
-            EntryPredictionProbability = trade.EntryPredictionProbability,
-            EntryPredictionTimestampUtc = trade.EntryPredictionTimestampUtc,
-            ExitPredictionProbability = trade.ExitPredictionProbability,
-            ExitPredictionTimestampUtc = trade.ExitPredictionTimestampUtc,
-            PredictionModelVersion = trade.PredictionModelVersion
         };
 
         var path = Path.Combine(_rootPath, $"{record.ExitTime:yyyy-MM-dd}.jsonl");
@@ -90,11 +85,6 @@ public sealed class TradeCloseHistoryStore
         public string ExitTrigger { get; set; } = "";
         public string EntryDecision { get; set; } = "";
         public string EntryReason { get; set; } = "";
-        public double EntryPredictionProbability { get; set; }
-        public DateTime? EntryPredictionTimestampUtc { get; set; }
-        public double? ExitPredictionProbability { get; set; }
-        public DateTime? ExitPredictionTimestampUtc { get; set; }
-        public int PredictionModelVersion { get; set; }
         public DateTime EntryTime { get; set; }
         public DateTime ExitTime { get; set; }
 
@@ -116,11 +106,6 @@ public sealed class TradeCloseHistoryStore
             ExitTrigger = ExitTrigger,
             EntryDecision = EntryDecision,
             EntryReason = EntryReason,
-            EntryPredictionProbability = EntryPredictionProbability,
-            EntryPredictionTimestampUtc = EntryPredictionTimestampUtc,
-            ExitPredictionProbability = ExitPredictionProbability,
-            ExitPredictionTimestampUtc = ExitPredictionTimestampUtc,
-            PredictionModelVersion = PredictionModelVersion,
             Closed = true,
             Status = TradeStatus.Closed
         };

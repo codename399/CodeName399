@@ -491,62 +491,6 @@
       ]
     },
     {
-      "UpstreamHttpMethod": [
-        "POST"
-      ],
-      "UpstreamPathTemplate": "/generateSession",
-      "DownstreamPathTemplate": "/generateSession",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 5004
-        }
-      ]
-    },
-    {
-      "UpstreamHttpMethod": [
-        "GET"
-      ],
-      "UpstreamPathTemplate": "/gainers",
-      "DownstreamPathTemplate": "/gainers",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 5004
-        }
-      ]
-    },
-    {
-      "UpstreamHttpMethod": [
-        "GET"
-      ],
-      "UpstreamPathTemplate": "/losers",
-      "DownstreamPathTemplate": "/losers",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 5004
-        }
-      ]
-    },
-    {
-      "UpstreamHttpMethod": [
-        "GET"
-      ],
-      "UpstreamPathTemplate": "/login-to-angel",
-      "DownstreamPathTemplate": "/login-to-angel",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 5004
-        }
-      ]
-    },
-    {
       "UpstreamPathTemplate": "/marketHub/{everything}",
       "UpstreamHttpMethod": [
         "GET",
@@ -565,134 +509,8 @@
       "UpstreamHttpMethod": [
         "GET"
       ],
-      "UpstreamPathTemplate": "/get-available-cash",
-      "DownstreamPathTemplate": "/get-available-cash",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 5004
-        }
-      ]
-    },
-    {
-      "UpstreamHttpMethod": [
-        "GET"
-      ],
       "UpstreamPathTemplate": "/dashboard",
       "DownstreamPathTemplate": "/dashboard",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 5004
-        }
-      ]
-    },
-    {
-      "UpstreamHttpMethod": [
-        "GET"
-      ],
-      "UpstreamPathTemplate": "/trading-state",
-      "DownstreamPathTemplate": "/trading-state",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 5004
-        }
-      ]
-    },
-    {
-      "UpstreamHttpMethod": [
-        "GET"
-      ],
-      "UpstreamPathTemplate": "/owned-holdings",
-      "DownstreamPathTemplate": "/owned-holdings",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 5004
-        }
-      ]
-    },
-    {
-      "UpstreamHttpMethod": [
-        "POST"
-      ],
-      "UpstreamPathTemplate": "/enable-auto-trading",
-      "DownstreamPathTemplate": "/enable-auto-trading",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 5004
-        }
-      ]
-    },
-    {
-      "UpstreamHttpMethod": [
-        "POST"
-      ],
-      "UpstreamPathTemplate": "/disable-auto-trading",
-      "DownstreamPathTemplate": "/disable-auto-trading",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 5004
-        }
-      ]
-    },
-    {
-      "UpstreamHttpMethod": [
-        "POST"
-      ],
-      "UpstreamPathTemplate": "/update-strategy",
-      "DownstreamPathTemplate": "/update-strategy",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 5004
-        }
-      ]
-    },
-    {
-      "UpstreamHttpMethod": [
-        "POST"
-      ],
-      "UpstreamPathTemplate": "/toggle-paper-trading",
-      "DownstreamPathTemplate": "/toggle-paper-trading",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 5004
-        }
-      ]
-    },
-    {
-      "UpstreamHttpMethod": [
-        "POST"
-      ],
-      "UpstreamPathTemplate": "/reset-trading-state",
-      "DownstreamPathTemplate": "/reset-trading-state",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 5004
-        }
-      ]
-    },
-    {
-      "UpstreamHttpMethod": [
-        "POST"
-      ],
-      "UpstreamPathTemplate": "/refresh-angel-token",
-      "DownstreamPathTemplate": "/refresh-angel-token",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -721,20 +539,6 @@
       ],
       "UpstreamPathTemplate": "/set-configuration",
       "DownstreamPathTemplate": "/set-configuration",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 5004
-        }
-      ]
-    },
-    {
-      "UpstreamHttpMethod": [
-        "GET"
-      ],
-      "UpstreamPathTemplate": "/trade-analysis/{fileName}",
-      "DownstreamPathTemplate": "/trade-analysis/{fileName}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -791,6 +595,76 @@
       ],
       "UpstreamPathTemplate": "/api/market/sendemail",
       "DownstreamPathTemplate": "/api/market/sendemail",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5004
+        }
+      ]
+    },
+    {
+      "UpstreamHttpMethod": [
+        "GET"
+      ],
+      "UpstreamPathTemplate": "/api/market/{symbolToken}/candles",
+      "DownstreamPathTemplate": "/api/market/{symbolToken}/candles",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5004
+        }
+      ]
+    },
+    {
+      "UpstreamHttpMethod": [
+        "POST"
+      ],
+      "UpstreamPathTemplate": "/api/market/buy",
+      "DownstreamPathTemplate": "/api/market/buy",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5004
+        }
+      ]
+    },
+    {
+      "UpstreamHttpMethod": [
+        "POST"
+      ],
+      "UpstreamPathTemplate": "/api/market/sell",
+      "DownstreamPathTemplate": "/api/market/sell",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5004
+        }
+      ]
+    },
+    {
+      "UpstreamHttpMethod": [
+        "GET"
+      ],
+      "UpstreamPathTemplate": "/api/market/search",
+      "DownstreamPathTemplate": "/api/market/search",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5004
+        }
+      ]
+    },
+    {
+      "UpstreamHttpMethod": [
+        "GET"
+      ],
+      "UpstreamPathTemplate": "/trading/daily-summary",
+      "DownstreamPathTemplate": "/trading/daily-summary",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {

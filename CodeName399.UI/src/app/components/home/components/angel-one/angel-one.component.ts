@@ -57,9 +57,11 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   marketTimer = signal('');
 
   searchText = signal('');
+  searchDraft = signal('');
   page = signal(1);
   pageSize = signal(10);
-  totalCount = computed(() => this.getMatchingGainers().length);
+  totalCount = signal(0);
+  serverPageGainers = signal<Gainer[]>([]);
   isLoadingGainers = signal(false);
   actionInProgress = signal<string | null>(null);
 
@@ -137,7 +139,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
 
   visibleColumns = signal<string[]>([]);
 
-  readonly visibleColumnSet = computed(() => new Set(this.visibleColumns()));
+  readonly visibleColumnSet = computed(() => new Set(['stock', ...this.visibleColumns()]));
 
   private timerId: any;
   private subscription?: Subscription;
@@ -154,16 +156,9 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
     () => this.subscribedGainers().length === 0,
   );
 
-  // SignalR owns the complete list. Search and pagination are performed locally;
-  // no REST request is made to load or page gainers.
-  filteredGainers = computed(() => {
-    const matching = this.getMatchingGainers().sort((a, b) =>
-      this.getGainerSortBucket(a) - this.getGainerSortBucket(b) ||
-      String(a.symbol ?? '').localeCompare(String(b.symbol ?? ''))
-    );
-    const start = (this.page() - 1) * this.pageSize();
-    return matching.slice(start, start + this.pageSize());
-  });
+  // The API performs filtering, sorting, searching and pagination. SignalR is
+  // the source of live tick updates and is merged into the currently visible page.
+  filteredGainers = computed(() => this.serverPageGainers());
 
   totalPages = computed(() => Math.max(1, Math.ceil(this.totalCount() / this.pageSize())));
   firstRowNumber = computed(() => this.totalCount() === 0 ? 0 : (this.page() - 1) * this.pageSize() + 1);
@@ -269,7 +264,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   toggleColumn(columnKey: string): void {
-    if (!this.columnDefinitions.some((column) => column.key === columnKey)) {
+    if (columnKey === 'stock' || !this.columnDefinitions.some((column) => column.key === columnKey)) {
       return;
     }
     const current = this.visibleColumns();
@@ -338,6 +333,12 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
       .subscribe({
         next: (configuration) => {
           this.applyVisibleColumns(configuration);
+          const configuredPageSize = Number(configuration?.gainersPageSize ?? 10);
+          if (Number.isFinite(configuredPageSize) && configuredPageSize >= 1 && configuredPageSize <= 100 && configuredPageSize !== this.pageSize()) {
+            this.pageSize.set(configuredPageSize);
+            this.page.set(1);
+            this.loadGainersPage();
+          }
         },
 
         error: (error) => {
@@ -393,7 +394,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.visibleColumns.set(
       configuredColumns.length
-        ? [...new Set(configuredColumns)]
+        ? ['stock', ...new Set(configuredColumns.filter((key: string) => key !== 'stock'))]
         : this.getDefaultVisibleColumnKeys(),
     );
   }
@@ -407,7 +408,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const payload: TradingConfiguration = {
       ...configuration,
-      visibleColumns,
+      visibleColumns: ['stock', ...visibleColumns.filter((key) => key !== 'stock')],
     };
 
     this.#angel.saveTradingConfiguration(payload).subscribe({
@@ -436,13 +437,26 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
     this.subscription = this.#market.gainers$.subscribe((data: Gainer[] | null) => {
       if (data === null) return; // SignalR has not delivered its initial snapshot yet.
       const snapshot = data.map((stock) => this.normalizeGainerForDisplay(stock));
+      const previous = this.gainers();
+      const previousByToken = new Map<string, Gainer>(previous.map(stock => [String(stock.symbolToken), stock] as const));
+      const snapshotByToken = new Map<string, Gainer>(snapshot.map(stock => [String(stock.symbolToken), stock] as const));
+      const membershipChanged = previousByToken.size !== snapshotByToken.size
+        || [...previousByToken.keys()].some(token => !snapshotByToken.has(token));
+      const priorityChanged = snapshot.some(stock => {
+        const old = previousByToken.get(String(stock.symbolToken));
+        return !!old && (old.isOwned !== stock.isOwned
+          || old.pullbackDetected !== stock.pullbackDetected
+          || old.isManuallySubscribed !== stock.isManuallySubscribed
+          || old.isSubscribed !== stock.isSubscribed);
+      });
       this.gainers.set(snapshot);
+      this.serverPageGainers.update(rows => this.sortVisibleRows(rows.map(row => ({ ...row, ...(snapshotByToken.get(String(row.symbolToken)) ?? {}) }))));
       this.isLoadingGainers.set(false);
-      const lastPage = Math.max(1, Math.ceil(this.totalCount() / this.pageSize()));
-      if (this.page() > lastPage) this.page.set(lastPage);
+      if (this.serverPageGainers().length === 0 || membershipChanged || priorityChanged) this.loadGainersPage();
     });
 
     await this.#market.startConnection();
+    this.loadGainersPage();
   }
 
   // ======================================================
@@ -453,19 +467,25 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
     this.showSettings.set(false);
     this.loadDashboard();
     this.loadConfiguration();
-    // Reconnect to trigger the hub's OnConnectedAsync snapshot. Gainers are
-    // never fetched through REST.
+    // Refresh the server-side page and request a fresh SignalR snapshot.
+    this.loadGainersPage();
     void this.#market.refreshGainersSnapshot();
   }
 
-  onSearchChanged(value: string): void {
-    this.searchText.set(value);
+  onSearchDraftChanged(value: string): void {
+    this.searchDraft.set(value);
+  }
+
+  applySearch(): void {
+    this.searchText.set(this.searchDraft().trim());
     this.page.set(1);
+    this.loadGainersPage();
   }
 
   changePage(nextPage: number): void {
     if (nextPage < 1 || nextPage > this.totalPages() || nextPage === this.page()) return;
     this.page.set(nextPage);
+    this.loadGainersPage();
   }
 
   changePageSize(value: string): void {
@@ -473,18 +493,55 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!Number.isFinite(size) || size < 1) return;
     this.pageSize.set(size);
     this.page.set(1);
+    this.loadGainersPage();
+  }
+
+  private loadGainersPage(): void {
+    this.isLoadingGainers.set(true);
+    const appliedSearch = this.searchText().trim();
+    const request = appliedSearch
+      ? this.#angel.searchGainers(appliedSearch, this.page(), this.pageSize())
+      : this.#angel.getGainersPage(this.page(), this.pageSize(), '');
+    request.subscribe({
+      next: response => {
+        this.totalCount.set(response.totalCount ?? 0);
+        this.serverPageGainers.set(this.sortVisibleRows((response.items ?? []).map(stock => this.normalizeGainerForDisplay(stock))));
+        const lastPage = Math.max(1, response.totalPages ?? 1);
+        if (this.page() > lastPage) {
+          this.page.set(lastPage);
+          this.loadGainersPage();
+          return;
+        }
+        this.isLoadingGainers.set(false);
+      },
+      error: error => {
+        this.isLoadingGainers.set(false);
+        this.#toast.error(error?.error?.message ?? 'Unable to load the requested gainer page.');
+      }
+    });
+  }
+
+  openTrading(stock: Gainer): void {
+    if (!stock?.symbolToken) return;
+    this.#router.navigate(['/home/trade', stock.symbolToken], { queryParams: { symbol: stock.symbol, exchange: stock.exchange || 'NSE' } });
   }
 
   toggleSubscription(stock: Gainer): void {
     const token = String(stock.symbolToken ?? '');
     if (!token || this.actionInProgress()) return;
     this.actionInProgress.set(token);
-    const request = stock.isSubscribed ? this.#angel.unsubscribeStock(token) : this.#angel.subscribeStock(token);
+    const exchange = stock.exchange || stock.quote?.exchange || 'NSE';
+    const request = stock.isSubscribed ? this.#angel.unsubscribeStock(token, exchange) : this.#angel.subscribeStock(token, exchange);
     request.subscribe({
       next: () => {
-        this.gainers.update(rows => rows.map(row => row.symbolToken === stock.symbolToken ? { ...row, isSubscribed: !stock.isSubscribed } : row));
+        const updated = (row: Gainer) => row.symbolToken === stock.symbolToken
+          ? { ...row, isSubscribed: !stock.isSubscribed, isManuallySubscribed: !stock.isSubscribed }
+          : row;
+        this.gainers.update(rows => rows.map(updated));
+        this.serverPageGainers.update(rows => this.sortVisibleRows(rows.map(updated)));
         this.#toast.success(stock.isSubscribed ? `${stock.symbol} unsubscribed` : `${stock.symbol} subscribed`);
         this.actionInProgress.set(null);
+        this.loadGainersPage();
       },
       error: error => {
         this.actionInProgress.set(null);
@@ -493,9 +550,9 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  executeManualOrder(stock: Gainer, side: 'buy' | 'sell'): void {
+  executeManualOrder(stock: Gainer, side: 'buy' | 'sell', buyMode: 'minimum' | 'maximum' = 'minimum'): void {
     const token = String(stock.symbolToken ?? '');
-    const quantity = side === 'sell' ? Number(stock.quantity ?? 0) : Number(stock.minimumBuyQuantity ?? 0);
+    const quantity = side === 'sell' ? Number(stock.quantity ?? 0) : (buyMode === 'minimum' ? Number(stock.minimumBuyQuantity ?? 1) : 1);
     if (!token || quantity < 1 || this.actionInProgress()) {
       this.#toast.error(side === 'buy' ? 'Minimum buy quantity is not available for this stock.' : 'No owned quantity is available to sell.');
       return;
@@ -505,9 +562,10 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
     this.actionInProgress.set(token);
-    const request = side === 'buy' ? this.#angel.buyStock(token, quantity) : this.#angel.sellStock(token, quantity);
+    const exchange = stock.exchange || stock.quote?.exchange || 'NSE';
+    const request = side === 'buy' ? this.#angel.buyStock(token, quantity, buyMode, exchange) : this.#angel.sellStock(token, quantity, exchange);
     request.subscribe({
-      next: () => { this.actionInProgress.set(null); this.#toast.success(`${side.toUpperCase()} request submitted for ${stock.symbol}`); this.loadDashboard(); },
+      next: () => { this.actionInProgress.set(null); this.#toast.success(`${side.toUpperCase()} request submitted for ${stock.symbol}`); this.loadDashboard(); this.loadGainersPage(); },
       error: error => { this.actionInProgress.set(null); this.#toast.error(error?.error?.message ?? `Unable to ${side} ${stock.symbol}`); }
     });
   }
@@ -515,13 +573,47 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   isMarketOpenForOrders(): boolean {
     if (this.configuration()?.ignoreMarketHours) return true;
     const now = new Date();
-    return !this.isWeekend(now) && now >= this.getTodayOpen() && now < this.getTodayClose();
+    return !this.isNonTradingDay(now) && now >= this.getTodayOpen() && now < this.getTodayClose();
   }
 
   hasSufficientFunds(stock: Gainer): boolean {
     if (stock.sufficientFunds != null) return stock.sufficientFunds;
     const investment = stock.minimumInvestmentWithCharges ?? ((stock.minimumBuyQuantity ?? 0) * stock.currentPrice + (stock.estimatedCharges ?? 0));
     return investment > 0 && this.availableCash() >= investment;
+  }
+
+  displayProfitLoss(stock: Gainer): number {
+    const gross = Number(stock.profitLoss ?? 0);
+    const charges = Number(stock.ownedEstimatedCharges ?? 0);
+    return stock.isOwned && charges > 0 ? gross - charges : gross;
+  }
+
+  isDisplayProfitPositive(stock: Gainer): boolean {
+    return this.displayProfitLoss(stock) >= 0;
+  }
+
+  displayCharges(stock: Gainer): string {
+    if (stock.isOwned) {
+      const charges = Number(stock.ownedEstimatedCharges ?? 0);
+      return charges > 0 ? this.formatCurrency(charges) : 'Calculating…';
+    }
+    return stock.estimatedCharges != null ? this.formatCurrency(stock.estimatedCharges) : '—';
+  }
+
+  displayMinimumInvestment(stock: Gainer): string {
+    if (stock.isOwned || stock.minimumInvestmentWithCharges == null) return '—';
+    return this.formatCurrency(stock.minimumInvestmentWithCharges);
+  }
+
+  private formatCurrency(value: number): string {
+    return `₹${new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}`;
+  }
+
+  hasBudgetForMaximum(stock: Gainer): boolean {
+    const cash = this.availableCash();
+    const allocationPercent = Math.min(100, Math.max(0, Number(this.configuration()?.maxCapitalPerTradePercent ?? 0)));
+    const budget = cash * allocationPercent / 100;
+    return stock.currentPrice > 0 && budget >= stock.currentPrice;
   }
 
   // ======================================================
@@ -551,7 +643,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
     const marketClose = this.getTodayClose();
 
     if (config.ignoreMarketHours) {
-      if (this.isWeekend(now)) {
+      if (this.isNonTradingDay(now)) {
         this.marketStatus.set('OPEN (Ignored)');
         this.marketTimer.set(
           `Market opens in ${this.formatTime(
@@ -590,7 +682,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    if (this.isWeekend(now)) {
+    if (this.isNonTradingDay(now)) {
       this.marketStatus.set('CLOSED');
 
       this.marketTimer.set(
@@ -635,17 +727,6 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   // Helpers
   // ======================================================
 
-  private getMatchingGainers(): Gainer[] {
-    const search = this.searchText().trim().toLocaleLowerCase();
-    const rows = this.gainers();
-    if (!search) return rows;
-    return rows.filter(stock =>
-      String(stock.symbol ?? '').toLocaleLowerCase().includes(search) ||
-      String(stock.exchange ?? '').toLocaleLowerCase().includes(search) ||
-      String(stock.symbolToken ?? '').toLocaleLowerCase().includes(search)
-    );
-  }
-
   private normalizeGainerForDisplay(stock: Gainer): Gainer {
     const signal = String(stock.signal ?? '').trim().toUpperCase();
     if (!stock.isOwned && signal === 'SELL') {
@@ -655,71 +736,68 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private getGainerSortBucket(stock: Gainer): number {
-    if (stock.isOwned) {
-      return 0;
-    }
-
-    if (stock.isSubscribed) {
-      return 1;
-    }
-
-    if (stock.pullbackDetected === true) {
-      return 2;
-    }
-
+    if (stock.isOwned) return 0;
+    if (stock.pullbackDetected === true) return 1;
+    if (stock.isManuallySubscribed) return 2;
     const signal = (stock.signal ?? '').toUpperCase();
     if (signal === 'BUY' || signal === 'SETUP') return 3;
     return 4;
   }
 
+  private sortVisibleRows(rows: Gainer[]): Gainer[] {
+    return [...rows].sort((a, b) =>
+      this.getGainerSortBucket(a) - this.getGainerSortBucket(b)
+      || Number(b.changePercent ?? 0) - Number(a.changePercent ?? 0)
+      || String(a.symbol ?? '').localeCompare(String(b.symbol ?? '')),
+    );
+  }
+
   private getTodayOpen(): Date {
-    const config = this.configuration();
-
-    const date = new Date();
-
-    const [hour, minute] = config?.marketOpenTime?.split(':').map(Number) ?? [
-      9, 15,
-    ];
-
-    date.setHours(hour, minute, 0, 0);
-
-    return date;
+    return this.getIndiaDateAtTime(this.configuration()?.marketOpenTime ?? '09:15:00', new Date(), 0);
   }
 
   private getTodayClose(): Date {
-    const config = this.configuration();
+    return this.getIndiaDateAtTime(this.configuration()?.marketCloseTime ?? '15:00:00', new Date(), 0);
+  }
 
-    const date = new Date();
+  private indiaDateParts(date: Date): { year: number; month: number; day: number; weekday: string } {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short',
+    }).formatToParts(date);
+    const get = (type: string) => parts.find(part => part.type === type)?.value ?? '';
+    return { year: Number(get('year')), month: Number(get('month')), day: Number(get('day')), weekday: get('weekday') };
+  }
 
-    const [hour, minute] = config?.marketCloseTime?.split(':').map(Number) ?? [
-      15, 0,
-    ];
+  private indiaDateKey(date: Date): string {
+    const p = this.indiaDateParts(date);
+    return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
+  }
 
-    date.setHours(hour, minute, 0, 0);
-
-    return date;
+  private getIndiaDateAtTime(time: string, reference: Date, dayOffset: number): Date {
+    const p = this.indiaDateParts(reference);
+    const calendarDate = new Date(Date.UTC(p.year, p.month - 1, p.day + dayOffset));
+    const [hour, minute, second] = String(time).split(':').map(Number);
+    // Build an absolute instant from an IST wall-clock value without relying on
+    // the browser/host machine's local timezone.
+    return new Date(Date.UTC(calendarDate.getUTCFullYear(), calendarDate.getUTCMonth(), calendarDate.getUTCDate(), hour || 0, minute || 0, second || 0) - 330 * 60 * 1000);
   }
 
   private isWeekend(date: Date): boolean {
-    return date.getDay() === 0 || date.getDay() === 6;
+    return ['Sat', 'Sun'].includes(this.indiaDateParts(date).weekday);
+  }
+
+  private isNonTradingDay(date: Date): boolean {
+    const config = this.configuration();
+    return this.isWeekend(date) || (config?.tradingHolidays ?? []).includes(this.indiaDateKey(date));
   }
 
   private getNextMarketOpen(current: Date): Date {
-    const config = this.configuration();
-
-    const next = new Date(current);
-
-    const [hour, minute] = config?.marketOpenTime?.split(':').map(Number) ?? [
-      9, 15,
-    ];
-
-    next.setHours(hour, minute, 0, 0);
-
-    do {
-      next.setDate(next.getDate() + 1);
-    } while (this.isWeekend(next));
-
-    return next;
+    const openTime = this.configuration()?.marketOpenTime ?? '09:15:00';
+    for (let offset = 1; offset <= 31; offset++) {
+      const candidate = this.getIndiaDateAtTime(openTime, current, offset);
+      if (!this.isNonTradingDay(candidate)) return candidate;
+    }
+    return this.getIndiaDateAtTime(openTime, current, 1);
   }
 
   // ======================================================

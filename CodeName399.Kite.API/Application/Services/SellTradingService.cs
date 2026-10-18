@@ -1,5 +1,4 @@
 using CodeName399.Kite.API.Diagnostics;
-using CodeName399.Kite.API.Prediction;
 using CodeName399.Kite.API.Helpers;
 using CodeName399.Kite.API.Models;
 using CodeName399.Kite.API.Models.Enum;
@@ -16,7 +15,6 @@ namespace CodeName399.Kite.API.Services
     {
         private readonly MarketClock _marketClock;
         private readonly IIndicatorService _indicatorService;
-        private readonly ExpectedPredictionService _prediction;
 
         public SellTradingService(
             IAngelOneService angel,
@@ -32,7 +30,6 @@ namespace CodeName399.Kite.API.Services
             SymbolLockService symbolLocks,
             MarketClock marketClock,
             IIndicatorService indicatorService,
-            ExpectedPredictionService prediction,
             ILogger<SellTradingService> logger
         )
             : base(
@@ -52,7 +49,6 @@ namespace CodeName399.Kite.API.Services
         {
             _marketClock = marketClock;
             _indicatorService = indicatorService;
-            _prediction = prediction;
             _orderWebSocket.OrderUpdated += OnOrderUpdated;
         }
 
@@ -155,35 +151,12 @@ namespace CodeName399.Kite.API.Services
                     if (trade.Status != TradeStatus.Open)
                         continue;
 
-                    // Prediction is the strategy exit. Protective stop/trailing remains
-                    // only as a hard safety backstop. Both BUY and SELL therefore use the
-                    // same point-in-time prediction model.
-                    var predictionSell = false;
-                    var predictionReason = "Prediction unavailable";
-                    if (_prediction.IsEnabled && _prediction.IsModelReady
-                        && _prediction.TryGetLiveHistory(stock.SymbolToken, out var predictionHistory))
-                    {
-                        var currentTick = ExpectedPredictionService.ToMarketTick(stock);
-                        var predictionDecision = _prediction.EvaluateExit(currentTick, predictionHistory);
-                        predictionSell = predictionDecision.ShouldSell;
-                        predictionReason = predictionDecision.Reason;
-                        trade.ExitPredictionProbability = predictionDecision.Probability;
-                        trade.ExitPredictionTimestampUtc = currentTick.ExchangeTime;
-                        trade.PredictionModelVersion = _prediction.ModelVersion;
-                    }
-
-                    var stopLossConfirmed = trade.StopLoss > 0
-                        && _tradeManager.ShouldConfirmTrailingExit(trade, stock.CurrentPrice);
-                    if (!predictionSell && !stopLossConfirmed)
-                        continue;
-
-                    string reason = predictionSell
-                        ? $"Prediction Exit: {predictionReason}"
-                        : (trade.TrailingActivated ? "Trailing Stop" : "Stop Loss / Break-even");
-                    trade.ExitCategory = predictionSell ? "PREDICTION" : (trade.TrailingActivated ? "PROFIT_PROTECTION" : "RISK");
-                    trade.ExitDecision = predictionSell ? "PREDICTION_SELL" : "SAFETY_EXIT";
-                    trade.ExitTrigger = predictionSell ? "PREDICTION" : (trade.TrailingActivated ? "TRAILING_STOP" : "STOP_LOSS");
-                    trade.ExitTriggerPrice = stock.CurrentPrice;
+                    // Automatic order placement is intentionally disabled.
+                    // Exit decisions must be submitted through the explicit sell endpoint.
+                    _logger.LogDebug(
+                        "Automatic sell skipped for {Symbol}; use the manual sell endpoint.",
+                        trade.Symbol);
+                    continue;
 
                     trade.StopLossTriggered = false;
                     trade.StopLossTriggerPrice = 0;
@@ -201,7 +174,7 @@ namespace CodeName399.Kite.API.Services
 
                         trade.ExitTime = DateTime.UtcNow;
 
-                        trade.ExitReason = reason;
+                        trade.ExitReason = "Manual sell";
 
                         trade.ExitIndicators = ResolveExitIndicators(trade, stock);
                         trade.ExitHistoricalContextJson = await CaptureHistoricalContextAsync(stock);
@@ -608,7 +581,7 @@ namespace CodeName399.Kite.API.Services
 
         private static TradeIndicatorSnapshot? ResolveExitIndicators(TradeOrder trade, Gainer? watch)
         {
-            if (watch != null && watch.HistoricalLoaded && watch.ATR > 0m)
+            if (watch != null && watch.ATR > 0m)
                 return IndicatorMapper.ToTradeIndicatorSnapshot(watch);
             return trade.EntryIndicators;
         }

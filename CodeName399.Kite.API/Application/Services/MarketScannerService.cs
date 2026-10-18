@@ -3,7 +3,6 @@ using CodeName399.Kite.API.Helpers;
 using CodeName399.Kite.API.Models;
 using CodeName399.Kite.API.Models.Configuration;
 using CodeName399.Kite.API.Models.Enum;
-using CodeName399.Kite.API.Services.Indicator;
 using CodeName399.Kite.API.Services.Interface;
 
 namespace CodeName399.Kite.API.Services;
@@ -12,30 +11,20 @@ public sealed class MarketScannerService
 {
     private readonly TradingSettingsProvider _settings;
     private readonly TradeManager _tradeManager;
-    private readonly IIndicatorService _indicatorService;
     private readonly ILogger<MarketScannerService> _logger;
-    private readonly HistoricalDownloadQueue _historyQueue;
-    private readonly HistoricalCacheService _historicalCache;
 
     public MarketScannerService(
         TradeManager tradeManager,
         TradingSettingsProvider settings,
-        IIndicatorService indicatorService,
-        HistoricalDownloadQueue historyQueue,
-        HistoricalCacheService historicalCache,
         ILogger<MarketScannerService> logger)
     {
         _tradeManager = tradeManager;
         _settings = settings;
-        _indicatorService = indicatorService;
-        _historyQueue = historyQueue;
-        _historicalCache = historicalCache;
         _logger = logger;
     }
 
     public async Task<List<Gainer>> BuildAsync(
         List<MarketQuoteData> stocks,
-        string jwtToken,
         HashSet<string> ownedSymbols)
     {
         using var activity = TradingFlowActivity.Start("trading.market-scan");
@@ -52,25 +41,14 @@ public sealed class MarketScannerService
                         || ownedSymbols.Contains(symbol)
                         || _tradeManager.ContainsPosition(quote.Exchange, quote.SymbolToken);
 
-            var indicator = await _indicatorService.GetAsync(quote, jwtToken);
-            var gainer = CreateGainer(quote, trade, owned, equity, indicator != null);
-            if (indicator != null)
-            {
-                IndicatorMapper.ApplyIndicators(gainer, indicator);
-                gainer.HistoricalLoaded = true;
-                gainer.LastHistoricalUpdate = DateTime.UtcNow;
-            }
-            else if (!_historicalCache.TryGet(quote.SymbolToken, out _)
-                     && !_historyQueue.IsQueued(quote.SymbolToken))
-            {
-                _historicalCache.AddPending(quote.SymbolToken);
-                _historyQueue.Enqueue(quote.SymbolToken, CalculateInitialPriority(quote));
-            }
+            // Historical candles are loaded only through the explicit candle endpoint.
+            // Discovery must not trigger hidden history downloads or cache refreshes.
+            var gainer = CreateGainer(quote, trade, owned, equity);
 
             // Historical/indicator availability is research context, not an entry gate.
             gainer.IsSubscribed = true;
-            gainer.Signal = owned ? "HOLD" : "BUY";
-            gainer.Reason = owned ? "Position Open" : "Risk/charges validation only.";
+            gainer.Signal = owned ? "HOLD" : "WATCH";
+            gainer.Reason = owned ? "Position Open" : "Eligible active equity gainer; orders are manual endpoint-only.";
             gainer.Direction = TradeDirection.Long;
             gainer.Risk = "RISK";
 
@@ -92,17 +70,13 @@ public sealed class MarketScannerService
             .Cast<Gainer>()
             .OrderByDescending(x => x.IsOwned)
             .ThenByDescending(x => x.Priority)
-            .ThenByDescending(x => x.Signal == "BUY")
             .ThenByDescending(x => x.ChangePercent)
             .ToList();
 
         return result;
     }
 
-    public bool IsExcluded(string symbol) => _settings.Current.ExcludedSymbols.Any(x =>
-        x.Equals(symbol, StringComparison.OrdinalIgnoreCase));
-
-    private static Gainer CreateGainer(MarketQuoteData quote, TradeOrder? trade, bool owned, InstrumentTradingSettings settings, bool loaded)
+    private static Gainer CreateGainer(MarketQuoteData quote, TradeOrder? trade, bool owned, InstrumentTradingSettings settings)
     {
         var change = quote.Close <= 0m ? 0m : Math.Round((quote.Ltp - quote.Close) / quote.Close * 100m, 2);
         return new Gainer
@@ -124,7 +98,6 @@ public sealed class MarketScannerService
             ChangePercent = change,
             Quote = quote,
             IsOwned = owned,
-            HistoricalLoaded = loaded,
             LastTickUpdated = quote.QuoteTimeUtc,
             StopLoss = trade?.StopLoss ?? 0m,
             Quantity = trade?.Quantity ?? 0,
@@ -134,6 +107,7 @@ public sealed class MarketScannerService
             InvestedAmount = trade == null ? 0m : trade.EntryPrice * trade.Quantity,
             CurrentValue = trade == null ? 0m : quote.Ltp * trade.Quantity,
             ProfitLoss = trade == null ? 0m : (quote.Ltp - trade.EntryPrice) * trade.Quantity,
+            OwnedEstimatedCharges = 0m,
             ProfitLossPercentage = trade == null || trade.EntryPrice <= 0m ? 0m : Math.Round((quote.Ltp - trade.EntryPrice) / trade.EntryPrice * 100m, 2)
         };
     }

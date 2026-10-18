@@ -257,11 +257,6 @@ namespace CodeName399.Kite.API.Models
 
         public string EntryReason { get; set; } = string.Empty;
         public string EntryDecision { get; set; } = string.Empty;
-        public double EntryPredictionProbability { get; set; }
-        public DateTime? EntryPredictionTimestampUtc { get; set; }
-        public double? ExitPredictionProbability { get; set; }
-        public DateTime? ExitPredictionTimestampUtc { get; set; }
-        public int PredictionModelVersion { get; set; }
         public string ExitDecision { get; set; } = string.Empty;
 
         public string BuyEligibilityReason { get; set; } = string.Empty;

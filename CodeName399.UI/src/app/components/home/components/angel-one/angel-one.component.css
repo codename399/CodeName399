@@ -3267,3 +3267,5 @@ body > .sidebar-float-button {
 .empty-state .material-icons { font-size:34px; color:#94a3b8; }
 .empty-state strong { color:#334155; }
 @media (max-width:768px) { .gainer-tools, .gainer-tools .search-box { width:100%; } .gainer-tools .search-box input { min-width:0; width:100%; } .pagination-bar { align-items:flex-start; flex-direction:column; } }
+
+.stock-link{padding:0;border:0;background:transparent;color:#1d4ed8;font-weight:700;cursor:pointer;text-align:left}.stock-link:hover{text-decoration:underline}

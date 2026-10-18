@@ -33,7 +33,4 @@ public class ModifyOrderRequest
 
     [JsonPropertyName("triggerprice")]
     public decimal? TriggerPrice { get; set; }
-
-    [JsonIgnore]
-    public bool IsCasEligible { get; set; }
 }

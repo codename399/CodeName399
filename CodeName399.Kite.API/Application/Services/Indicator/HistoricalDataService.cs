@@ -1,30 +1,15 @@
-﻿using CodeName399.Kite.API.Constants;
+using CodeName399.Kite.API.Constants;
 using CodeName399.Kite.API.Extensions;
 using CodeName399.Kite.API.Helpers;
 using CodeName399.Kite.API.Models;
 using CodeName399.Kite.API.Models.Indicator;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
 namespace CodeName399.Kite.API.Services.Indicator
 {
     public class HistoricalDataService : IHistoricalDataService
     {
-        private readonly HttpClient _httpClient;
-
         private readonly AngelOneConfiguration _options;
-
-        private readonly IMemoryCache _cache;
-
-        private static readonly Dictionary<string, TimeSpan> CacheDurations = new()
-        {
-            ["ONE_MINUTE"] = TimeSpan.FromMinutes(1),
-            ["FIVE_MINUTE"] = TimeSpan.FromMinutes(5),
-            ["FIFTEEN_MINUTE"] = TimeSpan.FromMinutes(15),
-            ["THIRTY_MINUTE"] = TimeSpan.FromMinutes(30),
-            ["ONE_HOUR"] = TimeSpan.FromHours(1),
-            ["ONE_DAY"] = TimeSpan.FromHours(12),
-        };
 
         private ILogger<HistoricalDataService> _logger;
 
@@ -35,9 +20,7 @@ namespace CodeName399.Kite.API.Services.Indicator
         private readonly RawMarketDataArchiveService _rawMarketData;
 
         public HistoricalDataService(
-            IHttpClientFactory factory,
             IOptions<AngelOneConfiguration> options,
-            IMemoryCache cache,
             ILogger<HistoricalDataService> logger,
             RequestHelper requestHelper,
             HistoricalRateLimiter rateLimiter,
@@ -45,11 +28,7 @@ namespace CodeName399.Kite.API.Services.Indicator
             RawMarketDataArchiveService rawMarketData
         )
         {
-            _httpClient = factory.CreateClient(Constant.AngelRefresh);
-
             _options = options.Value;
-
-            _cache = cache;
 
             _logger = logger;
 
@@ -67,23 +46,9 @@ namespace CodeName399.Kite.API.Services.Indicator
             string exchange = "NSE"
         )
         {
-            string cacheKey = $"HIST_{exchange}_{token}_{interval}";
-
-            if (_cache.TryGetValue(cacheKey, out List<Candle> candles))
-            {
-                if (candles.Count > 0)
-                    return candles;
-            }
-
-            candles = await LoadAsync(token, jwtToken, interval, exchange);
-
-            var duration = CacheDurations.TryGetValue(interval, out var cacheTime)
-                ? cacheTime
-                : TimeSpan.FromMinutes(5);
-
-            _cache.Set(cacheKey, candles, duration);
-
-            return candles;
+            // Deliberately no in-memory historical candle cache: the UI requests
+            // candles explicitly and continues building the current candle from ticks.
+            return await LoadAsync(token, jwtToken, interval, exchange);
         }
 
         private async Task<List<Candle>> LoadAsync(string token, string jwtToken, string interval, string exchange = "NSE")
@@ -92,96 +57,16 @@ namespace CodeName399.Kite.API.Services.Indicator
                 async () =>
                 {
                     DateTime toDate = _clock.Now;
-
-                    DateTime fromDate = interval switch
-                    {
-                        "ONE_MINUTE" => toDate.AddDays(-3),
-                        "FIVE_MINUTE" => toDate.AddDays(-7),
-                        "FIFTEEN_MINUTE" => toDate.AddDays(-20),
-                        "THIRTY_MINUTE" => toDate.AddDays(-40),
-                        "ONE_HOUR" => toDate.AddDays(-90),
-                        "ONE_DAY" => toDate.AddYears(-1),
-                        _ => toDate.AddDays(-7),
-                    };
-
+                    DateTime fromDate = _clock.Today.Date;
                     return await DownloadAsync(token, jwtToken, interval, fromDate, toDate, exchange);
                 },
                 _logger
             );
         }
 
-        public async Task<List<Candle>> RefreshAsync(
-            string token,
-            string jwtToken,
-            string interval,
-            List<Candle> existing,
-            string exchange = "NSE"
-        )
-        {
-            if (existing == null || existing.Count == 0)
-                return await LoadAsync(token, jwtToken, interval, exchange);
 
-            var latest = existing.Last().Timestamp;
 
-            //
-            // Expected interval between completed candles.
-            //
-            var expectedGap = interval switch
-            {
-                "ONE_MINUTE" => TimeSpan.FromMinutes(1),
-                "FIVE_MINUTE" => TimeSpan.FromMinutes(5),
-                "FIFTEEN_MINUTE" => TimeSpan.FromMinutes(15),
-                "THIRTY_MINUTE" => TimeSpan.FromMinutes(30),
-                "ONE_HOUR" => TimeSpan.FromHours(1),
-                _ => TimeSpan.FromMinutes(1),
-            };
 
-            //
-            // No completed candle is expected yet.
-            //
-            if (_clock.Now - latest < expectedGap)
-                return existing;
-
-            var fresh = await LoadIncrementalAsync(token, jwtToken, interval, latest, exchange);
-
-            if (fresh.Count == 0)
-                return existing;
-
-            return existing
-                .Concat(fresh)
-                .GroupBy(x => x.Timestamp)
-                .Select(g => g.Last())
-                .OrderBy(x => x.Timestamp)
-                .TakeLast(500)
-                .ToList();
-        }
-
-        private async Task<List<Candle>> LoadIncrementalAsync(
-            string token,
-            string jwtToken,
-            string interval,
-            DateTime lastCandle,
-            string exchange = "NSE"
-        )
-        {
-            return await _rateLimiter.ExecuteAsync(
-                async () =>
-                {
-                    DateTime fromDate = interval switch
-                    {
-                        "ONE_MINUTE" => lastCandle.AddMinutes(-1),
-                        "FIVE_MINUTE" => lastCandle.AddMinutes(-5),
-                        "FIFTEEN_MINUTE" => lastCandle.AddMinutes(-15),
-                        "THIRTY_MINUTE" => lastCandle.AddMinutes(-30),
-                        "ONE_HOUR" => lastCandle.AddHours(-1),
-                        _ => lastCandle.AddMinutes(-1),
-                    };
-
-                    return await DownloadAsync(token, jwtToken, interval, fromDate, _clock.Now, exchange);
-                },
-                _logger
-            );
-        }
 
         private async Task<List<Candle>> DownloadAsync(
             string token,

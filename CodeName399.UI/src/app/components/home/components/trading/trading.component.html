@@ -1,0 +1,63 @@
+<section class="trade-page">
+  <header class="trade-header">
+    <button type="button" class="back-button" (click)="goBack()" aria-label="Return to dashboard"><span class="material-icons" aria-hidden="true">arrow_back</span> Dashboard</button>
+    <div><h1>{{ symbol() }}</h1><p>{{ exchange() }} · Token {{ symbolToken() }} · Live LTP ₹{{ lastPrice() | number:'1.2-2' }}</p></div>
+    <button type="button" (click)="loadCandles()"><span class="material-icons" aria-hidden="true">refresh</span> Reload candles</button>
+  </header>
+  <section class="position-summary" *ngIf="stockDetails() as stock">
+    <div><span>Position</span><strong>{{ stock.isOwned ? 'Owned' : 'Not owned' }}</strong></div>
+    <div><span>Quantity</span><strong>{{ stock.quantity || 0 }}</strong></div>
+    <div><span>Average price</span><strong>₹{{ (stock.averagePrice || 0) | number:'1.2-2' }}</strong></div>
+    <div><span>Profit / Loss</span><strong [class.positive-value]="(stock.profitLoss || 0) >= 0" [class.negative-value]="(stock.profitLoss || 0) < 0">₹{{ (stock.profitLoss || 0) | number:'1.2-2' }}</strong></div>
+    <div><span>Invested amount</span><strong>₹{{ (stock.investedAmount || 0) | number:'1.2-2' }}</strong></div>
+    <div><span>Current position value</span><strong>₹{{ (stock.currentValue || 0) | number:'1.2-2' }}</strong></div>
+    <div><span>Owned round-trip charges</span><strong>₹{{ (stock.ownedEstimatedCharges || 0) | number:'1.2-2' }}</strong></div>
+    <div *ngIf="stock.isOwned"><span>Net P/L after estimated charges</span><strong [class.positive-value]="isNetProfitPositive(stock)" [class.negative-value]="(stock.ownedEstimatedCharges ?? 0) > 0 && !isNetProfitPositive(stock)">{{ displayNetProfitLoss(stock) }}</strong></div>
+    <div><span>Stop loss</span><strong>{{ stock.stopLoss > 0 ? ('₹' + (stock.stopLoss | number:'1.2-2')) : '—' }}</strong></div>
+    <div><span>Upper / Lower circuit</span><strong>₹{{ (stock.upperCircuitLimit || 0) | number:'1.2-2' }} / ₹{{ (stock.lowerCircuitLimit || 0) | number:'1.2-2' }}</strong></div>
+    <div><span>Bid / Ask</span><strong>₹{{ (stock.bid ?? stock.quote?.bid ?? 0) | number:'1.2-2' }} / ₹{{ (stock.ask ?? stock.quote?.ask ?? 0) | number:'1.2-2' }}</strong></div>
+    <div><span>Volume</span><strong>{{ (stock.tickDayVolume ?? stock.quote?.volume ?? 0) | number }}</strong></div>
+    <div><span>Change</span><strong>{{ stock.changePercent | number:'1.2-2' }}%</strong></div>
+    <div><span>Minimum quantity</span><strong>{{ stock.minimumBuyQuantity ?? '—' }}</strong></div>
+    <div><span>Estimated charges</span><strong>₹{{ (stock.estimatedCharges ?? 0) | number:'1.2-2' }}</strong></div>
+    <div><span>Minimum investment + charges</span><strong>₹{{ (stock.minimumInvestmentWithCharges ?? 0) | number:'1.2-2' }}</strong></div>
+    <div><span>Available funds</span><strong>{{ hasSufficientFunds(stock) ? 'Available' : 'Insufficient' }}</strong></div>
+    <div><span>Pullback</span><strong>{{ stock.pullbackDetected ? 'Detected' : '—' }}</strong></div>
+    <div class="trade-buttons" *ngIf="isMarketOpenForOrders()">
+      <button type="button" [disabled]="actionBusy() || stock.isOwned || !hasSufficientFunds(stock)" (click)="buy('minimum')"><span class="material-icons" aria-hidden="true">shopping_cart</span> Min Buy</button>
+      <button type="button" [disabled]="actionBusy() || stock.isOwned || !hasBudgetForMaximum(stock)" (click)="buy('maximum')"><span class="material-icons" aria-hidden="true">add_shopping_cart</span> Max Buy</button>
+      <button type="button" [disabled]="actionBusy() || !stock.isOwned || !(stock.quantity > 0)" (click)="sell()"><span class="material-icons" aria-hidden="true">sell</span> Sell</button>
+    </div>
+    <small *ngIf="!isMarketOpenForOrders()">Market closed — orders unavailable.</small>
+    <p class="action-message" *ngIf="actionMessage()">{{ actionMessage() }}</p>
+  </section>
+  <div class="trade-toolbar">
+    <label><input type="checkbox" [checked]="showPrice()" (change)="toggleIndicator('price')"> Price</label>
+    <label><input type="checkbox" [checked]="showEma9()" (change)="toggleIndicator('ema9')"> EMA 9</label>
+    <label><input type="checkbox" [checked]="showEma21()" (change)="toggleIndicator('ema21')"> EMA 21</label>
+    <label><input type="checkbox" [checked]="showVolume()" (change)="toggleIndicator('volume')"> Volume</label>
+    <span *ngIf="loading()">Loading today’s candles…</span>
+  </div>
+  <p class="trade-error" *ngIf="error()">{{ error() }}</p>
+  <div class="chart-wrap" *ngIf="plot().length; else noCandles">
+    <svg viewBox="0 0 1000 400" preserveAspectRatio="none" role="img" aria-label="Live price chart with EMA indicators">
+      <g class="grid-lines"><line x1="40" y1="20" x2="960" y2="20"/><line x1="40" y1="105" x2="960" y2="105"/><line x1="40" y1="190" x2="960" y2="190"/><line x1="40" y1="275" x2="960" y2="275"/><line x1="40" y1="360" x2="960" y2="360"/></g>
+      <g *ngFor="let tick of priceAxis()"><text x="4" [attr.y]="tick.y + 4" class="price-axis-label">{{ tick.price | number:'1.2-2' }}</text></g>
+      <polyline *ngIf="showEma9()" [attr.points]="ema9Polyline()" fill="none" stroke="#f59e0b" stroke-width="1.8"/>
+      <polyline *ngIf="showEma21()" [attr.points]="ema21Polyline()" fill="none" stroke="#8b5cf6" stroke-width="1.8"/>
+      <g *ngFor="let p of plot(); let i = index; trackBy: trackPoint">
+        <line *ngIf="showPrice() && i > 0" [attr.x1]="plot()[i-1].x" [attr.y1]="plot()[i-1].y" [attr.x2]="p.x" [attr.y2]="p.y" [attr.stroke]="p.price >= plot()[i-1].price ? '#16a34a' : '#dc2626'" stroke-width="1.6"/>
+        <rect *ngIf="showVolume()" [attr.x]="p.x-2" [attr.y]="390-volumeBarHeight(p.candle)" width="4" [attr.height]="volumeBarHeight(p.candle)" fill="#94a3b8" opacity="0.65"/>
+        <circle *ngIf="showPrice()" [attr.cx]="p.x" [attr.cy]="p.y" r="2.6" fill="#2474d2" (click)="selectPoint(p)"><title>{{ p.timestamp }} IST · ₹{{ p.price | number:'1.2-2' }} · O {{ p.candle.open | number:'1.2-2' }} H {{ p.candle.high | number:'1.2-2' }} L {{ p.candle.low | number:'1.2-2' }} C {{ p.candle.close | number:'1.2-2' }}</title></circle>
+        <path *ngIf="p.candle.crossover === 'up'" [attr.d]="'M '+(p.x-6)+' '+(p.y-6)+' L '+(p.x+6)+' '+(p.y+6)+' M '+(p.x+6)+' '+(p.y-6)+' L '+(p.x-6)+' '+(p.y+6)" stroke="#16a34a" stroke-width="3"/>
+        <path *ngIf="p.candle.crossover === 'down'" [attr.d]="'M '+(p.x-6)+' '+(p.y-6)+' L '+(p.x+6)+' '+(p.y+6)+' M '+(p.x+6)+' '+(p.y-6)+' L '+(p.x-6)+' '+(p.y+6)" stroke="#dc2626" stroke-width="3"/>
+        <rect [attr.x]="p.x-7" [attr.y]="p.y-12" width="14" height="24" fill="transparent" (click)="selectPoint(p)"/>
+      </g>
+    </svg>
+    <div class="chart-legend"><span class="price-key">● Price</span><span class="ema9-key">━ EMA 9</span><span class="ema21-key">━ EMA 21</span><span class="up-key">✚ Bullish crossover</span><span class="down-key">✚ Bearish crossover</span></div>
+  </div>
+  <ng-template #noCandles><div class="empty-chart">No candles are available yet. Keep this view open to build candles from live ticks.</div></ng-template>
+  <section class="point-details" *ngIf="selected() as point">
+    <h2>Selected point</h2><div class="detail-grid"><span>Timestamp (IST)</span><strong>{{ point.timestamp | date:'yyyy-MM-dd HH:mm:ss':'+0530' }}</strong><span>Open</span><strong>₹{{ point.open | number:'1.2-2' }}</strong><span>High</span><strong>₹{{ point.high | number:'1.2-2' }}</strong><span>Low</span><strong>₹{{ point.low | number:'1.2-2' }}</strong><span>Close / LTP</span><strong>₹{{ point.close | number:'1.2-2' }}</strong><span>Volume</span><strong>{{ point.volume | number }}</strong><span>EMA 9</span><strong>{{ point.ema9 | number:'1.2-2' }}</strong><span>EMA 21</span><strong>{{ point.ema21 | number:'1.2-2' }}</strong><span>Crossover</span><strong>{{ point.crossover || '—' }}</strong></div>
+  </section>
+</section>

@@ -36,11 +36,6 @@ namespace CodeName399.Kite.API.Models
 
         public List<DailyTradeSummary> OpenTrades { get; set; } = [];
 
-        public int PredictionEvaluations { get; set; }
-        public int PredictionBuySignals { get; set; }
-        public int PredictionHoldDecisions { get; set; }
-        public int PredictionSellSignals { get; set; }
-        public int PredictionDrivenExits { get; set; }
         public int SafetyExits { get; set; }
         public decimal UnrealizedPnL { get; set; }
         public decimal NetPnlIncludingOpen { get; set; }

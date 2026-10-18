@@ -23,34 +23,31 @@
       </label>
     </div>
 
-    <section class="settings-card" *ngIf="sectionMatches('trading', 'auto trading', 'paper trading', 'notifications', 'auto square-off')">
+    <section class="settings-card" *ngIf="sectionMatches('trading', 'auto trading', 'paper trading', 'notifications')">
       <div class="card-header">
-        <button type="button" class="accordion-trigger" (click)="toggleSection('trading')" [attr.aria-expanded]="openSection === 'trading'"><span><h2>Trading</h2><p>API: <code>EnableAutoTrading</code>, <code>PaperTrading</code>, <code>PaperTradingAsLive</code>, <code>EnableNotification</code>, <code>AutoSquareOff</code>.</p></span><span class="accordion-icon">{{ openSection === 'trading' ? '−' : '+' }}</span></button>
+        <button type="button" class="accordion-trigger" (click)="toggleSection('trading')" [attr.aria-expanded]="openSection === 'trading'"><span><h2>Trading</h2><p>The auto-trading flag is retained for configuration compatibility; order placement is endpoint-only. Paper, paper-as-live and notification flags are active.</p></span><span class="accordion-icon">{{ openSection === 'trading' ? '−' : '+' }}</span></button>
       </div>
       <div class="grid-4" *ngIf="openSection === 'trading'">
         <label class="toggle-field"><input type="checkbox" formControlName="enableAutoTrading"><span>Auto trading</span></label>
         <label class="toggle-field"><input type="checkbox" formControlName="paperTrading"><span>Paper trading</span></label>
         <label class="toggle-field"><input type="checkbox" formControlName="paperTradingAsLive"><span>Paper trading as live</span></label>
         <label class="toggle-field"><input type="checkbox" formControlName="enableNotification"><span>Notifications enabled</span></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="autoSquareOff"><span>Auto square-off</span></label>
+        <label class="toggle-field"><input type="checkbox" formControlName="enableNetProfitOpportunityNotifications"><span>Net-profit opportunity notifications</span></label>
+        <label class="toggle-field"><input type="checkbox" formControlName="enablePullbackOpportunityNotifications"><span>Pullback buy-opportunity notifications</span></label>
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('risk capital', 'risk per trade', 'risk reward', 'capital', 'broker failures', 'paper trading balance')">
+    <section class="settings-card" *ngIf="sectionMatches('capital', 'trade allocation', 'paper trading balance')">
       <div class="card-header">
-        <button type="button" class="accordion-trigger" (click)="toggleSection('risk')" [attr.aria-expanded]="openSection === 'risk'"><span><h2>Risk &amp; Capital</h2><p>Risk, capital allocation and broker failure controls.</p></span><span class="accordion-icon">{{ openSection === 'risk' ? '−' : '+' }}</span></button>
+        <button type="button" class="accordion-trigger" (click)="toggleSection('risk')" [attr.aria-expanded]="openSection === 'risk'"><span><h2>Capital &amp; Paper Balance</h2><p>Per-trade capital allocation and simulated account balance.</p></span><span class="accordion-icon">{{ openSection === 'risk' ? '−' : '+' }}</span></button>
       </div>
       <div class="grid-4" *ngIf="openSection === 'risk'">
-        <label><span>Risk per trade %</span><input type="number" formControlName="riskPercentage" min="0" step="0.01"></label>
-        <label><span>Risk/reward ratio</span><input type="number" formControlName="riskRewardRatio" min="0" step="0.1"></label>
         <label><span>Maximum capital per trade %</span><input type="number" formControlName="maxCapitalPerTradePercent" min="0" max="100" step="0.1"></label>
-        <label><span>Max broker failures before kill switch</span><input type="number" formControlName="maxBrokerFailuresBeforeKillSwitch" min="0"></label>
-        <label><span>Broker failure window minutes</span><input type="number" formControlName="brokerFailureWindowMinutes" min="0"></label>
         <label><span>Paper trading balance</span><input type="number" formControlName="paperTradingBalance" min="0" step="100"></label>
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('equity execution', 'exchange', 'product type', 'order type', 'duration', 'spread', 'order book liquidity', 'atr stop multiplier', 'exit retries')">
+    <section class="settings-card" *ngIf="sectionMatches('equity execution', 'exchange', 'product type', 'order type', 'duration')">
       <div class="card-header">
         <button type="button" class="accordion-trigger" (click)="toggleSection('equity')" [attr.aria-expanded]="openSection === 'equity'"><span><h2>Equity Execution</h2><p>Maps field-for-field to <code>TradingConfiguration.Equity</code>.</p></span><span class="accordion-icon">{{ openSection === 'equity' ? '−' : '+' }}</span></button>
       </div>
@@ -59,27 +56,18 @@
         <label><span>Product type</span><input type="text" formControlName="productType"></label>
         <label><span>Order type</span><input type="text" formControlName="orderType"></label>
         <label><span>Duration</span><input type="text" formControlName="duration"></label>
-        <label><span>Maximum spread %</span><input type="number" formControlName="maximumSpreadPercent" min="0" step="0.01"></label>
-        <label><span>ATR stop multiplier</span><input type="number" formControlName="atrStopMultiplier" min="0" step="0.01"></label>
-        <label><span>Minimum order book liquidity coverage ratio</span><input type="number" formControlName="minimumOrderBookLiquidityCoverageRatio" min="0" step="0.01"></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="requireOrderBookLiquidityData"><span>Require order book liquidity data</span></label>
-        <label><span>Exit order timeout seconds</span><input type="number" formControlName="exitOrderTimeoutSeconds" min="0"></label>
-        <label><span>Max market data age seconds</span><input type="number" formControlName="maxMarketDataAgeSeconds" min="0"></label>
-        <label><span>Maximum exit retries</span><input type="number" formControlName="maximumExitRetries" min="0"></label>
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('market hours', 'square-off', 'market open', 'market close', 'cutoff')">
+    <section class="settings-card" *ngIf="sectionMatches('market hours', 'market open', 'market close', 'cutoff')">
       <div class="card-header">
-        <button type="button" class="accordion-trigger" (click)="toggleSection('hours')" [attr.aria-expanded]="openSection === 'hours'"><span><h2>Market Hours &amp; Square-Off</h2><p>All values are sent to the API as <code>TimeSpan</code> strings.</p></span><span class="accordion-icon">{{ openSection === 'hours' ? '−' : '+' }}</span></button>
+        <button type="button" class="accordion-trigger" (click)="toggleSection('hours')" [attr.aria-expanded]="openSection === 'hours'"><span><h2>Market Hours</h2><p>All values are sent to the API as <code>TimeSpan</code> strings.</p></span><span class="accordion-icon">{{ openSection === 'hours' ? '−' : '+' }}</span></button>
       </div>
       <div class="grid-4" *ngIf="openSection === 'hours'">
         <label class="toggle-field"><input type="checkbox" formControlName="ignoreMarketHours"><span>Ignore market hours</span></label>
         <label><span>Market open</span><input type="time" step="1" formControlName="marketOpenTime"></label>
         <label><span>Market close</span><input type="time" step="1" formControlName="marketCloseTime"></label>
         <label><span>Intraday entry cutoff</span><input type="time" step="1" formControlName="intradayEntryCutoffTime"></label>
-        <label><span>Equity MIS auto square-off</span><input type="time" step="1" formControlName="equityMisAutoSquareOffTime"></label>
-        <label><span>Robo auto square-off</span><input type="time" step="1" formControlName="roboAutoSquareOffTime"></label>
       </div>
     </section>
 
@@ -88,26 +76,22 @@
         <button type="button" class="accordion-trigger" (click)="toggleSection('discovery')" [attr.aria-expanded]="openSection === 'discovery'"><span><h2>Watch-list</h2><p>Watch-list refresh interval.</p></span><span class="accordion-icon">{{ openSection === 'discovery' ? '−' : '+' }}</span></button>
       </div>
       <div class="grid-4" *ngIf="openSection === 'discovery'">
-        <label><span>Watch-list refresh minutes</span><input type="number" formControlName="watchListRefreshMinutes" min="0"></label>
+        <label><span>Default page size</span><input type="number" formControlName="gainersPageSize" min="1" max="100" step="1"></label>
+        <label><span>Minimum buy price change %</span><input type="number" formControlName="minimumBuyProfitChangePercent" min="0.01" max="100" step="0.01"></label>
+        <label><span>Watch-list refresh minutes</span><input type="number" formControlName="watchListRefreshMinutes" min="1"></label>
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('runtime', 'connectivity', 'audit', 'consent', 'websocket', 'broker', 'retry', 'trading interval', 'time zone')">
+    <section class="settings-card" *ngIf="sectionMatches('runtime', 'connectivity', 'consent', 'websocket', 'broker', 'retry', 'trading interval')">
       <div class="card-header">
-        <button type="button" class="accordion-trigger" (click)="toggleSection('runtime')" [attr.aria-expanded]="openSection === 'runtime'"><span><h2>Runtime &amp; Connectivity</h2><p>Execution audit, consent, websocket and broker timing controls.</p></span><span class="accordion-icon">{{ openSection === 'runtime' ? '−' : '+' }}</span></button>
+        <button type="button" class="accordion-trigger" (click)="toggleSection('runtime')" [attr.aria-expanded]="openSection === 'runtime'"><span><h2>Runtime &amp; Connectivity</h2><p>Cash-order consent and websocket connectivity controls.</p></span><span class="accordion-icon">{{ openSection === 'runtime' ? '−' : '+' }}</span></button>
       </div>
       <div class="grid-4" *ngIf="openSection === 'runtime'">
-        <label class="toggle-field"><input type="checkbox" formControlName="enableEntryExecutionAudit"><span>Entry execution audit</span></label>
         <label class="toggle-field"><input type="checkbox" formControlName="enableScripConsentForCashOrders"><span>Scrip consent for cash orders</span></label>
         <label><span>Websocket heartbeat seconds</span><input type="number" formControlName="webSocketHeartbeatSeconds" min="0"></label>
         <label><span>Websocket pong timeout seconds</span><input type="number" formControlName="webSocketPongTimeoutSeconds" min="0"></label>
         <label><span>Websocket retry initial seconds</span><input type="number" formControlName="webSocketRetryInitialSeconds" min="0"></label>
         <label><span>Websocket retry max seconds</span><input type="number" formControlName="webSocketRetryMaxSeconds" min="0"></label>
-        <label><span>Broker position confirmation delay</span><input type="number" formControlName="brokerPositionConfirmationDelaySeconds" min="0"></label>
-        <label><span>Square-off retry delay</span><input type="number" formControlName="squareOffRetryDelaySeconds" min="0"></label>
-        <label><span>Buy trading interval ms</span><input type="number" formControlName="buyTradingInterval" min="0"></label>
-        <label><span>Sell trading interval ms</span><input type="number" formControlName="sellTradingInterval" min="0"></label>
-        <label><span>Market time zone</span><input type="text" formControlName="marketTimeZoneId"></label>
       </div>
     </section>
 
@@ -120,7 +104,7 @@
         <label><span>Storage path</span><input type="text" formControlName="rawMarketDataStoragePath"></label>
         <label><span>Maximum ZIP size MB</span><input type="number" formControlName="rawMarketDataMaximumZipSizeMb" min="0"></label>
         <label><span>Rollover at %</span><input type="number" formControlName="rawMarketDataRollOverAtPercent" min="0" max="100"></label>
-        <label class="toggle-field"><input type="checkbox" formControlName="rawMarketDataRecordOnlyDuringMarketHours"><span>Record only during market hours</span></label>
+
       </div>
     </section>
 
@@ -132,7 +116,7 @@
         <label><span>Last daily summary sent</span><input type="date" formControlName="lastDailySummarySent"></label>
         <label><span>Instrument loaded at</span><input type="text" formControlName="instrumentLoadedAt" readonly></label>
         <label class="wide-field"><span>Trading holidays (comma separated YYYY-MM-DD)</span><input type="text" formControlName="tradingHolidays"></label>
-        <label class="wide-field"><span>Visible columns (comma separated)</span><input type="text" formControlName="visibleColumns"></label>
+        <label class="wide-field"><span>Visible columns (comma separated; Stock is always visible)</span><input type="text" formControlName="visibleColumns"></label>
       </div>
     </section>
   </form>

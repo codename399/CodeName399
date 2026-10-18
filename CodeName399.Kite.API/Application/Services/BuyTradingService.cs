@@ -1,6 +1,5 @@
 using CodeName399.Kite.API.Helpers;
 using CodeName399.Kite.API.Helpers.Calculators;
-using CodeName399.Kite.API.Prediction;
 using CodeName399.Kite.API.Models;
 using CodeName399.Kite.API.Models.Enum;
 using CodeName399.Kite.API.Models.WebSocketOrder;
@@ -16,7 +15,6 @@ namespace CodeName399.Kite.API.Services
         private readonly IntradayRiskGuard _intradayRiskGuard;
         private readonly PaperPortfolioService _paperPortfolio;
         private readonly MarketClock _marketClock;
-        private readonly ExpectedPredictionService _prediction;
         private decimal _cachedBalance;
         private DateTime _lastBalanceRefresh = DateTime.MinValue;
 
@@ -36,7 +34,6 @@ namespace CodeName399.Kite.API.Services
             IntradayRiskGuard intradayRiskGuard,
             PaperPortfolioService paperPortfolio,
             MarketClock marketClock,
-            ExpectedPredictionService prediction,
             ILogger<BuyTradingService> logger
         )
             : base(
@@ -59,7 +56,6 @@ namespace CodeName399.Kite.API.Services
             _intradayRiskGuard = intradayRiskGuard;
             _paperPortfolio = paperPortfolio;
             _marketClock = marketClock;
-            _prediction = prediction;
         }
 
         public async Task Execute()
@@ -78,7 +74,6 @@ namespace CodeName399.Kite.API.Services
 
             string jwtToken = (await _angel.GetLoginDataAsync()).JwtToken;
 
-            await RefreshSubscribedStocksAsync(jwtToken);
 
             decimal remainingBalance = await GetAvailableBalanceAsync();
 
@@ -98,52 +93,15 @@ namespace CodeName399.Kite.API.Services
             try
             {
                 if (_tradeManager.IsOpen(stock.Symbol)) { stock.Suggestion = "Close the existing position before buying again."; _tradeManager.ReleaseSymbol(stock.Symbol); return remainingBalance; }
-                if (!_prediction.IsEnabled)
-                {
-                    stock.Suggestion = "Prediction trading is disabled in TradingConfiguration.Prediction.Enabled.";
-                    _logger.LogInformation("BUY REJECTED Symbol={Symbol} Reason={Reason}", stock.Symbol, stock.Suggestion);
-                    _tradeManager.ReleaseSymbol(stock.Symbol);
-                    return remainingBalance;
-                }
-                if (!_prediction.IsModelReady)
-                {
-                    stock.Suggestion = $"Prediction model is not ready. ModelPath={_prediction.ModelFilePath}";
-                    _logger.LogWarning("BUY REJECTED Symbol={Symbol} Reason={Reason} ModelReady={ModelReady} ModelPath={ModelPath}", stock.Symbol, stock.Suggestion, _prediction.IsModelReady, _prediction.ModelFilePath);
-                    _tradeManager.ReleaseSymbol(stock.Symbol);
-                    return remainingBalance;
-                }
-
-                var currentTick = ExpectedPredictionService.ToMarketTick(stock);
-                if (!_prediction.TryGetLiveHistory(stock.SymbolToken, out var predictionHistory))
-                {
-                    stock.Suggestion = $"Prediction history is not ready; need {_prediction.Options.MinimumHistoryTicks} ticks.";
-                    _logger.LogDebug("BUY REJECTED Symbol={Symbol} Reason={Reason}", stock.Symbol, stock.Suggestion);
-                    _tradeManager.ReleaseSymbol(stock.Symbol);
-                    return remainingBalance;
-                }
-
-                var predictionDecision = _prediction.EvaluateEntry(currentTick, predictionHistory);
-                stock.Suggestion = $"Prediction {predictionDecision.Probability:F3}";
-                _logger.LogInformation("PREDICTION ENTRY Symbol={Symbol} Probability={Probability:F4} Decision={Decision} Reason={Reason}", stock.Symbol, predictionDecision.Probability, predictionDecision.ShouldBuy ? "BUY" : "HOLD", predictionDecision.Reason);
-                stock.Reason = predictionDecision.Reason;
-                if (!predictionDecision.ShouldBuy)
-                {
-                    _tradeManager.ReleaseSymbol(stock.Symbol);
-                    return remainingBalance;
-                }
-                var candidate = new TradeCandidate
-{
-    Stock = stock,
-    EntryDecision = "PREDICTION_BUY",
-    EntryPredictionProbability = predictionDecision.Probability,
-    EntryPredictionTimestampUtc = currentTick.ExchangeTime,
-    PredictionModelVersion = _prediction.ModelVersion,
-    SignalPrice = stock.CurrentPrice,
-    SignalAtr = stock.ATR,
-    SignalTimeUtc = currentTick.ExchangeTime,
-    BuyEligibilityReason = $"PREDICTION_BUY:{predictionDecision.Probability:F3}"
-};
-                return await ExecuteTradeCandidate(candidate, remainingBalance);
+                // Automatic order placement is intentionally disabled.
+                // Orders must be initiated through the explicit buy endpoint.
+                stock.Suggestion = "Automatic buying is disabled; use the manual buy endpoint.";
+                _logger.LogInformation(
+                    "BUY SKIPPED Symbol={Symbol} Reason={Reason}",
+                    stock.Symbol,
+                    stock.Suggestion);
+                _tradeManager.ReleaseSymbol(stock.Symbol);
+                return remainingBalance;
             }
             catch (Exception ex) { _logger.LogError(ex, "Failed processing BUY for {Symbol}.", stock.Symbol); _tradeManager.ReleaseSymbol(stock.Symbol); return remainingBalance; }
         }
@@ -460,9 +418,6 @@ namespace CodeName399.Kite.API.Services
                 TrailingActivated = false,
                 EntryDecision = candidate.EntryDecision,
                 EntryReason = candidate.BuyEligibilityReason,
-                EntryPredictionProbability = candidate.EntryPredictionProbability,
-                EntryPredictionTimestampUtc = candidate.EntryPredictionTimestampUtc,
-                PredictionModelVersion = candidate.PredictionModelVersion,
             };
 
             IndicatorMapper.ApplyTradeIndicators(paperTrade, latest, captureEntrySnapshot: true);
@@ -550,9 +505,6 @@ namespace CodeName399.Kite.API.Services
                 TrailingActivated = false,
                 EntryDecision = candidate.EntryDecision,
                 EntryReason = candidate.BuyEligibilityReason,
-                EntryPredictionProbability = candidate.EntryPredictionProbability,
-                EntryPredictionTimestampUtc = candidate.EntryPredictionTimestampUtc,
-                PredictionModelVersion = candidate.PredictionModelVersion,
                 EligibilityReason = candidate.BuyEligibilityReason
             };
 
@@ -640,24 +592,5 @@ namespace CodeName399.Kite.API.Services
             return _cachedBalance;
         }
 
-        private async Task RefreshSubscribedStocksAsync(string jwtToken)
-        {
-            foreach (var stock in _watchList.Current)
-            {
-                if (!stock.IsSubscribed || stock.IsOwned || stock.Quote == null)
-                    continue;
-
-                var indicator = await _indicatorService.GetAsync(stock.Quote, jwtToken);
-                if (indicator == null)
-                    continue;
-
-                // Refresh indicator/candle data only. No strategy evaluator,
-                // legacy score/confidence/indicator gate or stock-
-                // Indicator refresh is observational only; it does not gate entry.
-                IndicatorMapper.ApplyIndicators(stock, indicator);
-                stock.HistoricalLoaded = true;
-                stock.LastHistoricalUpdate = DateTime.UtcNow;
-            }
-        }
     }
 }

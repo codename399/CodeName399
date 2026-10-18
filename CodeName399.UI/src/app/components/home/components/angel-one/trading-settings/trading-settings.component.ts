@@ -31,49 +31,31 @@ export class TradingSettingsComponent implements OnInit {
     paperTrading: [true],
     paperTradingAsLive: [true],
     enableNotification: [true],
+    enablePullbackOpportunityNotifications: [false],
+    enableNetProfitOpportunityNotifications: [false],
+    gainersPageSize: [10, [Validators.required, Validators.min(1), Validators.max(100)]],
+    minimumBuyProfitChangePercent: [0.25, [Validators.required, Validators.min(0.01), Validators.max(100)]],
 
-    riskPercentage: [0.5, [Validators.required, Validators.min(0)]],
-    riskRewardRatio: [2, [Validators.required, Validators.min(0)]],
     maxCapitalPerTradePercent: [
       10,
       [Validators.required, Validators.min(0), Validators.max(100)],
     ],
-    maxBrokerFailuresBeforeKillSwitch: [
-      5,
-      [Validators.required, Validators.min(0)],
-    ],
-    brokerFailureWindowMinutes: [2, [Validators.required, Validators.min(0)]],
-
     exchange: ['NSE', Validators.required],
     productType: ['INTRADAY', Validators.required],
     orderType: ['MARKET', Validators.required],
     duration: ['DAY', Validators.required],
-    atrStopMultiplier: [1.2, [Validators.required, Validators.min(0)]],
-    maximumSpreadPercent: [0.5, [Validators.required, Validators.min(0)]],
-    minimumOrderBookLiquidityCoverageRatio: [
-      1,
-      [Validators.required, Validators.min(0)],
-    ],
-    requireOrderBookLiquidityData: [false],
-    exitOrderTimeoutSeconds: [10, [Validators.required, Validators.min(0)]],
-    maxMarketDataAgeSeconds: [15, [Validators.required, Validators.min(0)]],
-    maximumExitRetries: [5, [Validators.required, Validators.min(0)]],
 
     ignoreMarketHours: [false],
     marketOpenTime: ['09:15:00', Validators.required],
     marketCloseTime: ['15:00:00', Validators.required],
     intradayEntryCutoffTime: ['15:00:00', Validators.required],
-    equityMisAutoSquareOffTime: ['15:30:00', Validators.required],
-    roboAutoSquareOffTime: ['15:30:00', Validators.required],
 
-    watchListRefreshMinutes: [1, [Validators.required, Validators.min(0)]],
+    watchListRefreshMinutes: [1, [Validators.required, Validators.min(1)]],
 
-    marketTimeZoneId: ['Asia/Kolkata', Validators.required],
     tradingHolidays: [''],
     lastDailySummarySent: [''],
     instrumentLoadedAt: [''],
 
-    enableEntryExecutionAudit: [true],
     enableScripConsentForCashOrders: [true],
     webSocketHeartbeatSeconds: [10, [Validators.required, Validators.min(0)]],
     webSocketPongTimeoutSeconds: [30, [Validators.required, Validators.min(0)]],
@@ -82,24 +64,15 @@ export class TradingSettingsComponent implements OnInit {
       [Validators.required, Validators.min(0)],
     ],
     webSocketRetryMaxSeconds: [60, [Validators.required, Validators.min(0)]],
-    brokerPositionConfirmationDelaySeconds: [
-      1,
-      [Validators.required, Validators.min(0)],
-    ],
-    squareOffRetryDelaySeconds: [1, [Validators.required, Validators.min(0)]],
 
-    buyTradingInterval: [1000, [Validators.required, Validators.min(0)]],
-    sellTradingInterval: [1000, [Validators.required, Validators.min(0)]],
     visibleColumns: ['stock, ltp, minimumQuantity, charges, investmentWithCharges, profitLoss, pullback, funds, subscription, action'],
 
-    autoSquareOff: [true],
     paperTradingBalance: [100000, [Validators.required, Validators.min(0)]],
 
     rawMarketDataEnabled: [true],
     rawMarketDataStoragePath: ['RawMarketData', Validators.required],
-    rawMarketDataMaximumZipSizeMb: [100, [Validators.required, Validators.min(0)]],
-    rawMarketDataRollOverAtPercent: [95, [Validators.required, Validators.min(0), Validators.max(100)]],
-    rawMarketDataRecordOnlyDuringMarketHours: [true],
+    rawMarketDataMaximumZipSizeMb: [100, [Validators.required, Validators.min(1)]],
+    rawMarketDataRollOverAtPercent: [95, [Validators.required, Validators.min(1), Validators.max(99)]],
   });
 
   ngOnInit(): void {
@@ -125,28 +98,17 @@ export class TradingSettingsComponent implements OnInit {
               paperTrading: config?.paperTrading ?? true,
               paperTradingAsLive: config?.paperTradingAsLive ?? true,
               enableNotification: config?.enableNotification ?? true,
+              enablePullbackOpportunityNotifications: config?.enablePullbackOpportunityNotifications ?? false,
+              enableNetProfitOpportunityNotifications: config?.enableNetProfitOpportunityNotifications ?? false,
+              gainersPageSize: config?.gainersPageSize ?? 10,
+              minimumBuyProfitChangePercent: config?.minimumBuyProfitChangePercent ?? 0.25,
 
-              riskPercentage: config?.riskPercentage ?? 0.5,
-              riskRewardRatio: config?.riskRewardRatio ?? 2,
               maxCapitalPerTradePercent:
                 config?.maxCapitalPerTradePercent ?? 10,
-              maxBrokerFailuresBeforeKillSwitch:
-                config?.maxBrokerFailuresBeforeKillSwitch ?? 5,
-              brokerFailureWindowMinutes:
-                config?.brokerFailureWindowMinutes ?? 2,
-
               exchange: equity.exchange,
               productType: equity.productType,
               orderType: equity.orderType,
               duration: equity.duration,
-              atrStopMultiplier: equity.atrStopMultiplier,
-              maximumSpreadPercent: equity.maximumSpreadPercent,
-              minimumOrderBookLiquidityCoverageRatio:
-                equity.minimumOrderBookLiquidityCoverageRatio,
-              requireOrderBookLiquidityData: equity.requireOrderBookLiquidityData,
-              exitOrderTimeoutSeconds: equity.exitOrderTimeoutSeconds,
-              maxMarketDataAgeSeconds: equity.maxMarketDataAgeSeconds,
-              maximumExitRetries: equity.maximumExitRetries,
 
               ignoreMarketHours: config?.ignoreMarketHours ?? false,
               marketOpenTime: this.time(config?.marketOpenTime, '09:15:00'),
@@ -155,24 +117,13 @@ export class TradingSettingsComponent implements OnInit {
                 config?.intradayEntryCutoffTime,
                 '15:00:00',
               ),
-              equityMisAutoSquareOffTime: this.time(
-                config?.equityMisAutoSquareOffTime,
-                '15:30:00',
-              ),
-              roboAutoSquareOffTime: this.time(
-                config?.roboAutoSquareOffTime,
-                '15:30:00',
-              ),
 
               watchListRefreshMinutes: config?.watchListRefreshMinutes ?? 1,
 
-              marketTimeZoneId: config?.marketTimeZoneId ?? 'Asia/Kolkata',
               tradingHolidays: (config?.tradingHolidays ?? []).join(', '),
               lastDailySummarySent: this.dateOnly(config?.lastDailySummarySent),
               instrumentLoadedAt: this.dateTime(config?.instrumentLoadedAt),
 
-              enableEntryExecutionAudit:
-                config?.enableEntryExecutionAudit ?? true,
               enableScripConsentForCashOrders:
                 config?.enableScripConsentForCashOrders ?? true,
               webSocketHeartbeatSeconds:
@@ -182,13 +133,7 @@ export class TradingSettingsComponent implements OnInit {
               webSocketRetryInitialSeconds:
                 config?.webSocketRetryInitialSeconds ?? 10,
               webSocketRetryMaxSeconds: config?.webSocketRetryMaxSeconds ?? 60,
-              brokerPositionConfirmationDelaySeconds:
-                config?.brokerPositionConfirmationDelaySeconds ?? 1,
-              squareOffRetryDelaySeconds:
-                config?.squareOffRetryDelaySeconds ?? 1,
 
-              buyTradingInterval: config?.buyTradingInterval ?? 1000,
-              sellTradingInterval: config?.sellTradingInterval ?? 1000,
               visibleColumns: this.sanitizeVisibleColumns(
                 config?.visibleColumns ?? [
                   'stock', 'ltp', 'minimumQuantity', 'charges',
@@ -197,14 +142,12 @@ export class TradingSettingsComponent implements OnInit {
                 ],
               ).join(', '),
 
-              autoSquareOff: config?.autoSquareOff ?? true,
               paperTradingBalance: config?.paperTradingBalance ?? 100000,
 
               rawMarketDataEnabled: rawMarketData.enabled,
               rawMarketDataStoragePath: rawMarketData.storagePath,
               rawMarketDataMaximumZipSizeMb: rawMarketData.maximumZipSizeMb,
               rawMarketDataRollOverAtPercent: rawMarketData.rollOverAtPercent,
-              rawMarketDataRecordOnlyDuringMarketHours: rawMarketData.recordOnlyDuringMarketHours,
             },
             { emitEvent: false },
           );
@@ -226,51 +169,39 @@ export class TradingSettingsComponent implements OnInit {
     const current = this.currentConfiguration ?? ({} as TradingConfiguration);
 
     const configuration: TradingConfiguration = {
+      ...current,
       id: current.id ?? 'DEFAULT',
 
       enableAutoTrading: !!v.enableAutoTrading,
       paperTrading: !!v.paperTrading,
       paperTradingAsLive: !!v.paperTradingAsLive,
       enableNotification: !!v.enableNotification,
+      enablePullbackOpportunityNotifications: !!v.enablePullbackOpportunityNotifications,
+      enableNetProfitOpportunityNotifications: !!v.enableNetProfitOpportunityNotifications,
+      gainersPageSize: Number(v.gainersPageSize),
+      minimumBuyProfitChangePercent: Number(v.minimumBuyProfitChangePercent),
 
-      riskPercentage: Number(v.riskPercentage),
-      riskRewardRatio: Number(v.riskRewardRatio),
       maxCapitalPerTradePercent: Number(v.maxCapitalPerTradePercent),
-      maxBrokerFailuresBeforeKillSwitch: Number(
-        v.maxBrokerFailuresBeforeKillSwitch,
-      ),
-      brokerFailureWindowMinutes: Number(v.brokerFailureWindowMinutes),
-
       ignoreMarketHours: !!v.ignoreMarketHours,
       marketOpenTime: this.toTimeSpan(v.marketOpenTime),
       marketCloseTime: this.toTimeSpan(v.marketCloseTime),
       intradayEntryCutoffTime: this.toTimeSpan(v.intradayEntryCutoffTime),
-      equityMisAutoSquareOffTime: this.toTimeSpan(v.equityMisAutoSquareOffTime),
-      roboAutoSquareOffTime: this.toTimeSpan(v.roboAutoSquareOffTime),
 
       watchListRefreshMinutes: Number(v.watchListRefreshMinutes),
-      marketTimeZoneId: String(v.marketTimeZoneId),
       tradingHolidays: this.csv(v.tradingHolidays),
       lastDailySummarySent: this.nullIfBlank(v.lastDailySummarySent),
       instrumentLoadedAt:
         current.instrumentLoadedAt ?? this.nullIfBlank(v.instrumentLoadedAt),
 
-      enableEntryExecutionAudit: !!v.enableEntryExecutionAudit,
+      researchDataVersion: current.researchDataVersion ?? 'v1',
       enableScripConsentForCashOrders: !!v.enableScripConsentForCashOrders,
       webSocketHeartbeatSeconds: Number(v.webSocketHeartbeatSeconds),
       webSocketPongTimeoutSeconds: Number(v.webSocketPongTimeoutSeconds),
       webSocketRetryInitialSeconds: Number(v.webSocketRetryInitialSeconds),
       webSocketRetryMaxSeconds: Number(v.webSocketRetryMaxSeconds),
-      brokerPositionConfirmationDelaySeconds: Number(
-        v.brokerPositionConfirmationDelaySeconds,
-      ),
-      squareOffRetryDelaySeconds: Number(v.squareOffRetryDelaySeconds),
 
-      buyTradingInterval: Number(v.buyTradingInterval),
-      sellTradingInterval: Number(v.sellTradingInterval),
       visibleColumns: this.sanitizeVisibleColumns(this.csv(v.visibleColumns)),
 
-      autoSquareOff: !!v.autoSquareOff,
       paperTradingBalance: Number(v.paperTradingBalance),
 
       rawMarketData: {
@@ -278,7 +209,6 @@ export class TradingSettingsComponent implements OnInit {
         storagePath: String(v.rawMarketDataStoragePath),
         maximumZipSizeMb: Number(v.rawMarketDataMaximumZipSizeMb),
         rollOverAtPercent: Number(v.rawMarketDataRollOverAtPercent),
-        recordOnlyDuringMarketHours: !!v.rawMarketDataRecordOnlyDuringMarketHours,
       },
 
       equity: {
@@ -286,15 +216,6 @@ export class TradingSettingsComponent implements OnInit {
         productType: String(v.productType),
         orderType: String(v.orderType),
         duration: String(v.duration),
-        atrStopMultiplier: Number(v.atrStopMultiplier),
-        maximumSpreadPercent: Number(v.maximumSpreadPercent),
-        minimumOrderBookLiquidityCoverageRatio: Number(
-          v.minimumOrderBookLiquidityCoverageRatio,
-        ),
-        requireOrderBookLiquidityData: !!v.requireOrderBookLiquidityData,
-        exitOrderTimeoutSeconds: Number(v.exitOrderTimeoutSeconds),
-        maxMarketDataAgeSeconds: Number(v.maxMarketDataAgeSeconds),
-        maximumExitRetries: Number(v.maximumExitRetries),
       },
     };
 
@@ -345,13 +266,6 @@ export class TradingSettingsComponent implements OnInit {
       productType: 'INTRADAY',
       orderType: 'MARKET',
       duration: 'DAY',
-      atrStopMultiplier: 1.2,
-      maximumSpreadPercent: 0.5,
-      minimumOrderBookLiquidityCoverageRatio: 1,
-      requireOrderBookLiquidityData: false,
-      exitOrderTimeoutSeconds: 10,
-      maxMarketDataAgeSeconds: 15,
-      maximumExitRetries: 5,
     };
   }
 
@@ -361,7 +275,6 @@ export class TradingSettingsComponent implements OnInit {
       storagePath: 'RawMarketData',
       maximumZipSizeMb: 100,
       rollOverAtPercent: 95,
-      recordOnlyDuringMarketHours: true,
     };
   }
 
@@ -396,7 +309,7 @@ export class TradingSettingsComponent implements OnInit {
       'investmentWithCharges', 'profitLoss', 'pullback',
       'funds', 'subscription', 'action',
     ]);
-    return [...new Set(columns.filter((column) => allowed.has(column)))];
+    return ['stock', ...new Set(columns.filter((column) => allowed.has(column) && column !== 'stock'))];
   }
 
   private nullIfBlank(value: string | null | undefined): string | null {

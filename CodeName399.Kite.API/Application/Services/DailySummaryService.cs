@@ -31,7 +31,7 @@ namespace CodeName399.Kite.API.Services
 
         public async Task<DailyTradingSummary> GetDailySummaryAsync(DateOnly date)
         {
-            var ist = TimeZoneInfo.FindSystemTimeZoneById("Asia/Kolkata");
+            var ist = MarketClock.IndiaTimeZone;
             var startUtc = TimeZoneInfo.ConvertTimeToUtc(date.ToDateTime(TimeOnly.MinValue), ist);
             var endUtc = TimeZoneInfo.ConvertTimeToUtc(date.AddDays(1).ToDateTime(TimeOnly.MinValue), ist);
 
@@ -62,9 +62,7 @@ namespace CodeName399.Kite.API.Services
                 summary.TotalInvestment += investment;
                 summary.Trades.Add(ToDailyTrade(trade, net, charges, false));
 
-                if (trade.EntryDecision.Contains("PREDICTION_BUY", StringComparison.OrdinalIgnoreCase)) summary.PredictionBuySignals++;
-                if ((trade.ExitCategory + " " + trade.ExitReason).Contains("PREDICTION", StringComparison.OrdinalIgnoreCase)) summary.PredictionDrivenExits++;
-                else summary.SafetyExits++;
+                summary.SafetyExits++;
             }
 
             foreach (var trade in openTrades)
@@ -100,9 +98,6 @@ namespace CodeName399.Kite.API.Services
             ExitTrigger = trade.ExitTrigger,
             EntryDecision = trade.EntryDecision,
             EntryReason = trade.EntryReason,
-            EntryPredictionProbability = trade.EntryPredictionProbability,
-            ExitPredictionProbability = trade.ExitPredictionProbability,
-            PredictionModelVersion = trade.PredictionModelVersion,
             EntryTime = trade.EntryTime,
             ExitTime = trade.ExitTime ?? DateTime.MinValue,
             IsOpen = open
@@ -112,7 +107,7 @@ namespace CodeName399.Kite.API.Services
         {
             try
             {
-                var ist = TimeZoneInfo.FindSystemTimeZoneById("Asia/Kolkata");
+                var ist = MarketClock.IndiaTimeZone;
 
                 var nowIst = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ist);
 

@@ -18,9 +18,6 @@ public class Instrument : Audit
     [JsonPropertyName("instrumenttype")]
     public string instrumenttype { get; set; } = "";
 
-    [JsonPropertyName("is_cas_enabled")]
-    public bool IsCasEnabled { get; set; }
-
     [JsonIgnore]
     public bool IsIntradayEligible { get; set; } = true;
 

@@ -10,9 +10,6 @@ public sealed class TradeCandidate
 {
     public Gainer Stock { get; set; } = default!;
     public string EntryDecision { get; set; } = "OPEN";
-    public double EntryPredictionProbability { get; set; }
-    public DateTime? EntryPredictionTimestampUtc { get; set; }
-    public int PredictionModelVersion { get; set; }
     public TradeIndicatorSnapshot EntryIndicators { get; set; } = new();
     public string EligibilityReason { get; set; } = string.Empty;
     public string BuyEligibilityReason { get; set; } = string.Empty;

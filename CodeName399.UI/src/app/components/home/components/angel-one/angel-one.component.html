@@ -71,7 +71,7 @@
           </div>
 <div
             class="summary-stripe-item tooltip-trigger"
-            title="Auto trading"
+            title="Auto-trading configuration flag only; order placement is manual endpoint-only"
             tabindex="0"
           >
             <span>🤖</span>
@@ -148,6 +148,8 @@
               <input
                 type="checkbox"
                 [checked]="isColumnVisible(column.key)"
+                [disabled]="column.key === 'stock'"
+                [attr.aria-label]="column.key === 'stock' ? 'Stock column is always visible' : column.label"
                 (change)="toggleColumn(column.key)"
               />
               <span>{{ column.label }}</span>
@@ -166,8 +168,9 @@
         <div class="gainer-tools">
           <label class="search-box" aria-label="Search gainers">
             <span class="material-icons">search</span>
-            <input type="search" placeholder="Search stock symbol…" [value]="searchText()" (input)="onSearchChanged($any($event.target).value)" />
+            <input type="search" placeholder="Search stock symbol…" [value]="searchDraft()" (input)="onSearchDraftChanged($any($event.target).value)" (keydown.enter)="applySearch()" />
           </label>
+          <button class="pill-button" type="button" (click)="applySearch()" title="Search gainers"><span class="material-icons">search</span> Search</button>
           <button class="pill-button" type="button" (click)="refresh()" title="Refresh gainers"><span class="material-icons">refresh</span> Refresh</button>
         </div>
       </div>
@@ -175,7 +178,7 @@
       <section class="table-shell">
         <div class="table-header gainer-table-header">
           <div><strong>{{ totalCount() }}</strong> stocks <span class="muted">· page {{ page() }} of {{ totalPages() }}</span></div>
-          <label class="page-size">Rows <select [value]="pageSize()" (change)="changePageSize($any($event.target).value)"><option value="10">10</option><option value="20">20</option><option value="50">50</option></select></label>
+          <label class="page-size">Rows <select [value]="pageSize()" (change)="changePageSize($any($event.target).value)"><option [value]="configuration()?.gainersPageSize">Default ({{ configuration()?.gainersPageSize ?? 10 }})</option><option value="10">10</option><option value="20">20</option><option value="25">25</option><option value="50">50</option><option value="100">100</option></select></label>
         </div>
         <div class="loading-bar" *ngIf="isLoadingGainers()"><span></span></div>
         <div class="empty-state" *ngIf="!isLoadingGainers() && filteredGainers().length === 0">
@@ -186,8 +189,6 @@
             <table>
             <thead>
               <tr>
-                <th>Stock</th>
-                <th>LTP</th>
                 <th *ngIf="visibleColumnSet().has('stock')">Stock</th>
                 <th *ngIf="visibleColumnSet().has('ltp')">LTP</th>
                 <th *ngIf="visibleColumnSet().has('minimumQuantity')">Min. Qty</th>
@@ -213,21 +214,24 @@
                 }"
               >
                 <td class="primary-stock-cell" *ngIf="visibleColumnSet().has('stock')">
-                  <div class="stock-primary">{{ stock.symbol }}</div>
+                  <button class="stock-primary stock-link" type="button" (click)="openTrading(stock)" [title]="'Open trading chart for ' + stock.symbol">{{ stock.symbol }}</button>
                   <div class="stock-secondary">{{ stock.exchange || stock.quote.exchange || 'NSE' }} · {{ stock.changePercent | number:'1.2-2' }}%</div>
                 </td>
                 <td class="numeric-cell" *ngIf="visibleColumnSet().has('ltp')">₹{{ stock.currentPrice | number:'1.2-2' }}</td>
-                <td class="numeric-cell" *ngIf="visibleColumnSet().has('minimumQuantity')">{{ stock.minimumBuyQuantity ?? '—' }}</td>
-                <td class="numeric-cell" *ngIf="visibleColumnSet().has('charges')">{{ stock.estimatedCharges != null ? ('₹' + (stock.estimatedCharges | number:'1.2-2')) : '—' }}</td>
-                <td class="numeric-cell" *ngIf="visibleColumnSet().has('investmentWithCharges')">{{ stock.minimumInvestmentWithCharges != null ? ('₹' + (stock.minimumInvestmentWithCharges | number:'1.2-2')) : '—' }}</td>
-                <td class="numeric-cell" *ngIf="visibleColumnSet().has('profitLoss')" [class.positive]="stock.profitLoss >= 0" [class.negative]="stock.profitLoss < 0">{{ stock.isOwned ? ('₹' + (stock.profitLoss | number:'1.2-2')) : '—' }}</td>
+                <td class="numeric-cell" *ngIf="visibleColumnSet().has('minimumQuantity')">{{ stock.isOwned ? '—' : (stock.minimumBuyQuantity ?? '—') }}</td>
+                <td class="numeric-cell" *ngIf="visibleColumnSet().has('charges')">{{ displayCharges(stock) }}</td>
+                <td class="numeric-cell" *ngIf="visibleColumnSet().has('investmentWithCharges')">{{ displayMinimumInvestment(stock) }}</td>
+                <td class="numeric-cell" *ngIf="visibleColumnSet().has('profitLoss')" [class.positive]="isDisplayProfitPositive(stock)" [class.negative]="!isDisplayProfitPositive(stock)" [title]="stock.isOwned && (stock.ownedEstimatedCharges ?? 0) <= 0 ? 'Gross P/L; round-trip charge estimate pending' : 'P/L after estimated round-trip charges when owned'">{{ stock.isOwned ? ('₹' + (displayProfitLoss(stock) | number:'1.2-2')) : '—' }}</td>
                 <td *ngIf="visibleColumnSet().has('pullback')"><span class="status-chip" [class.status-good]="stock.pullbackDetected">{{ stock.pullbackDetected ? 'Detected' : '—' }}</span></td>
-                <td *ngIf="visibleColumnSet().has('funds')"><span class="status-chip" [class.status-good]="hasSufficientFunds(stock)" [class.status-bad]="!hasSufficientFunds(stock)">{{ hasSufficientFunds(stock) ? 'Available' : 'Insufficient' }}</span></td>
+                <td *ngIf="visibleColumnSet().has('funds')"><span class="status-chip" [class.status-good]="stock.isOwned || hasSufficientFunds(stock)" [class.status-bad]="!stock.isOwned && !hasSufficientFunds(stock)">{{ stock.isOwned ? 'Owned' : (hasSufficientFunds(stock) ? 'Available' : 'Insufficient') }}</span></td>
                 <td *ngIf="visibleColumnSet().has('subscription')"><button class="icon-action" type="button" [disabled]="actionInProgress() === stock.symbolToken || stock.isOwned" (click)="toggleSubscription(stock)" [title]="stock.isSubscribed ? 'Unsubscribe' : 'Subscribe'"><span class="material-icons">{{ stock.isSubscribed ? 'notifications_active' : 'notifications_off' }}</span><span>{{ stock.isSubscribed ? 'Subscribed' : 'Subscribe' }}</span></button></td>
                 <td class="action-cell" *ngIf="visibleColumnSet().has('action')">
-                  <button *ngIf="!stock.isOwned" class="trade-action buy-action" type="button" [disabled]="!isMarketOpenForOrders() || actionInProgress() === stock.symbolToken || !hasSufficientFunds(stock) || !(stock.minimumBuyQuantity ?? 0)" (click)="executeManualOrder(stock, 'buy')" title="Buy stock"><span class="material-icons">shopping_cart</span> Buy</button>
-                  <button *ngIf="stock.isOwned" class="trade-action sell-action" type="button" [disabled]="!isMarketOpenForOrders() || actionInProgress() === stock.symbolToken || stock.quantity < 1" (click)="executeManualOrder(stock, 'sell')" title="Sell owned stock"><span class="material-icons">sell</span> Sell</button>
-                  <small *ngIf="!isMarketOpenForOrders()" class="market-closed-note">Market closed</small>
+                  <ng-container *ngIf="isMarketOpenForOrders(); else marketClosedActions">
+                    <button *ngIf="!stock.isOwned" class="trade-action buy-action" type="button" [disabled]="actionInProgress() === stock.symbolToken || !hasSufficientFunds(stock)" (click)="executeManualOrder(stock, 'buy', 'minimum')" title="Buy minimum quantity to cover charges"><span class="material-icons">shopping_cart</span> Min Buy</button>
+                    <button *ngIf="!stock.isOwned" class="trade-action buy-action" type="button" [disabled]="actionInProgress() === stock.symbolToken || !hasBudgetForMaximum(stock)" (click)="executeManualOrder(stock, 'buy', 'maximum')" title="Buy maximum quantity within trade budget"><span class="material-icons">add_shopping_cart</span> Max Buy</button>
+                    <button *ngIf="stock.isOwned" class="trade-action sell-action" type="button" [disabled]="actionInProgress() === stock.symbolToken || stock.quantity < 1" (click)="executeManualOrder(stock, 'sell')" title="Sell owned stock"><span class="material-icons">sell</span> Sell</button>
+                  </ng-container>
+                  <ng-template #marketClosedActions><small class="market-closed-note">Market closed</small></ng-template>
                 </td>
               </tr>
             </tbody>

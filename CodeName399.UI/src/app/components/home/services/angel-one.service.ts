@@ -95,20 +95,44 @@ export class AngelOneService {
   }
 
 
-  subscribeStock(symbolToken: string) {
-    return this.#http.post(this.#api.getUrl(`/api/market/${encodeURIComponent(symbolToken)}/subscribe`, false), {});
+  subscribeStock(symbolToken: string, exchange = 'NSE') {
+    const params = new URLSearchParams({ exchange });
+    return this.#http.post(this.#api.getUrl(`/api/market/${encodeURIComponent(symbolToken)}/subscribe?${params.toString()}`, false), {});
   }
 
-  unsubscribeStock(symbolToken: string) {
-    return this.#http.delete(this.#api.getUrl(`/api/market/${encodeURIComponent(symbolToken)}/subscribe`, false));
+  unsubscribeStock(symbolToken: string, exchange = 'NSE') {
+    const params = new URLSearchParams({ exchange });
+    return this.#http.delete(this.#api.getUrl(`/api/market/${encodeURIComponent(symbolToken)}/subscribe?${params.toString()}`, false));
   }
 
-  buyStock(symbolToken: string, quantity: number) {
-    return this.#http.post(this.#api.getUrl(`/api/market/${encodeURIComponent(symbolToken)}/buy`, false), { quantity });
+  getTodayCandles(symbolToken: string, exchange = 'NSE', interval = 'ONE_MINUTE') {
+    const params = new URLSearchParams({ exchange, interval });
+    return this.#http.get<Array<{ timestamp: string; open: number; high: number; low: number; close: number; volume: number }>>(
+      this.#api.getUrl(`/api/market/${encodeURIComponent(symbolToken)}/candles?${params.toString()}`, false),
+    );
   }
 
-  sellStock(symbolToken: string, quantity: number) {
-    return this.#http.post(this.#api.getUrl(`/api/market/${encodeURIComponent(symbolToken)}/sell`, false), { quantity });
+  getGainersPage(page: number, pageSize: number, search: string) {
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (search.trim()) params.set('search', search.trim());
+    return this.#http.get<{ page: number; pageSize: number; totalCount: number; totalPages: number; items: Gainer[] }>(
+      this.#api.getUrl(`/api/market/gainers?${params.toString()}`, false),
+    );
+  }
+
+  searchGainers(query: string, page: number, pageSize: number) {
+    const params = new URLSearchParams({ query: query.trim(), page: String(page), pageSize: String(pageSize) });
+    return this.#http.get<{ page: number; pageSize: number; totalCount: number; totalPages: number; items: Gainer[] }>(
+      this.#api.getUrl(`/api/market/search?${params.toString()}`, false),
+    );
+  }
+
+  buyStock(symbolToken: string, quantity: number, buyMode: 'minimum' | 'maximum' = 'minimum', exchange = 'NSE') {
+    return this.#http.post(this.#api.getUrl('/api/market/buy', false), { symbolToken, quantity, buyMode, exchange });
+  }
+
+  sellStock(symbolToken: string, quantity: number, exchange = 'NSE') {
+    return this.#http.post(this.#api.getUrl('/api/market/sell', false), { symbolToken, quantity, exchange });
   }
 
   get isAutoTradingEnabled(): boolean {

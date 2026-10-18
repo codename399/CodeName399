@@ -127,6 +127,12 @@ export const routes: Routes = [
         data: { projectName: Constants.angelOne }
       },
       {
+        path: 'trade/:symbolToken',
+        loadComponent: () => import('./components/home/components/trading/trading.component').then(c => c.TradingComponent),
+        canActivate: [AuthGuard],
+        data: { projectName: Constants.angelOne }
+      },
+      {
         path: 'trading-settings',
         loadComponent: () =>
           import(

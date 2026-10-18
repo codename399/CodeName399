@@ -40,8 +40,16 @@ public class Gainer
     public MarketQuoteData Quote { get; set; } = new();
     public int Priority { get; set; }
     public bool IsSubscribed { get; set; }
-    public DateTime LastHistoricalUpdate { get; set; }
-    public bool HistoricalLoaded { get; set; }
+
+    // Dashboard execution estimates, refreshed with the latest market price.
+    public int MinimumBuyQuantity { get; set; }
+    public decimal EstimatedCharges { get; set; }
+    public decimal OwnedEstimatedCharges { get; set; }
+    public decimal MinimumInvestmentWithCharges { get; set; }
+    public bool? SufficientFunds { get; set; }
+    public bool PullbackDetected { get; set; }
+    public bool IsManuallySubscribed { get; set; }
+    public bool IsManuallyUnsubscribed { get; set; }
 
     // Raw latest broker tick state used for UI/live monitoring.
     public int TickExchangeType { get; set; }

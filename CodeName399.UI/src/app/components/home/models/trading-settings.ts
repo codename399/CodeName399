@@ -3,13 +3,7 @@ export interface InstrumentTradingSettings {
   productType: string;
   orderType: string;
   duration: string;
-  atrStopMultiplier: number;
-  maximumSpreadPercent: number;
-  minimumOrderBookLiquidityCoverageRatio: number;
-  requireOrderBookLiquidityData: boolean;
-  exitOrderTimeoutSeconds: number;
-  maxMarketDataAgeSeconds: number;
-  maximumExitRetries: number;
+  /* Execution defaults used by explicit manual order endpoints. */
 }
 
 export interface RawMarketDataSettings {
@@ -17,7 +11,6 @@ export interface RawMarketDataSettings {
   storagePath: string;
   maximumZipSizeMb: number;
   rollOverAtPercent: number;
-  recordOnlyDuringMarketHours: boolean;
 }
 
 /**
@@ -29,42 +22,33 @@ export interface TradingConfiguration {
   enableAutoTrading: boolean;
   paperTrading: boolean;
   paperTradingAsLive: boolean;
+  gainersPageSize: number;
+  minimumBuyProfitChangePercent: number;
+  enablePullbackOpportunityNotifications: boolean;
+  enableNetProfitOpportunityNotifications: boolean;
   enableNotification: boolean;
 
   equity: InstrumentTradingSettings;
 
-  riskPercentage: number;
-  riskRewardRatio: number;
   maxCapitalPerTradePercent: number;
-  maxBrokerFailuresBeforeKillSwitch: number;
-  brokerFailureWindowMinutes: number;
   ignoreMarketHours: boolean;
-  autoSquareOff: boolean;
   paperTradingBalance: number;
 
   marketOpenTime: string;
   marketCloseTime: string;
   intradayEntryCutoffTime: string;
-  equityMisAutoSquareOffTime: string;
-  roboAutoSquareOffTime: string;
 
   watchListRefreshMinutes: number;
   lastDailySummarySent: string | null;
   instrumentLoadedAt: string | null;
-  marketTimeZoneId: string;
   tradingHolidays: string[];
 
-  enableEntryExecutionAudit: boolean;
+  researchDataVersion: string;
   enableScripConsentForCashOrders: boolean;
   webSocketHeartbeatSeconds: number;
   webSocketPongTimeoutSeconds: number;
   webSocketRetryInitialSeconds: number;
   webSocketRetryMaxSeconds: number;
-  brokerPositionConfirmationDelaySeconds: number;
-  squareOffRetryDelaySeconds: number;
-
-  buyTradingInterval: number;
-  sellTradingInterval: number;
   visibleColumns: string[];
 
   rawMarketData: RawMarketDataSettings;

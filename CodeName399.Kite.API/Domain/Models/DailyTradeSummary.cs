@@ -31,9 +31,6 @@ namespace CodeName399.Kite.API.Models
         public string ExitTrigger { get; set; } = "";
         public string EntryDecision { get; set; } = "";
         public string EntryReason { get; set; } = "";
-        public double EntryPredictionProbability { get; set; }
-        public double? ExitPredictionProbability { get; set; }
-        public int PredictionModelVersion { get; set; }
         public bool IsOpen { get; set; }
     }
 }

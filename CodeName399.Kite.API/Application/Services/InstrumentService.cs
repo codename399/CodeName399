@@ -24,7 +24,9 @@ public sealed class InstrumentService : IInstrumentService
         _logger = logger;
     }
 
-    private bool IsLoadedForToday() => _cache.Count > 0 && _loadedAt.Date == DateTime.Now.Date;
+    private static DateTime IndiaNow => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, MarketClock.IndiaTimeZone);
+
+    private bool IsLoadedForToday() => _cache.Count > 0 && _loadedAt.Date == IndiaNow.Date;
 
     private async Task<List<Instrument>> DownloadEquityInstrumentsAsync()
     {
@@ -111,7 +113,7 @@ public sealed class InstrumentService : IInstrumentService
             foreach (var pair in symbolCache) _symbolCache[pair.Key] = pair.Value;
 
             _cache = instruments;
-            _loadedAt = DateTime.Now;
+            _loadedAt = IndiaNow;
             _settings.Current.InstrumentLoadedAt = _loadedAt;
 
             _logger.LogInformation("Equity instrument cache ready. Count={Count}, LoadedAt={LoadedAt}", _cache.Count, _loadedAt);
