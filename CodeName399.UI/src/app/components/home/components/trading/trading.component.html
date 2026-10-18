@@ -15,8 +15,8 @@
     <div *ngIf="stock.isOwned"><span>Net P/L after estimated charges</span><strong [class.positive-value]="isNetProfitPositive(stock)" [class.negative-value]="(stock.ownedEstimatedCharges ?? 0) > 0 && !isNetProfitPositive(stock)">{{ displayNetProfitLoss(stock) }}</strong></div>
     <div><span>Stop loss</span><strong>{{ stock.stopLoss > 0 ? ('₹' + (stock.stopLoss | number:'1.2-2')) : '—' }}</strong></div>
     <div><span>Upper / Lower circuit</span><strong>₹{{ (stock.upperCircuitLimit || 0) | number:'1.2-2' }} / ₹{{ (stock.lowerCircuitLimit || 0) | number:'1.2-2' }}</strong></div>
-    <div><span>Bid / Ask</span><strong>₹{{ (stock.bid ?? stock.quote?.bid ?? 0) | number:'1.2-2' }} / ₹{{ (stock.ask ?? stock.quote?.ask ?? 0) | number:'1.2-2' }}</strong></div>
-    <div><span>Volume</span><strong>{{ (stock.tickDayVolume ?? stock.quote?.volume ?? 0) | number }}</strong></div>
+    <div><span>Bid / Ask</span><strong>₹{{ (stock.bid ?? stock.quote.bid ?? 0) | number:'1.2-2' }} / ₹{{ (stock.ask ?? stock.quote.ask ?? 0) | number:'1.2-2' }}</strong></div>
+    <div><span>Volume</span><strong>{{ (stock.tickDayVolume ?? stock.quote.volume ?? 0) | number }}</strong></div>
     <div><span>Change</span><strong>{{ stock.changePercent | number:'1.2-2' }}%</strong></div>
     <div><span>Minimum quantity</span><strong>{{ stock.minimumBuyQuantity ?? '—' }}</strong></div>
     <div><span>Estimated charges</span><strong>₹{{ (stock.estimatedCharges ?? 0) | number:'1.2-2' }}</strong></div>

@@ -145,7 +145,4 @@ export class AngelOneService {
     return this.configuration()?.equity;
   }
 
-  get riskPercentage(): number {
-    return this.configuration()?.riskPercentage ?? 0;
-  }
 }

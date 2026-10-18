@@ -178,9 +178,6 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
 
   activeInstrumentType = computed(() => 'Equity' as const);
 
-  riskPercentage = computed(
-    () => this.configuration()?.riskPercentage ?? 0,
-  );
 
   // ======================================================
   // Lifecycle
