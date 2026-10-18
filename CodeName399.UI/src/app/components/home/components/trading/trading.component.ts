@@ -30,6 +30,7 @@ export class TradingComponent implements OnInit, OnDestroy {
   readonly stockDetails = signal<Gainer | null>(null);
   readonly actionMessage = signal('');
   readonly actionBusy = signal(false);
+  readonly crossoverNotice = signal('');
   readonly selected = signal<Candle | null>(null);
   readonly showPrice = signal(true);
   readonly showEma9 = signal(true);
@@ -48,6 +49,8 @@ export class TradingComponent implements OnInit, OnDestroy {
   });
   #tickSubscription?: Subscription;
   #detailsSubscription?: Subscription;
+  #lastCrossoverKeys = new Set<string>();
+  #crossoverNoticeTimer?: ReturnType<typeof setTimeout>;
 
   ngOnInit(): void {
     this.symbolToken.set(this.#route.snapshot.paramMap.get('symbolToken') ?? '');
@@ -81,7 +84,11 @@ export class TradingComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnDestroy(): void { this.#tickSubscription?.unsubscribe(); this.#detailsSubscription?.unsubscribe(); }
+  ngOnDestroy(): void {
+    this.#tickSubscription?.unsubscribe();
+    this.#detailsSubscription?.unsubscribe();
+    if (this.#crossoverNoticeTimer) clearTimeout(this.#crossoverNoticeTimer);
+  }
 
   loadCandles(): void {
     this.loading.set(true);
@@ -182,7 +189,10 @@ export class TradingComponent implements OnInit, OnDestroy {
     } else {
       list.push({ timestamp: `${key}:00+05:30`, open: price, high: price, low: price, close: price, volume });
     }
-    this.candles.set(this.withIndicators(list.slice(-500)));
+    const updated = this.withIndicators(list.slice(-500));
+    this.candles.set(updated);
+    const latest = updated.at(-1);
+    if (latest?.crossover) this.notifyCrossover(latest);
   }
 
   private indiaMinuteKey(value: string): string {
@@ -220,6 +230,39 @@ export class TradingComponent implements OnInit, OnDestroy {
       previousDiff = diff;
     }
     return [...result];
+  }
+
+
+  private notifyCrossover(candle: Candle): void {
+    // Crossover notifications are controlled by the existing global notification flag.
+    if (!this.#angel.configuration()?.enableNotification || !candle.crossover) return;
+
+    const minute = this.indiaMinuteKey(candle.timestamp);
+    const direction = candle.crossover;
+    const key = `${this.symbolToken()}|${minute}|${direction}`;
+    if (this.#lastCrossoverKeys.has(key)) return;
+    this.#lastCrossoverKeys.add(key);
+
+    // Keep the de-duplication cache bounded during long-running chart sessions.
+    if (this.#lastCrossoverKeys.size > 300) {
+      const oldest = this.#lastCrossoverKeys.values().next().value;
+      if (oldest) this.#lastCrossoverKeys.delete(oldest);
+    }
+
+    const label = direction === 'up' ? 'Bullish EMA crossover' : 'Bearish EMA crossover';
+    const timestamp = new Intl.DateTimeFormat('en-IN', {
+      timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+    }).format(new Date());
+    const message = `${label} · ${this.symbol()} · EMA9 ₹${(candle.ema9 ?? 0).toFixed(2)} / EMA21 ₹${(candle.ema21 ?? 0).toFixed(2)} · ${timestamp} IST`;
+    this.crossoverNotice.set(message);
+    if (this.#crossoverNoticeTimer) clearTimeout(this.#crossoverNoticeTimer);
+    this.#crossoverNoticeTimer = setTimeout(() => this.crossoverNotice.set(''), 10000);
+
+    // Use desktop notifications when the user has already granted permission;
+    // the in-app notice works regardless of browser notification permission.
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      try { new Notification(label, { body: message }); } catch { /* Browser may block notifications in this context. */ }
+    }
   }
 
   private makeIndicatorPolyline(indicator: 'ema9' | 'ema21'): string {

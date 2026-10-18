@@ -31,6 +31,11 @@
     <small *ngIf="!isMarketOpenForOrders()">Market closed — orders unavailable.</small>
     <p class="action-message" *ngIf="actionMessage()">{{ actionMessage() }}</p>
   </section>
+  <div class="crossover-notice" role="status" aria-live="polite" *ngIf="crossoverNotice()">
+    <span class="material-icons" aria-hidden="true">notifications_active</span>
+    <span>{{ crossoverNotice() }}</span>
+    <button type="button" aria-label="Dismiss crossover notification" (click)="crossoverNotice.set('')">×</button>
+  </div>
   <div class="trade-toolbar">
     <label><input type="checkbox" [checked]="showPrice()" (change)="toggleIndicator('price')"> Price</label>
     <label><input type="checkbox" [checked]="showEma9()" (change)="toggleIndicator('ema9')"> EMA 9</label>
