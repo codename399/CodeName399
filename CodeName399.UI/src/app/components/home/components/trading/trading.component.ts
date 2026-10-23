@@ -222,10 +222,14 @@ export class TradingComponent implements OnInit, OnDestroy {
     const result = rows.sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     let ema9: number | undefined; let ema21: number | undefined; let previousDiff: number | undefined;
     for (const candle of result) {
+      // Keep the EMA values used by crossover detection and the UI at a consistent
+      // six-decimal precision. Round the calculated EMA values before comparing.
       ema9 = ema9 === undefined ? candle.close : candle.close * (2/10) + ema9 * (1-2/10);
       ema21 = ema21 === undefined ? candle.close : candle.close * (2/22) + ema21 * (1-2/22);
+      ema9 = Number(ema9.toFixed(6));
+      ema21 = Number(ema21.toFixed(6));
       candle.ema9 = ema9; candle.ema21 = ema21;
-      const diff = ema9 - ema21;
+      const diff = Number((ema9 - ema21).toFixed(6));
       candle.crossover = previousDiff !== undefined && previousDiff <= 0 && diff > 0 ? 'up' : previousDiff !== undefined && previousDiff >= 0 && diff < 0 ? 'down' : null;
       previousDiff = diff;
     }
@@ -253,7 +257,7 @@ export class TradingComponent implements OnInit, OnDestroy {
     const timestamp = new Intl.DateTimeFormat('en-IN', {
       timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
     }).format(new Date());
-    const message = `${label} · ${this.symbol()} · EMA9 ₹${(candle.ema9 ?? 0).toFixed(2)} / EMA21 ₹${(candle.ema21 ?? 0).toFixed(2)} · ${timestamp} IST`;
+    const message = `${label} · ${this.symbol()} · EMA9 ₹${(candle.ema9 ?? 0).toFixed(6)} / EMA21 ₹${(candle.ema21 ?? 0).toFixed(6)} · ${timestamp} IST`;
     this.crossoverNotice.set(message);
     if (this.#crossoverNoticeTimer) clearTimeout(this.#crossoverNoticeTimer);
     this.#crossoverNoticeTimer = setTimeout(() => this.crossoverNotice.set(''), 10000);
