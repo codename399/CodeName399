@@ -156,8 +156,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
     () => this.subscribedGainers().length === 0,
   );
 
-  // The API performs filtering, sorting, searching and pagination. SignalR is
-  // the source of live tick updates and is merged into the currently visible page.
+  // SignalR is the sole source of gainer rows. Search and pagination are local.
   filteredGainers = computed(() => this.serverPageGainers());
 
   totalPages = computed(() => Math.max(1, Math.ceil(this.totalCount() / this.pageSize())));
@@ -464,8 +463,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
     this.showSettings.set(false);
     this.loadDashboard();
     this.loadConfiguration();
-    // Refresh the server-side page and request a fresh SignalR snapshot.
-    this.loadGainersPage();
+    // Refresh market rows through SignalR only; no REST gainers request.
     void this.#market.refreshGainersSnapshot();
   }
 
@@ -494,28 +492,21 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private loadGainersPage(): void {
-    this.isLoadingGainers.set(true);
-    const appliedSearch = this.searchText().trim();
-    const request = appliedSearch
-      ? this.#angel.searchGainers(appliedSearch, this.page(), this.pageSize())
-      : this.#angel.getGainersPage(this.page(), this.pageSize(), '');
-    request.subscribe({
-      next: response => {
-        this.totalCount.set(response.totalCount ?? 0);
-        this.serverPageGainers.set(this.sortVisibleRows((response.items ?? []).map(stock => this.normalizeGainerForDisplay(stock))));
-        const lastPage = Math.max(1, response.totalPages ?? 1);
-        if (this.page() > lastPage) {
-          this.page.set(lastPage);
-          this.loadGainersPage();
-          return;
-        }
-        this.isLoadingGainers.set(false);
-      },
-      error: error => {
-        this.isLoadingGainers.set(false);
-        this.#toast.error(error?.error?.message ?? 'Unable to load the requested gainer page.');
-      }
-    });
+    // Gainers are delivered by MarketHub over SignalR. Keep search and
+    // pagination entirely client-side so this component never calls
+    // /api/market/gainers or /api/market/search.
+    this.isLoadingGainers.set(this.gainers().length === 0);
+    const query = this.searchText().trim().toLocaleLowerCase();
+    const allRows = this.sortVisibleRows(this.gainers().filter(stock => {
+      if (!query) return true;
+      return String(stock.symbol ?? '').toLocaleLowerCase().includes(query);
+    }));
+    this.totalCount.set(allRows.length);
+    const lastPage = Math.max(1, Math.ceil(allRows.length / this.pageSize()));
+    if (this.page() > lastPage) this.page.set(lastPage);
+    const start = (this.page() - 1) * this.pageSize();
+    this.serverPageGainers.set(allRows.slice(start, start + this.pageSize()));
+    this.isLoadingGainers.set(false);
   }
 
   openTrading(stock: Gainer): void {

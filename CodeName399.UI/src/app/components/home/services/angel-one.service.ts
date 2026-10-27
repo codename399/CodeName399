@@ -112,18 +112,11 @@ export class AngelOneService {
     );
   }
 
-  getGainersPage(page: number, pageSize: number, search: string) {
-    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-    if (search.trim()) params.set('search', search.trim());
-    return this.#http.get<{ page: number; pageSize: number; totalCount: number; totalPages: number; items: Gainer[] }>(
-      this.#api.getUrl(`/api/market/gainers?${params.toString()}`, false),
-    );
-  }
 
-  searchGainers(query: string, page: number, pageSize: number) {
-    const params = new URLSearchParams({ query: query.trim(), page: String(page), pageSize: String(pageSize) });
-    return this.#http.get<{ page: number; pageSize: number; totalCount: number; totalPages: number; items: Gainer[] }>(
-      this.#api.getUrl(`/api/market/search?${params.toString()}`, false),
+  sendMarketEmail(subject: string, message: string, isHtml = false) {
+    return this.#http.post<{ success: boolean }>(
+      this.#api.getUrl('/api/market/sendemail', false),
+      { subject, message, isHtml },
     );
   }
 

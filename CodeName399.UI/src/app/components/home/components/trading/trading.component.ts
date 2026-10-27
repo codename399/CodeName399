@@ -3,11 +3,13 @@ import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AngelOneService } from '../../services/angel-one.service';
-import { Gainer } from '../../models/gainer';
 import { MarketService } from '../../services/market.service';
+import { Gainer } from '../../models/gainer';
 
 type Candle = { timestamp: string; open: number; high: number; low: number; close: number; volume: number; ema9?: number; ema21?: number; crossover?: 'up' | 'down' | null };
 type PlotPoint = { x: number; y: number; price: number; timestamp: string; candle: Candle };
+type CandleInterval = 'ONE_MINUTE' | 'FIVE_MINUTE' | 'THIRTY_MINUTE';
+type ChartRepresentation = 'candles' | 'line';
 
 @Component({
   selector: 'app-trading',
@@ -21,10 +23,13 @@ export class TradingComponent implements OnInit, OnDestroy {
   readonly #router = inject(Router);
   readonly #angel = inject(AngelOneService);
   readonly #market = inject(MarketService);
+  #marketSubscriptions: Subscription[] = [];
   readonly symbolToken = signal('');
   readonly symbol = signal('');
   readonly exchange = signal('NSE');
   readonly candles = signal<Candle[]>([]);
+  readonly candleInterval = signal<CandleInterval>('ONE_MINUTE');
+  readonly chartRepresentation = signal<ChartRepresentation>('candles');
   readonly loading = signal(true);
   readonly error = signal('');
   readonly stockDetails = signal<Gainer | null>(null);
@@ -39,6 +44,7 @@ export class TradingComponent implements OnInit, OnDestroy {
   readonly lastPrice = computed(() => this.candles().at(-1)?.close ?? 0);
   readonly plot = computed(() => this.makePlot(this.candles()));
   readonly pricePolyline = computed(() => this.plot().map(p => `${p.x},${p.y}`).join(' '));
+  readonly chartBounds = computed(() => { const rows = this.candles(); const values = rows.flatMap(c => [c.low, c.high, ...(this.showEma9() && c.ema9 != null ? [c.ema9] : []), ...(this.showEma21() && c.ema21 != null ? [c.ema21] : [])]); const min = values.length ? Math.min(...values) : 0; const max = values.length ? Math.max(...values) : 1; return { min, max, range: Math.max(max - min, 0.01) }; });
   readonly ema9Polyline = computed(() => this.makeIndicatorPolyline('ema9'));
   readonly ema21Polyline = computed(() => this.makeIndicatorPolyline('ema21'));
   readonly priceAxis = computed(() => {
@@ -47,8 +53,6 @@ export class TradingComponent implements OnInit, OnDestroy {
     const min = Math.min(...rows.map(c => c.low)); const max = Math.max(...rows.map(c => c.high));
     return Array.from({ length: 5 }, (_, i) => ({ y: 20 + i * 85, price: max - (max - min) * i / 4 }));
   });
-  #tickSubscription?: Subscription;
-  #detailsSubscription?: Subscription;
   #lastCrossoverKeys = new Set<string>();
   #crossoverNoticeTimer?: ReturnType<typeof setTimeout>;
 
@@ -57,42 +61,41 @@ export class TradingComponent implements OnInit, OnDestroy {
     this.symbol.set(this.#route.snapshot.queryParamMap.get('symbol') ?? this.symbolToken());
     this.exchange.set(this.#route.snapshot.queryParamMap.get('exchange') ?? 'NSE');
     if (!this.symbolToken()) { this.error.set('A stock token is required.'); this.loading.set(false); return; }
-    this.#market.startConnection();
     this.#angel.getTradingConfiguration().subscribe({ error: () => {} });
     this.#angel.getDashboardSummary().subscribe({ error: () => {} });
-    this.#detailsSubscription = this.#market.gainers$.subscribe(rows => {
-      const found = (rows ?? []).find(row => String(row?.symbolToken ?? '') === this.symbolToken());
-      if (found) this.stockDetails.set(found as Gainer);
-    });
     this.loadCandles();
-    this.#tickSubscription = this.#market.ticks$.subscribe(tick => {
+
+    // Use the same live SignalR market feed as the Angel One dashboard.
+    // Subscribe to the selected instrument so its ticks reach this chart even
+    // when it is not present on the currently displayed gainer page.
+    this.#marketSubscriptions.push(this.#market.gainers$.subscribe(rows => {
+      const found = (rows ?? []).find(row => String(row?.symbolToken ?? '') === this.symbolToken());
+      if (found) this.stockDetails.set(found);
+    }));
+    this.#marketSubscriptions.push(this.#market.ticks$.subscribe(tick => {
       if (String(tick?.symbolToken ?? '') !== this.symbolToken()) return;
-      const price = Number(tick?.currentPrice ?? tick?.tickLtp ?? tick?.ltp ?? 0);
+      const price = Number(tick?.currentPrice ?? tick?.ltp ?? tick?.lastTradedPrice ?? tick?.close ?? 0);
       if (!(price > 0)) return;
-      this.stockDetails.update(previous => previous
-        ? { ...previous, ...(tick as Partial<Gainer>), currentPrice: price,
-            profitLoss: previous.isOwned ? (price - Number(previous.averagePrice ?? 0)) * Number(previous.quantity ?? 0) : previous.profitLoss,
-            currentValue: previous.isOwned ? price * Number(previous.quantity ?? 0) : previous.currentValue }
-        : (tick as Gainer));
-      const exchangeTime = String(tick?.tickExchangeTime ?? '');
-      const lastUpdated = String(tick?.lastTickUpdated ?? '');
-      const isUsableTimestamp = (value: string) => value.length > 0 && !value.startsWith('0001-01-01') && !Number.isNaN(new Date(value).getTime());
-      const timestamp = isUsableTimestamp(exchangeTime)
-        ? exchangeTime
-        : isUsableTimestamp(lastUpdated) ? lastUpdated : new Date().toISOString();
-      this.applyTick(price, timestamp, Number(tick?.tickDayVolume ?? 0));
+      const timestamp = tick?.timestamp ?? tick?.exchangeTimestamp ?? tick?.lastTradeTime ?? new Date().toISOString();
+      const volume = Number(tick?.tickDayVolume ?? tick?.volume ?? tick?.dayVolume ?? 0);
+      this.applyTick(price, String(timestamp), volume);
+      const stock = this.stockDetails();
+      if (stock) this.stockDetails.set({ ...stock, currentPrice: price, tickDayVolume: volume });
+    }));
+    void this.#market.startConnection();
+    this.#angel.subscribeStock(this.symbolToken(), this.exchange()).subscribe({
+      error: error => console.error('Unable to subscribe selected stock to live market ticks.', error)
     });
   }
 
   ngOnDestroy(): void {
-    this.#tickSubscription?.unsubscribe();
-    this.#detailsSubscription?.unsubscribe();
+    this.#marketSubscriptions.forEach(subscription => subscription.unsubscribe());
     if (this.#crossoverNoticeTimer) clearTimeout(this.#crossoverNoticeTimer);
   }
 
   loadCandles(): void {
     this.loading.set(true);
-    this.#angel.getTodayCandles(this.symbolToken(), this.exchange()).subscribe({
+    this.#angel.getTodayCandles(this.symbolToken(), this.exchange(), this.candleInterval()).subscribe({
       next: rows => { this.candles.set(this.withIndicators((rows ?? []).map(c => ({ ...c })))); this.loading.set(false); this.error.set(''); },
       error: e => { this.error.set(e?.error?.message ?? 'Unable to load today’s candles. Live ticks will still be displayed when available.'); this.loading.set(false); }
     });
@@ -179,20 +182,48 @@ export class TradingComponent implements OnInit, OnDestroy {
 
   private applyTick(price: number, timestamp: string, volume: number): void {
     const list = [...this.candles()];
-    const key = this.indiaMinuteKey(timestamp);
+    const key = this.intervalKey(timestamp);
     const last = list.at(-1);
-    // Historical API timestamps may omit a timezone while live ticks include
-    // +05:30 or Z. Compare normalized IST minute keys instead of raw strings,
-    // otherwise every live tick can accidentally create a separate candle.
-    if (last && this.indiaMinuteKey(last.timestamp) === key) {
+    if (last && this.intervalKey(last.timestamp) === key) {
       last.high = Math.max(last.high, price); last.low = Math.min(last.low, price); last.close = price; last.volume = Math.max(last.volume, volume);
-    } else {
-      list.push({ timestamp: `${key}:00+05:30`, open: price, high: price, low: price, close: price, volume });
+      this.candles.set(this.withIndicators(list.slice(-500)));
+      return;
     }
+
+    // A new interval means the previous candle is now closed. Only act on a
+    // bullish crossover confirmed by that completed candle, never on intrabar noise.
+    const completed = list.length ? this.withIndicators(list).at(-1) : undefined;
+    list.push({ timestamp: `${key}:00+05:30`, open: price, high: price, low: price, close: price, volume });
     const updated = this.withIndicators(list.slice(-500));
     this.candles.set(updated);
-    const latest = updated.at(-1);
-    if (latest?.crossover) this.notifyCrossover(latest);
+    if (completed?.crossover) this.notifyCrossover(completed, true);
+  }
+
+  private intervalKey(value: string): string {
+    const minuteKey = this.indiaMinuteKey(value);
+    const match = minuteKey.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})$/);
+    if (!match) return minuteKey;
+    const interval = this.candleInterval() === 'THIRTY_MINUTE' ? 30 : this.candleInterval() === 'FIVE_MINUTE' ? 5 : 1;
+    const minute = Number(match[3]);
+    const bucket = Math.floor(minute / interval) * interval;
+    return `${match[1]}T${match[2]}:${String(bucket).padStart(2, '0')}`;
+  }
+
+  setCandleInterval(interval: CandleInterval): void {
+    if (this.candleInterval() === interval) return;
+    this.candleInterval.set(interval);
+    this.#lastCrossoverKeys.clear();
+    this.loadCandles();
+  }
+
+  setChartRepresentation(representation: ChartRepresentation): void { this.chartRepresentation.set(representation); }
+
+  bodyY(candle: Candle): number { return Math.min(this.priceY(candle.open), this.priceY(candle.close)); }
+  bodyHeight(candle: Candle): number { return Math.max(1, Math.abs(this.priceY(candle.open) - this.priceY(candle.close))); }
+
+  priceY(price: number): number {
+    const bounds = this.chartBounds();
+    return 20 + (bounds.max - price) / bounds.range * 340;
   }
 
   private indiaMinuteKey(value: string): string {
@@ -237,7 +268,7 @@ export class TradingComponent implements OnInit, OnDestroy {
   }
 
 
-  private notifyCrossover(candle: Candle): void {
+  private notifyCrossover(candle: Candle, candleClosed = false): void {
     // Crossover notifications are controlled by the existing global notification flag.
     if (!this.#angel.configuration()?.enableNotification || !candle.crossover) return;
 
@@ -246,6 +277,7 @@ export class TradingComponent implements OnInit, OnDestroy {
     const key = `${this.symbolToken()}|${minute}|${direction}`;
     if (this.#lastCrossoverKeys.has(key)) return;
     this.#lastCrossoverKeys.add(key);
+    if (direction === 'up' && candleClosed) this.sendBullishCrossoverEmail(candle, minute);
 
     // Keep the de-duplication cache bounded during long-running chart sessions.
     if (this.#lastCrossoverKeys.size > 300) {
@@ -269,12 +301,40 @@ export class TradingComponent implements OnInit, OnDestroy {
     }
   }
 
+  private sendBullishCrossoverEmail(candle: Candle, minute: string): void {
+    const close = Number(candle.close || 0);
+    if (!(close > 0)) return;
+    const stock = this.stockDetails();
+    // Estimated round-trip charges are used as the conservative charge hurdle.
+    // At a 0.1% favorable move, quantity * close * 0.001 should cover that hurdle.
+    const charges = Math.max(0, Number(stock?.estimatedCharges ?? stock?.ownedEstimatedCharges ?? 0));
+    const quantity = Math.max(1, Math.ceil(charges / (close * 0.001)));
+    const istTime = `${minute.replace('T', ' ')} IST`;
+    const name = this.symbol() || stock?.symbol || this.symbolToken();
+    const ema9 = Number(candle.ema9 ?? 0).toFixed(6);
+    const ema21 = Number(candle.ema21 ?? 0).toFixed(6);
+    const subject = `EMA9>EMA21 CLOSED | ${name} | Close ₹${close.toFixed(2)} | ${istTime} | Min Qty ${quantity} @0.1% | EMA9 ${ema9} EMA21 ${ema21}`;
+    const message = `<h2>Bullish EMA crossover confirmed at candle close</h2><table border="1" cellpadding="6" cellspacing="0">` +
+      `<tr><th>Stock</th><td>${this.escapeHtml(name)}</td></tr>` +
+      `<tr><th>Closing price</th><td>₹${close.toFixed(2)}</td></tr>` +
+      `<tr><th>Closing time</th><td>${this.escapeHtml(istTime)}</td></tr>` +
+      `<tr><th>Minimum estimated quantity to cover charges at 0.1% move</th><td>${quantity}</td></tr>` +
+      `<tr><th>Estimated charges used</th><td>₹${charges.toFixed(2)}</td></tr>` +
+      `<tr><th>EMA 9</th><td>${ema9}</td></tr><tr><th>EMA 21</th><td>${ema21}</td></tr>` +
+      `<tr><th>Interval</th><td>${this.candleInterval()}</td></tr></table>`;
+    this.#angel.sendMarketEmail(subject, message, true).subscribe({
+      error: error => console.error('Bullish EMA crossover email endpoint failed.', error)
+    });
+  }
+
+  private escapeHtml(value: string): string {
+    return value.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] ?? ch));
+  }
+
   private makeIndicatorPolyline(indicator: 'ema9' | 'ema21'): string {
     const rows = this.candles();
     if (!rows.length) return '';
-    const prices = rows.flatMap(c => [c.low, c.high]);
-    const min = Math.min(...prices); const max = Math.max(...prices); const range = Math.max(max-min, 0.01);
-    return this.plot().map(p => `${p.x},${20 + (max - (p.candle[indicator] ?? p.price)) / range * 340}`).join(' ');
+    return this.plot().map(p => `${p.x},${this.priceY(p.candle[indicator] ?? p.price)}`).join(' ');
   }
 
   volumeBarHeight(candle: Candle): number {
@@ -284,8 +344,6 @@ export class TradingComponent implements OnInit, OnDestroy {
 
   private makePlot(rows: Candle[]): PlotPoint[] {
     if (!rows.length) return [];
-    const prices = rows.flatMap(c => [c.low, c.high, ...(this.showEma9() && c.ema9 ? [c.ema9] : []), ...(this.showEma21() && c.ema21 ? [c.ema21] : [])]);
-    const min = Math.min(...prices); const max = Math.max(...prices); const range = Math.max(max-min, 0.01);
-    return rows.map((c, i) => ({ x: 40 + i * (920 / Math.max(1, rows.length-1)), y: 20 + (max-c.close) / range * 340, price: c.close, timestamp: c.timestamp, candle: c }));
+    return rows.map((c, i) => ({ x: 40 + i * (920 / Math.max(1, rows.length-1)), y: this.priceY(c.close), price: c.close, timestamp: c.timestamp, candle: c }));
   }
 }
