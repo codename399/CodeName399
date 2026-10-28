@@ -85,6 +85,14 @@ namespace CodeName399.Kite.API.Services
             }
 
             // All entries obey the broker session and intraday cutoff.
+            if (!settings.IgnoreMarketHours &&
+                _marketClock.Now.TimeOfDay >= settings.MarketCloseTime.Subtract(TimeSpan.FromMinutes(Math.Max(0, settings.BuyCutoffMinutesBeforeClose))))
+            {
+                _logger.LogInformation("ORDER BLOCKED Gate=BuyCutoff Reason=Buy entries are disabled {CutoffMinutes} minutes before market close. CurrentTime={CurrentTime} MarketClose={MarketClose}",
+                    settings.BuyCutoffMinutesBeforeClose, _marketClock.Now, settings.MarketCloseTime);
+                return;
+            }
+
             if (!settings.IgnoreMarketHours && !_marketClock.IsNewIntradayEntryWindowOpen)
             {
                 _logger.LogInformation("ORDER BLOCKED Gate=MarketHours Reason=New-entry window closed. MarketTime={MarketTime} MarketOpen={MarketOpen} MarketClose={MarketClose} EntryCutoff={EntryCutoff}", _marketClock.Now, settings.MarketOpenTime, settings.MarketCloseTime, settings.IntradayEntryCutoffTime);
@@ -278,6 +286,8 @@ namespace CodeName399.Kite.API.Services
             // Find the largest quantity up to the requested quantity that fits the
             // available balance. Required margin is expected to be monotonic by quantity,
             // so binary search avoids returning an unnecessarily low quantity after 20% steps.
+            var marginPrice = GetExecutablePrice(stock);
+            if (marginPrice <= 0m) marginPrice = stock.CurrentPrice;
             var low = 1;
             var high = requestedQuantity;
             var bestQuantity = 0;
@@ -289,16 +299,21 @@ namespace CodeName399.Kite.API.Services
                 var margin = await _angel.GetRequiredMarginAsync(
                     stock.SymbolToken,
                     quantity,
-                    stock.CurrentPrice,
+                    marginPrice,
                     stock.Exchange,
                     stock.ProductType,
                     "BUY");
 
-                _logger.LogDebug("ORDER DIAGNOSTIC MarginCheck Symbol={Symbol} Token={Token} Quantity={Quantity} Price={Price:F4} Margin={Margin:F2} AvailableBalance={AvailableBalance:F2}", stock.Symbol, stock.SymbolToken, quantity, stock.CurrentPrice, margin, availableBalance);
-                if (margin > 0m && margin <= availableBalance)
+                var entryCharges = await _brokerage.CalculateAsync(
+                    stock.Symbol, stock.SymbolToken, marginPrice, quantity,
+                    BrokerageTransactionType.Buy, stock.Exchange, stock.ProductType);
+                var totalRequired = margin + entryCharges.TotalCharges;
+                _logger.LogDebug("ORDER DIAGNOSTIC MarginCheck Symbol={Symbol} Token={Token} Quantity={Quantity} Price={Price:F4} Margin={Margin:F2} EntryCharges={EntryCharges:F2} TotalRequired={TotalRequired:F2} AvailableBalance={AvailableBalance:F2}",
+                    stock.Symbol, stock.SymbolToken, quantity, marginPrice, margin, entryCharges.TotalCharges, totalRequired, availableBalance);
+                if (margin > 0m && totalRequired <= availableBalance)
                 {
                     bestQuantity = quantity;
-                    bestMargin = margin;
+                    bestMargin = totalRequired;
                     low = quantity + 1;
                 }
                 else
@@ -476,7 +491,7 @@ namespace CodeName399.Kite.API.Services
             var stock = candidate.Stock;
             var config = _tradingSettingsProvider.Current;
 
-            _logger.LogInformation("ORDER DIAGNOSTIC ValidationStarted Symbol={Symbol} Token={Token} Price={Price:F4} ATR={ATR:F4} AvailableBalance={Balance:F2} RiskPercent={RiskPercent} MaxCapitalPerTradePercent={MaxCapitalPercent} PaperTrading={PaperTrading} AutoTrading={AutoTrading}", stock.Symbol, stock.SymbolToken, stock.CurrentPrice, stock.ATR, remainingBalance, config.RiskPercentage, config.MaxCapitalPerTradePercent, config.PaperTrading, config.EnableAutoTrading);
+            _logger.LogInformation("ORDER DIAGNOSTIC ValidationStarted Symbol={Symbol} Token={Token} Price={Price:F4} ATR={ATR:F4} AvailableBalance={Balance:F2} PaperTrading={PaperTrading} AutoTrading={AutoTrading}", stock.Symbol, stock.SymbolToken, stock.CurrentPrice, stock.ATR, remainingBalance, config.PaperTrading, config.EnableAutoTrading);
             if (stock.CurrentPrice <= 0m)
             {
                 _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=CurrentPrice Price={Price}", stock.Symbol, stock.CurrentPrice);
@@ -485,112 +500,111 @@ namespace CodeName399.Kite.API.Services
                 return remainingBalance;
             }
 
-            var capitalForTrade = RiskManagementService.CalculateCapitalForTrade(
-                remainingBalance, config.MaxCapitalPerTradePercent);
-            if (capitalForTrade <= 0m)
-            {
-                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=CapitalForTrade Balance={Balance:F2} MaxCapitalPercent={MaxCapitalPercent} CalculatedCapital={Capital:F2}", stock.Symbol, remainingBalance, config.MaxCapitalPerTradePercent, capitalForTrade);
-                stock.Suggestion = "Increase Max Capital Per Trade or add funds.";
-                _tradeManager.ReleaseSymbol(stock.Symbol);
-                return remainingBalance;
-            }
+            // Use the executable/marginal quote for quantity, charges, margin and order validation.
+            var executionPrice = GetExecutablePrice(stock);
+            if (executionPrice <= 0m)
+                executionPrice = stock.CurrentPrice;
+            stock.CurrentPrice = executionPrice;
 
-            var atr = stock.ATR > 0m ? stock.ATR : stock.CurrentPrice * 0.005m;
-            stock.StopLoss = TradeLevelCalculator.CalculateProtectiveStop(
-                stock.CurrentPrice, atr, config.Equity.AtrStopMultiplier,
-                config.Equity.MinimumStopPercent, config.Equity.MaximumStopPercent);
+            // The protective stop is fixed at the configured percentage (default 0.1%).
+            var stopPercent = Math.Max(0.01m, config.StopLossPercent);
+            stock.StopLoss = OrderPriceValidator.RoundDown(stock.CurrentPrice * (1m - stopPercent / 100m));
             if (stock.StopLoss <= 0m || stock.StopLoss >= stock.CurrentPrice)
             {
-                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=ProtectiveStop Price={Price:F4} ATR={ATR:F4} StopLoss={StopLoss:F4} MinStopPercent={MinStopPercent} MaxStopPercent={MaxStopPercent}", stock.Symbol, stock.CurrentPrice, atr, stock.StopLoss, config.Equity.MinimumStopPercent, config.Equity.MaximumStopPercent);
+                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=ProtectiveStop Price={Price:F6} StopLoss={StopLoss:F6} StopLossPercent={StopLossPercent}",
+                    stock.Symbol, stock.CurrentPrice, stock.StopLoss, stopPercent);
                 stock.Suggestion = "Protective stop could not be calculated.";
                 _tradeManager.ReleaseSymbol(stock.Symbol);
                 return remainingBalance;
             }
 
-            var availableRiskCapacity = await _intradayRiskGuard.GetAvailableRiskCapacityAsync();
-            _logger.LogInformation("ORDER DIAGNOSTIC RiskCapacity Symbol={Symbol} AvailableRiskCapacity={AvailableRiskCapacity:F2} ConfiguredMaxOpenRisk={ConfiguredMaxOpenRisk:F2}", stock.Symbol, availableRiskCapacity, config.MaximumTotalOpenRisk);
-            var quantityRiskCap = config.MaximumTotalOpenRisk > 0m
-                ? Math.Min(config.MaximumTotalOpenRisk, availableRiskCapacity)
-                : availableRiskCapacity;
-            var useFixedQuantity = string.Equals(config.QuantityType, "Fixed", StringComparison.OrdinalIgnoreCase);
-            int quantity;
-            if (useFixedQuantity)
+            // Find the minimum whole-share quantity whose projected round trip,
+            // using the configurable favorable price increment, clears all charges.
+            var increment = Math.Max(0.01m, config.ChargeCoverPriceIncrement);
+            var minimumChargeCoverQuantity = 0;
+            decimal minBuyCharges = 0m, minSellCharges = 0m;
+            const int quantitySearchLimit = 1_000_000;
+            var quantityLow = 1;
+            var quantityHigh = quantitySearchLimit;
+            while (quantityLow <= quantityHigh)
             {
-                var matchingBand = config.FixedQuantityPriceBands?
-                    .Where(x => x != null && x.StartPrice <= x.EndPrice && x.Quantity > 0)
-                    .OrderBy(x => x.StartPrice)
-                    .FirstOrDefault(x => stock.CurrentPrice >= x.StartPrice && stock.CurrentPrice <= x.EndPrice);
+                var q = quantityLow + ((quantityHigh - quantityLow) / 2);
+                var buyCharge = await _brokerage.CalculateAsync(
+                    stock.Symbol, stock.SymbolToken, executionPrice, q,
+                    BrokerageTransactionType.Buy, stock.Exchange, stock.ProductType);
+                var projectedSellPrice = executionPrice + increment;
+                var sellCharge = await _brokerage.CalculateAsync(
+                    stock.Symbol, stock.SymbolToken, projectedSellPrice, q,
+                    BrokerageTransactionType.Sell, stock.Exchange, stock.ProductType);
+                var buyPrice = executionPrice * q + buyCharge.TotalCharges;
+                var sellPrice = projectedSellPrice * q + sellCharge.TotalCharges;
+                var clearsCharges = sellPrice - buyPrice > buyCharge.TotalCharges + sellCharge.TotalCharges;
 
-                quantity = matchingBand?.Quantity ?? 0;
-                if (quantity <= 0)
+                if (clearsCharges)
                 {
-                    _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=FixedQuantityPriceBand Price={Price:F4} ConfiguredBands={BandCount}", stock.Symbol, stock.CurrentPrice, config.FixedQuantityPriceBands?.Count ?? 0);
-                    stock.Suggestion = $"No valid fixed-quantity price band is configured for price ₹{stock.CurrentPrice:F2}.";
-                    _tradeManager.ReleaseSymbol(stock.Symbol);
-                    return remainingBalance;
+                    minimumChargeCoverQuantity = q;
+                    minBuyCharges = buyCharge.TotalCharges;
+                    minSellCharges = sellCharge.TotalCharges;
+                    quantityHigh = q - 1;
                 }
-
-                _logger.LogInformation("FIXED QUANTITY BAND Symbol={Symbol} Price={Price:F4} StartPrice={StartPrice:F4} EndPrice={EndPrice:F4} ConfiguredQuantity={ConfiguredQuantity}", stock.Symbol, stock.CurrentPrice, matchingBand!.StartPrice, matchingBand.EndPrice, quantity);
-
-                // For a BUY, cap the configured quantity by the shares currently offered
-                // for sale at the best ask price. For a SHORT entry, use bid-side depth.
-                // This is market depth, not an affordability/margin calculation.
-                var depth = GetAvailableQuantityAtExecutablePrice(stock, out var depthPrice, out var depthSide);
-                if (depth <= 0)
+                else
                 {
-                    _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=MarketDepthUnavailable Side={DepthSide} ExecutablePrice={ExecutablePrice:F4} DepthPrice={DepthPrice:F4} ConfiguredQuantity={ConfiguredQuantity}", stock.Symbol, depthSide, GetExecutablePrice(stock), depthPrice, quantity);
-                    stock.Suggestion = "Market depth quantity at the executable price is unavailable; fixed-quantity order was not placed.";
-                    _tradeManager.ReleaseSymbol(stock.Symbol);
-                    return remainingBalance;
+                    quantityLow = q + 1;
                 }
-
-                stock.FixedQuantityConfigured = quantity;
-                stock.MarketDepthAvailableQuantity = depth;
-                stock.MarketDepthExecutablePrice = depthPrice;
-                stock.MarketDepthSide = depthSide;
-
-                var depthCappedQuantity = (int)Math.Min(quantity, Math.Min(depth, int.MaxValue));
-                if (depthCappedQuantity < quantity)
-                {
-                    _logger.LogInformation("FIXED QUANTITY CAPPED BY MARKET DEPTH Symbol={Symbol} Side={DepthSide} ExecutablePrice={ExecutablePrice:F4} AvailableAtPrice={AvailableAtPrice} ConfiguredQuantity={ConfiguredQuantity} FinalQuantity={FinalQuantity}", stock.Symbol, depthSide, depthPrice, depth, quantity, depthCappedQuantity);
-                }
-                quantity = depthCappedQuantity;
-            }
-            else
-            {
-                quantity = RiskManagementService.CalculateQuantity(
-                    capitalForTrade, stock.CurrentPrice, stock.StopLoss, config.RiskPercentage,
-                    stock.Direction, quantityRiskCap);
             }
 
-            if (quantity <= 0)
+            if (minimumChargeCoverQuantity <= 0)
             {
-                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=RiskQuantity Price={Price:F4} StopLoss={StopLoss:F4} Capital={Capital:F2} RiskPercent={RiskPercent} RiskCapacity={RiskCapacity:F2} Quantity={Quantity}", stock.Symbol, stock.CurrentPrice, stock.StopLoss, capitalForTrade, config.RiskPercentage, quantityRiskCap, quantity);
-                stock.Suggestion = "Increase funds or reduce risk percentage.";
+                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=ChargeCoverQuantity Price={Price:F6} Increment={Increment:F4} SearchLimit={SearchLimit}",
+                    stock.Symbol, stock.CurrentPrice, increment, quantitySearchLimit);
+                stock.Suggestion = "Could not find a quantity that clears round-trip charges.";
                 _tradeManager.ReleaseSymbol(stock.Symbol);
                 return remainingBalance;
             }
 
-            var configuredQuantity = quantity;
-            var affordable = await GetAffordableQuantity(stock, configuredQuantity, remainingBalance);
-            // Market depth caps fixed quantity before this point. This separate check
-            // continues to enforce the existing available-margin limit for both modes.
-            quantity = Math.Min(configuredQuantity, affordable.Quantity);
-            var requiredMargin = quantity > 0 ? affordable.Margin : 0m;
-            if (quantity <= 0)
+            var depth = GetAvailableQuantityAtExecutablePrice(stock, out var depthPrice, out var depthSide);
+            stock.FixedQuantityConfigured = minimumChargeCoverQuantity;
+            stock.MarketDepthAvailableQuantity = depth;
+            stock.MarketDepthExecutablePrice = depthPrice;
+            stock.MarketDepthSide = depthSide;
+            _logger.LogInformation(
+                "CHARGE-COVER QUANTITY Symbol={Symbol} Price={Price:F6} FavorableIncrement={Increment:F4} MinimumQuantity={MinimumQuantity} BuyCharges={BuyCharges:F2} SellCharges={SellCharges:F2} DepthSide={DepthSide} DepthPrice={DepthPrice:F6} AvailableAtPrice={AvailableAtPrice}",
+                stock.Symbol, executionPrice, increment, minimumChargeCoverQuantity,
+                minBuyCharges, minSellCharges, depthSide, depthPrice, depth);
+
+            if (depth < minimumChargeCoverQuantity)
             {
-                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=AffordableQuantity ConfiguredQuantity={ConfiguredQuantity} AvailableBalance={Balance:F2} MarginReturned={Margin:F2}", stock.Symbol, configuredQuantity, remainingBalance, requiredMargin);
-                stock.Suggestion = useFixedQuantity
-                    ? $"No quantity from the configured fixed band is affordable at the current price with available margin ₹{remainingBalance:F2}."
-                    : "Insufficient available margin for the calculated risk-based quantity.";
+                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=MarketDepthBelowChargeCover MinimumQuantity={MinimumQuantity} AvailableAtPrice={AvailableAtPrice} DepthSide={DepthSide} DepthPrice={DepthPrice:F6}",
+                    stock.Symbol, minimumChargeCoverQuantity, depth, depthSide, depthPrice);
+                stock.Suggestion = $"Insufficient market depth at the executable price: need at least {minimumChargeCoverQuantity}, available {depth}.";
                 _tradeManager.ReleaseSymbol(stock.Symbol);
                 return remainingBalance;
             }
 
-            if (useFixedQuantity && quantity < configuredQuantity)
+            var affordable = await GetAffordableQuantity(stock, int.MaxValue, remainingBalance);
+            var affordableQuantity = Math.Min(affordable.Quantity, int.MaxValue);
+            var quantity = (int)Math.Min(affordableQuantity, Math.Min(depth, int.MaxValue));
+            var requiredMargin = quantity > 0
+                ? await _angel.GetRequiredMarginAsync(stock.SymbolToken, quantity, executionPrice, stock.Exchange, stock.ProductType, "BUY")
+                : 0m;
+            if (quantity > 0)
             {
-                _logger.LogInformation("FIXED QUANTITY CAPPED BY AFFORDABILITY Symbol={Symbol} Price={Price:F4} ConfiguredQuantity={ConfiguredQuantity} AffordableQuantity={AffordableQuantity} FinalQuantity={FinalQuantity} AvailableBalance={AvailableBalance:F2} RequiredMargin={RequiredMargin:F2}", stock.Symbol, stock.CurrentPrice, configuredQuantity, affordable.Quantity, quantity, remainingBalance, requiredMargin);
+                var finalEntryCharges = await _brokerage.CalculateAsync(
+                    stock.Symbol, stock.SymbolToken, executionPrice, quantity,
+                    BrokerageTransactionType.Buy, stock.Exchange, stock.ProductType);
+                requiredMargin += finalEntryCharges.TotalCharges;
             }
+            if (quantity < minimumChargeCoverQuantity)
+            {
+                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=AffordableQuantityBelowChargeCover MinimumQuantity={MinimumQuantity} AffordableQuantity={AffordableQuantity} DepthQuantity={DepthQuantity} AvailableBalance={Balance:F2} EstimatedMargin={Margin:F2}",
+                    stock.Symbol, minimumChargeCoverQuantity, affordableQuantity, depth, remainingBalance, affordable.Margin);
+                stock.Suggestion = $"Available funds/depth cannot support the minimum charge-covering quantity {minimumChargeCoverQuantity}.";
+                _tradeManager.ReleaseSymbol(stock.Symbol);
+                return remainingBalance;
+            }
+
+            _logger.LogInformation("CHARGE-COVER FINAL QUANTITY Symbol={Symbol} MinimumQuantity={MinimumQuantity} AffordableQuantity={AffordableQuantity} DepthQuantity={DepthQuantity} FinalQuantity={FinalQuantity} RequiredMargin={RequiredMargin:F2}",
+                stock.Symbol, minimumChargeCoverQuantity, affordableQuantity, depth, quantity, requiredMargin);
 
             var validation = await _tradeValidation.ValidateAsync(stock, quantity);
             if (!validation.CanTrade)
@@ -677,7 +691,7 @@ namespace CodeName399.Kite.API.Services
                 Symbol = stock.Symbol.Trim().ToUpperInvariant(),
                 SymbolToken = stock.SymbolToken,
                 Quantity = quantity,
-                QuantityType = _tradingSettingsProvider.Current.QuantityType,
+                QuantityType = "ChargeCover",
                 FixedQuantityConfigured = stock.FixedQuantityConfigured,
                 MarketDepthAvailableQuantity = stock.MarketDepthAvailableQuantity,
                 MarketDepthExecutablePrice = stock.MarketDepthExecutablePrice,
@@ -785,7 +799,7 @@ namespace CodeName399.Kite.API.Services
                 Symbol = stock.Symbol.Trim().ToUpperInvariant(),
                 SymbolToken = stock.SymbolToken,
                 Quantity = quantity,
-                QuantityType = config.QuantityType,
+                QuantityType = "ChargeCover",
                 FixedQuantityConfigured = stock.FixedQuantityConfigured,
                 MarketDepthAvailableQuantity = stock.MarketDepthAvailableQuantity,
                 MarketDepthExecutablePrice = stock.MarketDepthExecutablePrice,

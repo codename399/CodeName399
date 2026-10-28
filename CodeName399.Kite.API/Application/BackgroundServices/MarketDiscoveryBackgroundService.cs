@@ -110,7 +110,7 @@ public class MarketDiscoveryBackgroundService : BackgroundService
 
         var activeInstrumentType = InstrumentType.Equity;
 
-        const int maxCandidates = 10;
+        var maxCandidates = Math.Clamp(_settings.Current.MaximumDiscoveryCandidates, 1, 10);
         var normalizedStocks = stocks
             .Where(x => x != null && !string.IsNullOrWhiteSpace(x.SymbolToken))
             .Where(x => x.InstrumentType == activeInstrumentType || x.IsOwned)
@@ -123,6 +123,8 @@ public class MarketDiscoveryBackgroundService : BackgroundService
             .Concat(
                 normalizedStocks
                     .Where(x => !x.IsOwned && x.CurrentPrice > 0m && x.CurrentPrice <= _settings.Current.MaximumStockPrice)
+                    .Where(x => Math.Max(x.TickDayVolume, Math.Max(x.Quote?.TradeVolume ?? 0L,
+                        Math.Max(x.Quote?.DayVolume ?? 0L, Math.Max(x.Quote?.Volume ?? 0L, x.Quote?.LastTradedQuantity ?? 0L)))) > 0)
                     .OrderByDescending(x => x.Priority)
                     .ThenByDescending(x => x.ChangePercent)
                     .Take(maxCandidates))
@@ -191,7 +193,7 @@ public class MarketDiscoveryBackgroundService : BackgroundService
         // Enforce the active instrument boundary before anything reaches
         // the watchlist, history queue, subscriptions, or UI. Owned positions
         // are preserved because they still require lifecycle management.
-        const int maxCandidates = 10;
+        var maxCandidates = Math.Clamp(_settings.Current.MaximumDiscoveryCandidates, 1, 10);
         var normalizedStocks = stocks
             .Where(x => x != null && !string.IsNullOrWhiteSpace(x.SymbolToken))
             .Where(x => x.InstrumentType == activeInstrumentType || x.IsOwned)
@@ -204,6 +206,8 @@ public class MarketDiscoveryBackgroundService : BackgroundService
             .Concat(
                 normalizedStocks
                     .Where(x => !x.IsOwned && x.CurrentPrice > 0m && x.CurrentPrice <= _settings.Current.MaximumStockPrice)
+                    .Where(x => Math.Max(x.TickDayVolume, Math.Max(x.Quote?.TradeVolume ?? 0L,
+                        Math.Max(x.Quote?.DayVolume ?? 0L, Math.Max(x.Quote?.Volume ?? 0L, x.Quote?.LastTradedQuantity ?? 0L)))) > 0)
                     .OrderByDescending(x => x.Priority)
                     .ThenByDescending(x => x.ChangePercent)
                     .Take(maxCandidates))

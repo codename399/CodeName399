@@ -7,19 +7,21 @@ public sealed class PaperPortfolioService
     private readonly ITradeOrderRepository _repository; private readonly TradingSettingsProvider _settings; private readonly MarketClock _clock; private readonly LiveMarketCache _cache;
     public PaperPortfolioService(ITradeOrderRepository repository, TradingSettingsProvider settings, MarketClock clock, LiveMarketCache cache) { _repository = repository; _settings = settings; _clock = clock; _cache = cache; }
     /// <summary>
-    /// Returns the configured paper-trading balance without applying simulated
-    /// realized/unrealized P&amp;L or open-trade reservations. Paper trading uses
-    /// this value as a fixed capital baseline so autonomous configuration tests
-    /// are all evaluated against the same configured account size.
-    ///
-    /// Trade affordability and risk limits remain enforced by the existing
-    /// BuyTradingService and IntradayRiskGuard flows. Reserved capital is still
-    /// available separately through GetReservedCapitalAsync().
+    /// Keeps the paper account's available balance reduced by capital committed
+    /// to open paper positions. Trade/order records remain persisted by the
+    /// repository; the balance itself is calculated in memory from the configured
+    /// baseline and currently open positions.
     /// </summary>
-    public Task<decimal> GetAvailableBalanceAsync()
+    public async Task<decimal> GetAvailableBalanceAsync()
     {
-        return Task.FromResult(_settings.Current.PaperTradingBalance);
+        var baseline = Math.Max(0m, _settings.Current.PaperTradingBalance);
+        var reserved = await GetReservedCapitalAsync();
+        return Math.Max(0m, baseline - reserved);
     }
-    public async Task<decimal> GetReservedCapitalAsync() => (await _repository.GetOpenTradesAsync()).Where(x => x.ExecutionMode == TradeExecutionMode.Paper && !x.Closed).Sum(x => Math.Max(0, x.ReservedCapital));
+
+    public async Task<decimal> GetReservedCapitalAsync() =>
+        (await _repository.GetOpenTradesAsync())
+            .Where(x => x.ExecutionMode == TradeExecutionMode.Paper && !x.Closed)
+            .Sum(x => Math.Max(0m, x.ReservedCapital));
     private static decimal NetPnl(TradeOrder x) { if (x.EntryPrice <= 0 || x.ExitPrice <= 0 || x.Quantity <= 0) return 0; var gross = x.Direction == TradeDirection.Short ? (x.EntryPrice - x.ExitPrice) : (x.ExitPrice - x.EntryPrice); return gross * x.Quantity - x.EstimatedCharges; }
 }

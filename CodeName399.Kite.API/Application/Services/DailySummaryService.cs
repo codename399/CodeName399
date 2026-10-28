@@ -53,7 +53,7 @@ namespace CodeName399.Kite.API.Services
                 var investment = trade.EntryPrice * trade.Quantity;
                 var gross = trade.RealizedGrossProfit;
                 var charges = trade.RealizedCharges > 0 ? trade.RealizedCharges : trade.EstimatedCharges;
-                var net = trade.RealizedNetProfit != 0 || gross != 0 ? trade.RealizedNetProfit : gross - charges;
+                var net = trade.RealizedNetProfit != 0 ? trade.RealizedNetProfit : gross - charges;
                 if (net >= 0) summary.WinningTrades++; else summary.LosingTrades++;
                 summary.GrossProfit += Math.Max(0, gross);
                 summary.GrossLoss += Math.Min(0, gross);
@@ -62,7 +62,9 @@ namespace CodeName399.Kite.API.Services
                 summary.TotalInvestment += investment;
                 summary.Trades.Add(ToDailyTrade(trade, net, charges, false));
 
-                summary.SafetyExits++;
+                if ((trade.ExitTrigger ?? string.Empty).Contains("SAFETY", StringComparison.OrdinalIgnoreCase) ||
+                    (trade.ExitReason ?? string.Empty).Contains("SAFETY", StringComparison.OrdinalIgnoreCase))
+                    summary.SafetyExits++;
             }
 
             foreach (var trade in openTrades)
@@ -140,16 +142,17 @@ namespace CodeName399.Kite.API.Services
                 {
                     decimal investment = trade.EntryPrice * trade.Quantity;
 
-                    decimal sellValue = trade.ExitPrice * trade.Quantity;
+                    decimal gross = trade.Direction == TradeDirection.Short
+                        ? (trade.EntryPrice - trade.ExitPrice) * trade.Quantity
+                        : (trade.ExitPrice - trade.EntryPrice) * trade.Quantity;
 
-                    decimal gross = sellValue - investment;
-
-                    decimal charges = trade.EstimatedCharges;
-
-                    decimal net = gross - charges;
+                    decimal charges = trade.RealizedCharges > 0m ? trade.RealizedCharges : trade.EstimatedCharges;
+                    decimal net = trade.RealizedNetProfit != 0m
+                        ? trade.RealizedNetProfit
+                        : gross - charges;
 
                     totalInvestment += investment;
-                    grossProfit += gross;
+                    grossProfit += Math.Max(0m, gross);
                     totalCharges += charges;
                     netProfit += net;
 
@@ -203,13 +206,14 @@ namespace CodeName399.Kite.API.Services
                 {
                     decimal investment = trade.EntryPrice * trade.Quantity;
 
-                    decimal sellValue = trade.ExitPrice * trade.Quantity;
+                    decimal gross = trade.Direction == TradeDirection.Short
+                        ? (trade.EntryPrice - trade.ExitPrice) * trade.Quantity
+                        : (trade.ExitPrice - trade.EntryPrice) * trade.Quantity;
 
-                    decimal gross = sellValue - investment;
-
-                    decimal charges = trade.EstimatedCharges;
-
-                    decimal net = gross - charges;
+                    decimal charges = trade.RealizedCharges > 0m ? trade.RealizedCharges : trade.EstimatedCharges;
+                    decimal net = trade.RealizedNetProfit != 0m
+                        ? trade.RealizedNetProfit
+                        : gross - charges;
 
                     summary.Trades.Add(
                         new DailyTradeSummary
