@@ -7,16 +7,16 @@ using CodeName399.Kite.API.Models.Configuration;
 namespace CodeName399.Kite.API.Services;
 
 /// <summary>
-/// Calculates EMA9/EMA21 from one-minute candles. A bullish crossover arms an entry;
-/// entry is confirmed at the close of that one-minute candle only if EMA9 remains above EMA21.
+/// Builds one-minute candles and confirms entries at candle close using the configured
+/// entry mode. PullbackRecovery combines loose market-structure checks with Stochastic RSI.
 /// </summary>
 public sealed class EmaCrossoverStrategyService
 {
     private const int FastPeriod = 9;
     private const int SlowPeriod = 21;
     private const int MaximumCandles = 500;
-    private const decimal MinimumPullbackPercent = 0.05m;
-    private const decimal RecoveryFromPullbackLowPercent = 0.02m;
+    private const decimal MinimumPullbackPercent = 0.03m;
+    private const decimal RecoveryFromPullbackLowPercent = 0.01m;
     private const int StochRsiRsiPeriod = 14;
     private const int StochRsiStochasticPeriod = 14;
     private const int StochRsiKSmoothing = 3;
@@ -210,17 +210,17 @@ public sealed class EmaCrossoverStrategyService
             var choppiness = sidewaysFilterEnabled
                 ? CalculateChoppiness(indicatorCandles, Math.Max(2, _settings.Current.ChoppinessPeriod))
                 : -1m;
-            var (stochK, stochD, previousStochK) = CalculateStochasticRsi(
+            var (stochK, stochD, previousStochK, previousStochD) = CalculateStochasticRsi(
                 indicatorCandles, StochRsiRsiPeriod, StochRsiStochasticPeriod,
                 StochRsiKSmoothing, StochRsiDSmoothing);
             var sideways = sidewaysFilterEnabled && choppiness >= _settings.Current.SidewaysChoppinessThreshold;
             if (state.LastIndicatorLogMinute != minute)
             {
                 _logger.LogInformation(
-                    "ENTRY INDICATORS Token={Token} Symbol={Symbol} TimestampIST={TimestampIST} EMA9={EMA9:F8} EMA21={EMA21:F8} CHOP14={CHOP:F2} CHOPThreshold={CHOPThreshold:F2} Sideways={Sideways} StochRSI_K={StochK:F2} StochRSI_D={StochD:F2} PreviousStochRSI_K={PreviousStochK:F2} IndicatorHistoryCandles={CandleCount}",
+                    "ENTRY INDICATORS Token={Token} Symbol={Symbol} TimestampIST={TimestampIST} EMA9={EMA9:F8} EMA21={EMA21:F8} CHOP14={CHOP:F2} CHOPThreshold={CHOPThreshold:F2} Sideways={Sideways} StochRSI_K={StochK:F2} StochRSI_D={StochD:F2} PreviousStochRSI_K={PreviousStochK:F2} PreviousStochRSI_D={PreviousStochD:F2} IndicatorHistoryCandles={CandleCount}",
                     tick.SymbolToken, tick.TradingSymbol, now.ToString("yyyy-MM-dd HH:mm:ss.fff"),
                     ema9, ema21, choppiness, _settings.Current.SidewaysChoppinessThreshold, sideways,
-                    stochK, stochD, previousStochK, indicatorCandles.Count);
+                    stochK, stochD, previousStochK, previousStochD, indicatorCandles.Count);
                 state.LastIndicatorLogMinute = minute;
             }
 
@@ -274,7 +274,7 @@ public sealed class EmaCrossoverStrategyService
         var choppiness = sidewaysFilterEnabled
             ? CalculateChoppiness(candles, Math.Max(2, _settings.Current.ChoppinessPeriod))
             : -1m;
-        var (stochK, stochD, previousStochK) = CalculateStochasticRsi(
+        var (stochK, stochD, previousStochK, previousStochD) = CalculateStochasticRsi(
             candles, StochRsiRsiPeriod, StochRsiStochasticPeriod,
             StochRsiKSmoothing, StochRsiDSmoothing);
         var sideways = sidewaysFilterEnabled && choppiness >= _settings.Current.SidewaysChoppinessThreshold;
@@ -290,10 +290,29 @@ public sealed class EmaCrossoverStrategyService
         }
 
         var emaBullish = ema9 > ema21;
-        var pullbackRecovery = stochK > stochD && previousStochK <= stochD && stochK < 50m;
+        var (hasBullishStructure, pullbackLow, recoverySwingHigh, structureReason) =
+            EvaluatePullbackRecoveryStructure(candles);
+        var stochBullishCross = stochK >= 0m && stochD >= 0m &&
+                                previousStochK >= 0m && previousStochD >= 0m &&
+                                previousStochK <= previousStochD && stochK > stochD &&
+                                stochK < 60m;
+        // Keep this permissive: structure + a genuine StochRSI bullish cross
+        // is sufficient; the candle only needs to close above its previous close.
+        var priceRecovery = candles.Count >= 2 &&
+                            candle.Close > candles[^2].Close &&
+                            pullbackLow > 0m &&
+                            candle.Close >= pullbackLow * (1m + RecoveryFromPullbackLowPercent / 100m);
+        var pullbackRecovery = hasBullishStructure && stochBullishCross && priceRecovery;
         var allowEma = entryType.Equals("EmaCrossover", StringComparison.OrdinalIgnoreCase);
         var allowPullback = entryType.Equals("PullbackRecovery", StringComparison.OrdinalIgnoreCase);
         var allowBoth = entryType.Equals("Both", StringComparison.OrdinalIgnoreCase);
+
+        _logger.LogInformation(
+            "PULLBACK STRUCTURE CHECK Token={Token} Symbol={Symbol} CandleCloseIST={CandleCloseIST} Structure={Structure} StructureReason={StructureReason} PullbackLow={PullbackLow:F6} RecoverySwingHigh={RecoverySwingHigh:F6} StochBullishCross={StochBullishCross} StochK={StochK:F2} StochD={StochD:F2} PreviousK={PreviousK:F2} PreviousD={PreviousD:F2} PriceRecovery={PriceRecovery} EligiblePullbackRecovery={EligiblePullbackRecovery}",
+            symbolToken, symbol, closeTime.ToString("yyyy-MM-dd HH:mm:ss"),
+            hasBullishStructure, structureReason, pullbackLow, recoverySwingHigh,
+            stochBullishCross, stochK, stochD, previousStochK, previousStochD,
+            priceRecovery, pullbackRecovery);
 
         var eligible = allowEma
             ? state.EntrySignalPending && emaBullish
@@ -320,8 +339,8 @@ public sealed class EmaCrossoverStrategyService
         state.EntryChoppiness = choppiness;
         state.EntryStochRsiK = stochK;
         state.EntryStochRsiD = stochD;
-        state.EntryPullbackLow = 0m;
-        state.EntryRecoverySwingHigh = 0m;
+        state.EntryPullbackLow = pullbackLow;
+        state.EntryRecoverySwingHigh = recoverySwingHigh;
 
         _logger.LogInformation(
             "EMA CROSSOVER ENTRY CONFIRMED ON CANDLE CLOSE Token={Token} Symbol={Symbol} CandleCloseIST={CandleCloseIST} EntryReferencePrice={Price:F6} EMA9={EMA9:F8} EMA21={EMA21:F8} GapPercent={GapPercent:F8} CHOP14={CHOP:F2} StochRSI_K={StochK:F2} StochRSI_D={StochD:F2} EntryType={EntryType} EntryRule=CompletedCandleConfirmation",
@@ -439,11 +458,48 @@ public sealed class EmaCrossoverStrategyService
         return (decimal)Math.Clamp(value, 0d, 100d);
     }
 
-    private static (decimal K, decimal D, decimal PreviousK) CalculateStochasticRsi(
+    /// <summary>
+    /// Loose market-structure check for a pullback followed by an early recovery.
+    /// Uses recent candles only; avoids requiring a perfectly confirmed pivot so
+    /// the strategy does not become excessively restrictive on one-minute data.
+    /// </summary>
+    private static (bool IsValid, decimal PullbackLow, decimal RecoverySwingHigh, string Reason)
+        EvaluatePullbackRecoveryStructure(IReadOnlyList<Candle> candles)
+    {
+        if (candles.Count < 6)
+            return (false, 0m, 0m, "NeedAtLeast6Candles");
+
+        var recent = candles.TakeLast(3).ToList();
+        var prior = candles.Skip(candles.Count - 6).Take(3).ToList();
+        var priorSwingLow = prior.Min(x => x.Low > 0m ? x.Low : x.Close);
+        var pullbackLow = recent.Min(x => x.Low > 0m ? x.Low : x.Close);
+        var recoverySwingHigh = candles.TakeLast(6).Max(x => x.High > 0m ? x.High : x.Close);
+        var referenceHigh = candles.Skip(Math.Max(0, candles.Count - 8))
+            .Take(Math.Max(1, Math.Min(5, candles.Count - 3)))
+            .Max(x => x.High > 0m ? x.High : x.Close);
+
+        if (priorSwingLow <= 0m || pullbackLow <= 0m || referenceHigh <= 0m)
+            return (false, pullbackLow, recoverySwingHigh, "InvalidPriceData");
+
+        var pullbackPercent = (referenceHigh - pullbackLow) / referenceHigh * 100m;
+        // Allow a tiny dip below the earlier swing low to avoid rejecting
+        // otherwise usable setups because of normal one-minute market noise.
+        var structureHeld = pullbackLow >= priorSwingLow * 0.999m;
+        var pullbackPresent = pullbackPercent >= MinimumPullbackPercent;
+
+        if (!pullbackPresent)
+            return (false, pullbackLow, recoverySwingHigh, $"PullbackTooSmall:{pullbackPercent:F3}%");
+        if (!structureHeld)
+            return (false, pullbackLow, recoverySwingHigh, $"PriorSwingLowBroken:{pullbackLow:F4}<{priorSwingLow:F4}");
+
+        return (true, pullbackLow, recoverySwingHigh, $"HigherLowOrNearHigherLow:Pullback={pullbackPercent:F3}%");
+    }
+
+    private static (decimal K, decimal D, decimal PreviousK, decimal PreviousD) CalculateStochasticRsi(
         IReadOnlyList<Candle> candles, int rsiPeriod, int stochasticPeriod, int kSmoothing, int dSmoothing)
     {
         if (candles.Count < rsiPeriod + stochasticPeriod + kSmoothing + dSmoothing + 2)
-            return (-1m, -1m, -1m);
+            return (-1m, -1m, -1m, -1m);
 
         var closes = candles.Select(x => x.Close).ToList();
         var rsiValues = new List<decimal>();
@@ -483,8 +539,8 @@ public sealed class EmaCrossoverStrategyService
         for (var i = dSmoothing - 1; i < kValues.Count; i++)
             dValues.Add(kValues.Skip(i - dSmoothing + 1).Take(dSmoothing).Average());
 
-        if (kValues.Count < 2 || dValues.Count == 0) return (-1m, -1m, -1m);
-        return (kValues[^1], dValues[^1], kValues[^2]);
+        if (kValues.Count < 2 || dValues.Count < 2) return (-1m, -1m, -1m, -1m);
+        return (kValues[^1], dValues[^1], kValues[^2], dValues[^2]);
     }
 
     private void FinalizeCurrentCandle(SymbolState state)

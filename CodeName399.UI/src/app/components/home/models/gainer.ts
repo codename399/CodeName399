@@ -38,6 +38,17 @@ export interface Gainer {
 
   stopLoss: number;
 
+  // Optional diagnostics displayed by the Trading detail view.
+  bid?: number;
+  ask?: number;
+  tickDayVolume?: number;
+  minimumBuyQuantity?: number;
+  estimatedCharges?: number;
+  ownedEstimatedCharges?: number;
+  minimumInvestmentWithCharges?: number;
+  sufficientFunds?: boolean;
+  pullbackDetected?: boolean;
+
   isOwned: boolean;
   quantity: number;
   averagePrice: number;

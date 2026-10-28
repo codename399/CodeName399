@@ -118,8 +118,8 @@ namespace CodeName399.Kite.API.Services
                 if (_settings.Current.LastDailySummarySent == DateOnly.FromDateTime(todayIst))
                     return true;
 
-                var startUtc = TimeZoneInfo.ConvertTimeToUtc(todayIst, ist);
-                var endUtc = TimeZoneInfo.ConvertTimeToUtc(todayIst.AddDays(1), ist);
+                var startUtc = todayIst;
+                var endUtc = todayIst.AddDays(1);
 
                 _logger.LogInformation(
                     "Generating daily summary. IST={NowIst}, UTC Range={StartUtc} -> {EndUtc}",

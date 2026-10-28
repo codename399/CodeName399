@@ -84,7 +84,7 @@ export class TradingComponent implements OnInit, OnDestroy {
     }));
     void this.#market.startConnection();
     this.#angel.subscribeStock(this.symbolToken(), this.exchange()).subscribe({
-      error: error => console.error('Unable to subscribe selected stock to live market ticks.', error)
+      error: (error: any) => console.error('Unable to subscribe selected stock to live market ticks.', error)
     });
   }
 
@@ -96,8 +96,8 @@ export class TradingComponent implements OnInit, OnDestroy {
   loadCandles(): void {
     this.loading.set(true);
     this.#angel.getTodayCandles(this.symbolToken(), this.exchange(), this.candleInterval()).subscribe({
-      next: rows => { this.candles.set(this.withIndicators((rows ?? []).map(c => ({ ...c })))); this.loading.set(false); this.error.set(''); },
-      error: e => { this.error.set(e?.error?.message ?? 'Unable to load today’s candles. Live ticks will still be displayed when available.'); this.loading.set(false); }
+      next: (rows: Array<Candle>) => { this.candles.set(this.withIndicators((rows ?? []).map((c: Candle) => ({ ...c })))); this.loading.set(false); this.error.set(''); },
+      error: (e: any) => { this.error.set(e?.error?.message ?? e?.message ?? 'Unable to load today’s candles. Live ticks will still be displayed when available.'); this.loading.set(false); }
     });
   }
 
@@ -110,10 +110,8 @@ export class TradingComponent implements OnInit, OnDestroy {
   }
 
   hasBudgetForMaximum(stock: Gainer): boolean {
-    const configuration = this.#angel.configuration();
-    const allocation = Math.min(100, Math.max(0, Number(configuration?.maxCapitalPerTradePercent ?? 0)));
-    const budget = this.#angel.availableCash() * allocation / 100;
-    return stock.currentPrice > 0 && budget >= stock.currentPrice;
+    const availableCash = Math.max(0, Number(this.#angel.availableCash() ?? 0));
+    return stock.currentPrice > 0 && availableCash >= stock.currentPrice;
   }
 
   displayNetProfitLoss(stock: Gainer): string {
@@ -155,7 +153,7 @@ export class TradingComponent implements OnInit, OnDestroy {
         this.actionMessage.set(`${mode === 'minimum' ? 'Minimum' : 'Maximum'} buy request submitted.`);
         this.#angel.getDashboardSummary().subscribe({ error: () => {} });
       },
-      error: e => { this.actionBusy.set(false); this.actionMessage.set(e?.error?.message ?? 'Buy request failed.'); }
+      error: (e: any) => { this.actionBusy.set(false); this.actionMessage.set(e?.error?.message ?? e?.message ?? 'Buy request failed.'); }
     });
   }
   sell(): void {
@@ -168,7 +166,7 @@ export class TradingComponent implements OnInit, OnDestroy {
         this.actionMessage.set('Sell request submitted; live orders close after broker confirmation.');
         this.#angel.getDashboardSummary().subscribe({ error: () => {} });
       },
-      error: e => { this.actionBusy.set(false); this.actionMessage.set(e?.error?.message ?? 'Sell request failed.'); }
+      error: (e: any) => { this.actionBusy.set(false); this.actionMessage.set(e?.error?.message ?? e?.message ?? 'Sell request failed.'); }
     });
   }
   toggleIndicator(name: 'price' | 'ema9' | 'ema21' | 'volume'): void {
@@ -323,7 +321,7 @@ export class TradingComponent implements OnInit, OnDestroy {
       `<tr><th>EMA 9</th><td>${ema9}</td></tr><tr><th>EMA 21</th><td>${ema21}</td></tr>` +
       `<tr><th>Interval</th><td>${this.candleInterval()}</td></tr></table>`;
     this.#angel.sendMarketEmail(subject, message, true).subscribe({
-      error: error => console.error('Bullish EMA crossover email endpoint failed.', error)
+      error: (error: any) => console.error('Bullish EMA crossover email endpoint failed.', error)
     });
   }
 
