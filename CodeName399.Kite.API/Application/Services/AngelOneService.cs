@@ -20,6 +20,8 @@ public partial class AngelOneService : IAngelOneService
     private readonly RequestHelper _requestHelper;
     private readonly SmartApiRateLimiter _rateLimiter;
     private readonly PaperPortfolioService _paperPortfolio;
+    private readonly CasTradingRulesService _casRules;
+    private readonly CasEligibilityService _casEligibility;
 
     private readonly SemaphoreSlim _loginLock = new(1, 1);
     private readonly SemaphoreSlim _positionSemaphore = new(1, 1);
@@ -52,7 +54,9 @@ public partial class AngelOneService : IAngelOneService
         ILogger<AngelOneService> logger,
         RequestHelper requestHelper,
         SmartApiRateLimiter rateLimiter,
-        PaperPortfolioService paperPortfolio
+        PaperPortfolioService paperPortfolio,
+        CasTradingRulesService casRules,
+        CasEligibilityService casEligibility
     )
     {
         _httpClient = factory.CreateClient(Constant.AngelRefresh);
@@ -62,6 +66,8 @@ public partial class AngelOneService : IAngelOneService
         _requestHelper = requestHelper;
         _rateLimiter = rateLimiter;
         _paperPortfolio = paperPortfolio;
+        _casRules = casRules;
+        _casEligibility = casEligibility;
     }
 
     private bool SessionExpired
@@ -72,8 +78,8 @@ public partial class AngelOneService : IAngelOneService
             if (DateTime.UtcNow - _lastLoginUtc >= LoginRefreshInterval) return true;
             try
             {
-                return TimeZoneInfo.ConvertTimeFromUtc(_lastLoginUtc, MarketClock.IndiaTimeZone).Date
-                    != TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, MarketClock.IndiaTimeZone).Date;
+                var tz = TimeZoneInfo.FindSystemTimeZoneById(_tradingSettingsProvider.Current.MarketTimeZoneId);
+                return TimeZoneInfo.ConvertTimeFromUtc(_lastLoginUtc, tz).Date != TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
             }
             catch { return false; }
         }
@@ -244,7 +250,7 @@ public partial class AngelOneService : IAngelOneService
     {
         var settings = _tradingSettingsProvider.Current;
 
-        if ((settings.PaperTrading || settings.PaperTradingAsLive) && !forceLive)
+        if (settings.PaperTrading && !forceLive)
             return await _paperPortfolio.GetAvailableBalanceAsync();
 
         await _rateLimiter.WaitAsync("rms");
@@ -257,22 +263,44 @@ public partial class AngelOneService : IAngelOneService
 
     public async Task<PlaceOrderResponse> PlaceOrderAsync(PlaceOrderRequest requestBody, bool forceLive = false)
     {
-        if ((_tradingSettingsProvider.Current.PaperTrading || _tradingSettingsProvider.Current.PaperTradingAsLive) && !forceLive)
-            return new PlaceOrderResponse { Status = false, Message = "Paper trading or paper-as-live is enabled; live broker order blocked." };
+        _logger.LogInformation("BROKER ORDER PREFLIGHT Symbol={Symbol} Token={Token} Exchange={Exchange} Side={Side} Quantity={Quantity} OrderType={OrderType} ProductType={ProductType} Duration={Duration} ForceLive={ForceLive} PaperTrading={PaperTrading} AutoTrading={AutoTrading} IsExitOrder={IsExitOrder}", requestBody.TradingSymbol, requestBody.SymbolToken, requestBody.Exchange, requestBody.TransactionType, requestBody.Quantity, requestBody.OrderType, requestBody.ProductType, requestBody.Duration, forceLive, _tradingSettingsProvider.Current.PaperTrading, _tradingSettingsProvider.Current.EnableAutoTrading, requestBody.IsExitOrder);
+        if (_tradingSettingsProvider.Current.PaperTrading && !forceLive)
+        {
+            _logger.LogWarning("BROKER ORDER BLOCKED Symbol={Symbol} Gate=PaperTrading Reason=Live broker order blocked by PaperTrading setting.", requestBody.TradingSymbol);
+            return new PlaceOrderResponse { Status = false, Message = "Paper trading is enabled; live broker order blocked." };
+        }
 
         if (!string.IsNullOrWhiteSpace(requestBody.OrderTag) && requestBody.OrderTag.Length >= 20)
+        {
+            _logger.LogWarning("BROKER ORDER BLOCKED Symbol={Symbol} Gate=OrderTag TagLength={TagLength}", requestBody.TradingSymbol, requestBody.OrderTag.Length);
             return new PlaceOrderResponse { Status = false, Message = "SmartAPI order tag must be fewer than 20 characters." };
+        }
 
         var liveTrading = true;
         if (liveTrading && !ValidateRegisteredStaticIpForLiveOrder(out var staticIpError))
+        {
+            _logger.LogError("BROKER ORDER BLOCKED Symbol={Symbol} Gate=StaticIP Reason={Reason}", requestBody.TradingSymbol, staticIpError);
             return new PlaceOrderResponse { Status = false, Message = staticIpError };
+        }
+
+        requestBody.IsCasEligible = requestBody.IsCasEligible ||
+            await _casEligibility.IsCasEligibleAsync(requestBody.Exchange, requestBody.SymbolToken);
 
         var marketNow = GetMarketNow();
-        var entryCutoff = ResolveEntryCutoff();
-        if (!_tradingSettingsProvider.Current.IgnoreMarketHours
-            && !requestBody.IsExitOrder
-            && marketNow.TimeOfDay >= entryCutoff)
-            return new PlaceOrderResponse { Status = false, Message = $"New intraday entries are blocked after {entryCutoff}. Existing positions may still be exited." };
+        var entryCutoff = ResolveEntryCutoff(requestBody);
+        if (!requestBody.IsExitOrder && marketNow.TimeOfDay >= entryCutoff)
+        {
+            var reason = $"New intraday entries are blocked after {entryCutoff}. Existing positions may still be exited.";
+            _logger.LogWarning("BROKER ORDER BLOCKED Symbol={Symbol} Gate=EntryCutoff MarketTime={MarketTime} EntryCutoff={EntryCutoff}", requestBody.TradingSymbol, marketNow, entryCutoff);
+            return new PlaceOrderResponse { Status = false, Message = reason };
+        }
+
+        var casResult = _casRules.ValidatePlace(requestBody, marketNow);
+        if (!casResult.Allowed)
+        {
+            _logger.LogWarning("BROKER ORDER BLOCKED Symbol={Symbol} Gate=OrderPolicy Reason={Reason}", requestBody.TradingSymbol, casResult.Reason);
+            return new PlaceOrderResponse { Status = false, Message = casResult.Reason };
+        }
 
         if (_tradingSettingsProvider.Current.EnableScripConsentForCashOrders
             && requestBody.Exchange is "NSE" or "BSE")
@@ -284,6 +312,25 @@ public partial class AngelOneService : IAngelOneService
             requestBody.ScripConsent = "yes";
         }
 
+        if (requestBody.IsCasEligible
+            && requestBody.OrderType.Equals("LIMIT", StringComparison.OrdinalIgnoreCase)
+            && marketNow.TimeOfDay >= _tradingSettingsProvider.Current.CasOrderEntryStart
+            && marketNow.TimeOfDay < _tradingSettingsProvider.Current.CasLimitOnlyEnd)
+        {
+            var reference = await GetReferencePriceAsync(requestBody.Exchange, requestBody.SymbolToken, requestBody.TradingSymbol);
+            if (reference is null)
+            {
+                _logger.LogWarning("BROKER ORDER BLOCKED Symbol={Symbol} Gate=CASReferencePriceUnavailable", requestBody.TradingSymbol);
+                return new PlaceOrderResponse { Status = false, Message = "CAS reference price unavailable; LIMIT order blocked for safety." };
+            }
+
+            if (requestBody.Price < reference.LowerBand || requestBody.Price > reference.UpperBand)
+            {
+                _logger.LogWarning("BROKER ORDER BLOCKED Symbol={Symbol} Gate=CASPriceBand Price={Price:F4} LowerBand={LowerBand:F4} UpperBand={UpperBand:F4}", requestBody.TradingSymbol, requestBody.Price, reference.LowerBand, reference.UpperBand);
+                return new PlaceOrderResponse { Status = false, Message = $"CAS price {requestBody.Price} is outside the reference-price band {reference.LowerBand:F2}-{reference.UpperBand:F2}." };
+            }
+        }
+
         await _rateLimiter.WaitAsync("order");
         using var request = await CreateRequestAsync(
             HttpMethod.Post,
@@ -293,21 +340,24 @@ public partial class AngelOneService : IAngelOneService
 
         try
         {
-            return await _requestHelper.SendAsync<PlaceOrderResponse>(request);
+            _logger.LogInformation("BROKER ORDER HTTP REQUEST Sending order to broker. Symbol={Symbol} Token={Token} Side={Side} Quantity={Quantity}", requestBody.TradingSymbol, requestBody.SymbolToken, requestBody.TransactionType, requestBody.Quantity);
+            var response = await _requestHelper.SendAsync<PlaceOrderResponse>(request);
+            _logger.LogInformation("BROKER ORDER HTTP RESPONSE Symbol={Symbol} Status={Status} Message={Message} OrderId={OrderId} UniqueOrderId={UniqueOrderId}", requestBody.TradingSymbol, response.Status, response.Message, response.Data?.OrderId, response.Data?.UniqueOrderId);
+            return response;
         }
         catch (AngelApiException ex)
         {
             _logger.LogWarning(
-                "PlaceOrder failed. Status={Status} Response={Response}",
-                ex.StatusCode,
-                ex.Response
+                ex,
+                "BROKER ORDER HTTP FAILURE Symbol={Symbol} Side={Side} Quantity={Quantity} Status={Status} Response={Response}",
+                requestBody.TradingSymbol, requestBody.TransactionType, requestBody.Quantity, ex.StatusCode, ex.Response
             );
 
             return new PlaceOrderResponse { Status = false, Message = ex.Response };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error while placing order.");
+            _logger.LogError(ex, "BROKER ORDER HTTP EXCEPTION Symbol={Symbol} Side={Side} Quantity={Quantity}; unexpected error while placing order.", requestBody.TradingSymbol, requestBody.TransactionType, requestBody.Quantity);
 
             return new PlaceOrderResponse { Status = false, Message = ex.Message };
         }
@@ -394,9 +444,20 @@ public partial class AngelOneService : IAngelOneService
                 return _cachedPositions;
             }
 
-            _cachedPositions = result?.Data
-                ?.Where(x => !string.IsNullOrWhiteSpace(x.TradingSymbol))
-                .ToList() ?? [];
+            var excluded =
+                _tradingSettingsProvider
+                    .Current.ExcludedSymbols?.Select(x => x.Trim().ToUpperInvariant())
+                    .ToHashSet()
+                ?? [];
+
+            _cachedPositions =
+                result
+                    ?.Data?.Where(x =>
+                        !string.IsNullOrWhiteSpace(x.TradingSymbol)
+                        && !excluded.Contains(x.TradingSymbol.ToUpperInvariant())
+                    )
+                    .ToList()
+                ?? [];
 
             _positionsLastLoaded = DateTime.UtcNow;
             _lastPositionRefreshSucceeded = true;
@@ -522,6 +583,20 @@ public partial class AngelOneService : IAngelOneService
         if (!ValidateRegisteredStaticIpForLiveOrder(out var staticIpError))
             return new PlaceOrderResponse { Status = false, Message = staticIpError };
 
+        var details = await GetIndividualOrderAsync(orderId);
+        if (details != null)
+        {
+            var casEligible = await _casEligibility.IsCasEligibleAsync(details.Exchange, details.SymbolToken);
+            var casResult = _casRules.ValidateCancel(details.Exchange, details.OrderType, casEligible, GetMarketNow());
+            if (!casResult.Allowed)
+                return new PlaceOrderResponse { Status = false, Message = casResult.Reason };
+        }
+        else if (GetMarketNow().TimeOfDay >= _tradingSettingsProvider.Current.CasMarketOnlyEnd
+                 && GetMarketNow().TimeOfDay < _tradingSettingsProvider.Current.CasLimitOnlyEnd)
+        {
+            return new PlaceOrderResponse { Status = false, Message = "Unable to verify broker order details during CAS; cancellation blocked for safety." };
+        }
+
         await _rateLimiter.WaitAsync("cancelorder");
         using var request = await CreateRequestAsync(
             HttpMethod.Post,
@@ -531,7 +606,10 @@ public partial class AngelOneService : IAngelOneService
 
         try
         {
-            return await _requestHelper.SendAsync<PlaceOrderResponse>(request);
+            _logger.LogInformation("BROKER CANCEL HTTP REQUEST OrderId={OrderId} Variety={Variety}", orderId, variety);
+            var response = await _requestHelper.SendAsync<PlaceOrderResponse>(request);
+            _logger.LogInformation("BROKER CANCEL HTTP RESPONSE OrderId={OrderId} Status={Status} Message={Message}", orderId, response.Status, response.Message);
+            return response;
         }
         catch (AngelApiException ex)
         {
@@ -557,6 +635,25 @@ public partial class AngelOneService : IAngelOneService
         if (!ValidateRegisteredStaticIpForLiveOrder(out var staticIpError))
             return new PlaceOrderResponse { Status = false, Message = staticIpError };
 
+        modifyRequest.IsCasEligible = modifyRequest.IsCasEligible ||
+            await _casEligibility.IsCasEligibleAsync(modifyRequest.Exchange, modifyRequest.SymbolToken);
+        var marketNow = GetMarketNow();
+        var casResult = _casRules.ValidateModify(modifyRequest, marketNow);
+        if (!casResult.Allowed)
+            return new PlaceOrderResponse { Status = false, Message = casResult.Reason };
+
+        if (modifyRequest.IsCasEligible
+            && modifyRequest.OrderType.Equals("LIMIT", StringComparison.OrdinalIgnoreCase)
+            && marketNow.TimeOfDay >= _tradingSettingsProvider.Current.CasOrderEntryStart
+            && marketNow.TimeOfDay < _tradingSettingsProvider.Current.CasLimitOnlyEnd)
+        {
+            var reference = await GetReferencePriceAsync(modifyRequest.Exchange, modifyRequest.SymbolToken, modifyRequest.TradingSymbol);
+            if (reference is null)
+                return new PlaceOrderResponse { Status = false, Message = "CAS reference price unavailable; LIMIT modification blocked for safety." };
+            if (modifyRequest.Price < reference.LowerBand || modifyRequest.Price > reference.UpperBand)
+                return new PlaceOrderResponse { Status = false, Message = $"CAS price {modifyRequest.Price} is outside the reference-price band {reference.LowerBand:F2}-{reference.UpperBand:F2}." };
+        }
+
         await _rateLimiter.WaitAsync("modifyorder");
         using var request = await CreateRequestAsync(
             HttpMethod.Post,
@@ -566,7 +663,10 @@ public partial class AngelOneService : IAngelOneService
 
         try
         {
-            return await _requestHelper.SendAsync<PlaceOrderResponse>(request);
+            _logger.LogInformation("BROKER MODIFY HTTP REQUEST Symbol={Symbol} Token={Token} OrderType={OrderType} Quantity={Quantity} OrderId={OrderId}", modifyRequest.TradingSymbol, modifyRequest.SymbolToken, modifyRequest.OrderType, modifyRequest.Quantity, modifyRequest.OrderId);
+            var response = await _requestHelper.SendAsync<PlaceOrderResponse>(request);
+            _logger.LogInformation("BROKER MODIFY HTTP RESPONSE Symbol={Symbol} Status={Status} Message={Message} OrderId={OrderId}", modifyRequest.TradingSymbol, response.Status, response.Message, response.Data?.OrderId);
+            return response;
         }
         catch (AngelApiException ex)
         {
@@ -709,15 +809,52 @@ public partial class AngelOneService : IAngelOneService
         }
     }
 
-    private TimeSpan ResolveEntryCutoff() => _tradingSettingsProvider.Current.IntradayEntryCutoffTime;
+    private TimeSpan ResolveEntryCutoff(PlaceOrderRequest request)
+    {
+        var settings = _tradingSettingsProvider.Current;
+        var product = request.ProductType ?? string.Empty;
+        var squareOff =
+            product.Equals("BO", StringComparison.OrdinalIgnoreCase) || product.Equals("ROBO", StringComparison.OrdinalIgnoreCase)
+                ? settings.RoboAutoSquareOffTime
+                : settings.EquityMisAutoSquareOffTime;
+        return new[] { settings.IntradayEntryCutoffTime, squareOff }.Min();
+    }
 
 
     private DateTime GetMarketNow()
     {
-        return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, MarketClock.IndiaTimeZone);
+        try
+        {
+            var tz = TimeZoneInfo.FindSystemTimeZoneById(_tradingSettingsProvider.Current.MarketTimeZoneId);
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        }
+        catch
+        {
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, MarketClock.IndiaTimeZone);
+        }
     }
 
-
+    public async Task<ReferencePriceSnapshot?> GetReferencePriceAsync(string exchange, string symbolToken, string tradingSymbol, CancellationToken cancellationToken = default)
+    {
+        await _rateLimiter.WaitAsync("getltpdata", cancellationToken);
+        var login = await GetLoginDataAsync();
+        using var request = new HttpRequestMessage(HttpMethod.Post, AngelApiUrlConstant.ltpDataUrl);
+        request.AddAngelOneHeaders(_options, login.JwtToken);
+        request.AddContent(new { exchange, tradingsymbol = tradingSymbol, symboltoken = symbolToken });
+        try
+        {
+            var result = await _requestHelper.SendAsync<LtpDataResponse>(request);
+            var data = result.Data;
+            if (data == null || data.ReferenceLimitPrice <= 0) return null;
+            var band = _tradingSettingsProvider.Current.CasPriceBandPercent / 100m;
+            return new ReferencePriceSnapshot(DateOnly.FromDateTime(GetMarketNow()), data.ReferenceLimitPrice, data.ReferenceLimitPrice * (1m - band), data.ReferenceLimitPrice * (1m + band));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Unable to retrieve CAS reference price for {Exchange}:{Token}", exchange, symbolToken);
+            return null;
+        }
+    }
 
     public async Task<OrderData?> GetIndividualOrderAsync(string uniqueOrderId)
     {

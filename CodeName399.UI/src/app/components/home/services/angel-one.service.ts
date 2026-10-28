@@ -95,39 +95,6 @@ export class AngelOneService {
   }
 
 
-  subscribeStock(symbolToken: string, exchange = 'NSE') {
-    const params = new URLSearchParams({ exchange });
-    return this.#http.post(this.#api.getUrl(`/api/market/${encodeURIComponent(symbolToken)}/subscribe?${params.toString()}`, false), {});
-  }
-
-  unsubscribeStock(symbolToken: string, exchange = 'NSE') {
-    const params = new URLSearchParams({ exchange });
-    return this.#http.delete(this.#api.getUrl(`/api/market/${encodeURIComponent(symbolToken)}/subscribe?${params.toString()}`, false));
-  }
-
-  getTodayCandles(symbolToken: string, exchange = 'NSE', interval = 'ONE_MINUTE') {
-    const params = new URLSearchParams({ exchange, interval });
-    return this.#http.get<Array<{ timestamp: string; open: number; high: number; low: number; close: number; volume: number }>>(
-      this.#api.getUrl(`/api/market/${encodeURIComponent(symbolToken)}/candles?${params.toString()}`, false),
-    );
-  }
-
-
-  sendMarketEmail(subject: string, message: string, isHtml = false) {
-    return this.#http.post<{ success: boolean }>(
-      this.#api.getUrl('/api/market/sendemail', false),
-      { subject, message, isHtml },
-    );
-  }
-
-  buyStock(symbolToken: string, quantity: number, buyMode: 'minimum' | 'maximum' = 'minimum', exchange = 'NSE') {
-    return this.#http.post(this.#api.getUrl('/api/market/buy', false), { symbolToken, quantity, buyMode, exchange });
-  }
-
-  sellStock(symbolToken: string, quantity: number, exchange = 'NSE') {
-    return this.#http.post(this.#api.getUrl('/api/market/sell', false), { symbolToken, quantity, exchange });
-  }
-
   get isAutoTradingEnabled(): boolean {
     return this.configuration()?.enableAutoTrading ?? false;
   }
@@ -138,4 +105,7 @@ export class AngelOneService {
     return this.configuration()?.equity;
   }
 
+  get riskPercentage(): number {
+    return this.configuration()?.riskPercentage ?? 0;
+  }
 }

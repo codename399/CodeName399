@@ -47,6 +47,11 @@ public class AngelWebSocketClient : IAngelWebSocketClient
 
     private CancellationTokenSource? _cts;
 
+    // The host lifetime token must outlive individual socket sessions. Never pass
+    // the socket-session token back into StartAsync during reconnect: StartAsync
+    // cancels that session before creating the next one.
+    private CancellationToken _hostLifetimeToken = CancellationToken.None;
+
     private Task? _receiveTask;
 
     private readonly SemaphoreSlim _sync = new(1, 1);
@@ -87,6 +92,9 @@ public class AngelWebSocketClient : IAngelWebSocketClient
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
+        if (cancellationToken.CanBeCanceled)
+            _hostLifetimeToken = cancellationToken;
+
         if (Interlocked.Exchange(ref _starting, 1) == 1)
             return;
 
@@ -416,7 +424,7 @@ public class AngelWebSocketClient : IAngelWebSocketClient
         try
         {
             _currentRetryAttempt = 0;
-            while (!(_cts?.IsCancellationRequested ?? true))
+            while (!_hostLifetimeToken.IsCancellationRequested)
             {
                 _currentRetryAttempt++;
                 try
@@ -426,11 +434,21 @@ public class AngelWebSocketClient : IAngelWebSocketClient
                     _heartbeatTimer = null;
                     try { await _connection.CloseAsync(); } catch { }
                     var seconds = Math.Min(MaxRetryDelay.TotalSeconds, RetryInitialDelay.TotalSeconds * Math.Pow(2, Math.Min(_currentRetryAttempt - 1, 6)));
-                    await Task.Delay(TimeSpan.FromSeconds(seconds), _cts?.Token ?? CancellationToken.None);
-                    await StartAsync(_cts?.Token ?? CancellationToken.None);
-                    if (IsConnected) { _currentRetryAttempt = 0; return; }
+                    var lifetimeToken = _hostLifetimeToken;
+                    await Task.Delay(TimeSpan.FromSeconds(seconds), lifetimeToken);
+
+                    // StartAsync cancels/disposes the previous socket CTS. Pass the
+                    // host token instead, otherwise the replacement CTS is linked to
+                    // the already-cancelled session token and every reconnect fails.
+                    await StartAsync(lifetimeToken);
+                    if (IsConnected)
+                    {
+                        _logger.LogInformation("WebSocket reconnect succeeded after attempt {Attempt}.", _currentRetryAttempt);
+                        _currentRetryAttempt = 0;
+                        return;
+                    }
                 }
-                catch (OperationCanceledException) when (_cts?.IsCancellationRequested == true)
+                catch (OperationCanceledException) when (_hostLifetimeToken.IsCancellationRequested)
                 {
                     return;
                 }

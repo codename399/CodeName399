@@ -14,7 +14,7 @@ export class MarketService {
 
   // Keep the latest watchlist snapshot so a component that subscribes after
   // the SignalR connection is already established still receives the current data.
-  private gainersSubject = new BehaviorSubject<any[] | null>(null);
+  private gainersSubject = new BehaviorSubject<any[]>([]);
   gainers$ = this.gainersSubject.asObservable();
 
   // Every broker tick is emitted individually. The gainers$ stream remains
@@ -55,14 +55,8 @@ export class MarketService {
 
         this.hub.on('GainersUpdated', (data: any[]) => {
           this.pendingTicks.clear();
-          const snapshot = Array.isArray(data) ? data : [];
-          this.rebuildStockIndex(snapshot);
-          this.gainersSubject.next(snapshot);
-        });
-
-        this.hub.onreconnected(async () => {
-          try { await this.hub?.invoke('RequestGainersSnapshot'); }
-          catch (error) { console.error('Unable to request gainer snapshot after reconnect', error); }
+          this.rebuildStockIndex(data);
+          this.gainersSubject.next(data ?? []);
         });
 
         this.hub.on('StockTickUpdated', (stock: any) => {
@@ -80,9 +74,6 @@ export class MarketService {
       }
 
       await this.hub.start();
-      // Explicitly request a snapshot even though OnConnectedAsync also sends one.
-      // This makes initial-load behavior deterministic across hub implementations.
-      await this.hub.invoke('RequestGainersSnapshot');
       console.log('SignalR Connected');
     } catch (err) {
       console.error(err);
@@ -94,18 +85,6 @@ export class MarketService {
   async stopConnection(): Promise<void> {
     if (this.hub) {
       await this.hub.stop();
-    }
-  }
-
-  /** Reconnect so the hub can send its initial GainersUpdated snapshot again. */
-  async refreshGainersSnapshot(): Promise<void> {
-    try {
-      if (this.hub && this.hub.state !== signalR.HubConnectionState.Disconnected) {
-        await this.hub.stop();
-      }
-      await this.startConnection();
-    } catch (error) {
-      console.error('Unable to refresh the SignalR gainer snapshot', error);
     }
   }
 
@@ -138,7 +117,7 @@ export class MarketService {
   private flushPendingTicks(): void {
     if (this.pendingTicks.size === 0) return;
 
-    const current = this.gainersSubject.value ?? [];
+    const current = this.gainersSubject.value;
     if (current.length === 0) {
       this.pendingTicks.clear();
       return;

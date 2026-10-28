@@ -2,6 +2,7 @@ using CodeName399.Kite.API.Diagnostics;
 using CodeName399.Kite.API.Models;
 using CodeName399.Kite.API.Models.Enum;
 using CodeName399.Kite.API.Services;
+using CodeName399.Kite.API.Services.Indicator;
 using CodeName399.Kite.API.Services.Interface;
 using CodeName399.Kite.API.SignalRHubs;
 using Microsoft.AspNetCore.SignalR;
@@ -14,17 +15,23 @@ public class MarketDiscoveryBackgroundService : BackgroundService
     private readonly WatchListService _watchList;
     private readonly IMarketDataProvider _marketDataProvider;
     private readonly TradingSettingsProvider _settings;
+    private readonly HistoricalCacheService _historyCache;
+    private readonly HistoricalDownloadQueue _historyQueue;
     private readonly ILogger<MarketDiscoveryBackgroundService> _logger;
+    private readonly MarketClock _clock;
     private readonly IHubContext<MarketHub> _marketHub;
 
-    private InstrumentType? _lastActiveInstrumentType;
+    private DateOnly? _historyPreloadedDate;
 
     public MarketDiscoveryBackgroundService(
         IServiceProvider serviceProvider,
         WatchListService watchList,
         IMarketDataProvider marketDataProvider,
         TradingSettingsProvider settings,
+        HistoricalCacheService historyCache,
+        HistoricalDownloadQueue historyQueue,
         ILogger<MarketDiscoveryBackgroundService> logger,
+        MarketClock clock,
         IHubContext<MarketHub> marketHub
     )
     {
@@ -32,7 +39,10 @@ public class MarketDiscoveryBackgroundService : BackgroundService
         _watchList = watchList;
         _marketDataProvider = marketDataProvider;
         _settings = settings;
+        _historyCache = historyCache;
+        _historyQueue = historyQueue;
         _logger = logger;
+        _clock = clock;
         _marketHub = marketHub;
     }
 
@@ -43,54 +53,44 @@ public class MarketDiscoveryBackgroundService : BackgroundService
             try
             {
                 var config = _settings.Current;
-                // Discovery and quote refresh run independently of market hours.
-                // Market-hours enforcement belongs only to explicit buy/sell endpoints.
+                var now = _clock.Now;
+                var today = DateOnly.FromDateTime(now);
 
-                // ---------------------------------------------------------
-                // MARKET OPEN
-                // ---------------------------------------------------------
-                using var scope = _serviceProvider.CreateScope();
+                // Discovery is deliberately independent of market-hours checks so
+                // the UI can receive the latest available top-10 equity shortlist
+                // even before/after the session. Entry and exit workers enforce
+                // their own market-hours rules.
+                var preloadTime = config.MarketOpenTime.Subtract(TimeSpan.FromMinutes(30));
+                var isWeekday = now.DayOfWeek is not DayOfWeek.Saturday and not DayOfWeek.Sunday;
+                var isPreMarket = isWeekday
+                    && now.TimeOfDay >= preloadTime
+                    && now.TimeOfDay < config.MarketOpenTime;
 
-                var activeInstrumentType = InstrumentType.Equity;
-                if (_lastActiveInstrumentType.HasValue &&
-                    _lastActiveInstrumentType.Value != activeInstrumentType)
+                if (isPreMarket && _historyPreloadedDate != today)
                 {
-                    var removed = _watchList.ClearNonOwnedForInstrumentType(activeInstrumentType);
-                    await _marketDataProvider.SetSubscriptionsAsync(
-                        _watchList.Current
-                            .Where(ShouldSubscribe)
-                            .Select(x => new MarketSubscription(x.SymbolToken, x.Exchange))
-                            .ToList());
-
-                    _logger.LogDebug("FLOW STAGE InstrumentSwitch Previous={Previous}, Current={Current}, RemovedCandidates={RemovedCandidates}",
-                        _lastActiveInstrumentType.Value, activeInstrumentType, removed);
+                    await PreloadHistoricalDataAsync(stoppingToken);
+                    _historyPreloadedDate = today;
                 }
-                _lastActiveInstrumentType = activeInstrumentType;
 
+                using var scope = _serviceProvider.CreateScope();
                 var marketService = scope.ServiceProvider.GetRequiredService<IAngelMarketService>();
+                var topStocks = await marketService.GetTopGainersAsync();
+                await ProcessStocksAsync(topStocks, "top-10 equity discovery", stoppingToken);
 
-                var gainers = await marketService.GetTopGainersAsync();
-
-                await ProcessStocksAsync(gainers, "live discovery", stoppingToken);
-
-                await Task.Delay(
-                    TimeSpan.FromMinutes(config.WatchListRefreshMinutes),
-                    stoppingToken
-                );
+                await Task.Delay(TimeSpan.FromMinutes(Math.Max(1, config.WatchListRefreshMinutes)), stoppingToken);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
                 break;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in MarketDiscoveryBackgroundService");
-
                 try
                 {
                     await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
                     break;
                 }
@@ -100,11 +100,68 @@ public class MarketDiscoveryBackgroundService : BackgroundService
         _logger.LogInformation("MarketDiscoveryBackgroundService stopped.");
     }
 
+    private async Task PreloadHistoricalDataAsync(CancellationToken cancellationToken)
+    {
+        using var scope = _serviceProvider.CreateScope();
 
+        var market = scope.ServiceProvider.GetRequiredService<IAngelMarketService>();
 
+        var stocks = await market.GetTopGainersAsync();
 
+        var activeInstrumentType = InstrumentType.Equity;
 
+        const int maxCandidates = 10;
+        var normalizedStocks = stocks
+            .Where(x => x != null && !string.IsNullOrWhiteSpace(x.SymbolToken))
+            .Where(x => x.InstrumentType == activeInstrumentType || x.IsOwned)
+            .GroupBy(x => x.SymbolToken, StringComparer.OrdinalIgnoreCase)
+            .Select(x => x.First())
+            .ToList();
 
+        var stockList = normalizedStocks
+            .Where(x => x.IsOwned)
+            .Concat(
+                normalizedStocks
+                    .Where(x => !x.IsOwned && x.CurrentPrice > 0m && x.CurrentPrice <= _settings.Current.MaximumStockPrice)
+                    .OrderByDescending(x => x.Priority)
+                    .ThenByDescending(x => x.ChangePercent)
+                    .Take(maxCandidates))
+            .GroupBy(x => x.SymbolToken, StringComparer.OrdinalIgnoreCase)
+            .Select(x => x.First())
+            .ToList();
+
+        // Core strategy requires historical data, so queue the selected equity universe.
+        var preloadLimit = stockList.Count;
+        var preloadList = stockList
+            .Where(x => x.IsOwned)
+            .Concat(stockList
+                .Where(x => !x.IsOwned)
+                .OrderByDescending(x => x.Priority)
+                .Take(preloadLimit))
+            .GroupBy(x => x.SymbolToken, StringComparer.OrdinalIgnoreCase)
+            .Select(x => x.First())
+            .ToList();
+        foreach (var stock in preloadList)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (_historyCache.Exists(stock.SymbolToken))
+                continue;
+
+            if (_historyQueue.IsQueued(stock.SymbolToken))
+                continue;
+
+            _historyCache.AddPending(stock.SymbolToken);
+            _historyQueue.Enqueue(stock.SymbolToken, Math.Max(stock.Priority, 1));
+        }
+
+        _logger.LogInformation(
+            "Historical preload queued {Count} stocks from {UniverseCount}. "
+                + "Watchlist and normal subscriptions unchanged.",
+            preloadList.Count,
+            stockList.Count
+        );
+    }
 
     private async Task ProcessStocksAsync(
         IEnumerable<Gainer>? stocks,
@@ -118,13 +175,7 @@ public class MarketDiscoveryBackgroundService : BackgroundService
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        // Capture the active instrument type for this discovery cycle.
-        // This value must be local to ProcessStocksAsync; it is not a field.
         var activeInstrumentType = InstrumentType.Equity;
-
-        // The active instrument is prepared before discovery in ExecuteAsync.
-        // Keep this assignment defensive for direct/future callers.
-        _lastActiveInstrumentType = activeInstrumentType;
 
         if (stocks == null)
         {
@@ -138,7 +189,7 @@ public class MarketDiscoveryBackgroundService : BackgroundService
         }
 
         // Enforce the active instrument boundary before anything reaches
-        // the watchlist, subscriptions, or UI. Owned positions
+        // the watchlist, history queue, subscriptions, or UI. Owned positions
         // are preserved because they still require lifecycle management.
         const int maxCandidates = 10;
         var normalizedStocks = stocks
@@ -152,7 +203,7 @@ public class MarketDiscoveryBackgroundService : BackgroundService
             .Where(x => x.IsOwned)
             .Concat(
                 normalizedStocks
-                    .Where(x => !x.IsOwned)
+                    .Where(x => !x.IsOwned && x.CurrentPrice > 0m && x.CurrentPrice <= _settings.Current.MaximumStockPrice)
                     .OrderByDescending(x => x.Priority)
                     .ThenByDescending(x => x.ChangePercent)
                     .Take(maxCandidates))
@@ -168,19 +219,23 @@ public class MarketDiscoveryBackgroundService : BackgroundService
         if (stockList.Count == 0)
         {
             _logger.LogWarning(
-                "Market discovery returned no candidates for active InstrumentType={InstrumentType}. Source={Source}. Non-owned watchlist entries are not restored.",
+                "Market discovery returned no candidates for active InstrumentType={InstrumentType}. Source={Source}. Preserving the last known watchlist.",
                 activeInstrumentType, source);
 
-            // A successful quote response with no positive-change candidates is
-            // different from a broker failure (which throws before this point).
-            // Clear ordinary discovery candidates but retain open positions and
-            // manual subscriptions.
-            _watchList.ClearNonOwnedForInstrumentType(activeInstrumentType);
-            await _marketDataProvider.SetSubscriptionsAsync(
-                _watchList.Current
-                    .Where(ShouldSubscribe)
-                    .Select(x => new MarketSubscription(x.SymbolToken, x.Exchange))
-                    .ToList());
+            // Preserve the last known shortlist on a transient empty broker response.
+            // Keep its subscriptions so live ticks can continue updating the UI.
+            try
+            {
+                await _marketDataProvider.SetSubscriptionsAsync(
+                    _watchList.Current
+                        .Where(x => x.IsOwned || x.InstrumentType == activeInstrumentType)
+                        .Select(x => new MarketSubscription(x.SymbolToken, x.Exchange))
+                        .ToList());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to refresh subscriptions after an empty discovery response; preserving the current UI shortlist.");
+            }
 
             await PublishWatchlistAsync();
             return;
@@ -192,41 +247,80 @@ public class MarketDiscoveryBackgroundService : BackgroundService
 
         _watchList.UpdateForInstrumentType(stockList, activeInstrumentType);
 
-        // Historical candles are loaded on demand by the candle endpoint only.
-
         // =========================================================
-        // Build desired subscription set
-        // =========================================================
-        //
-        // THIS IS THE P0 FIX.
-        //
-        // The selected equity universe and manually subscribed stocks are
-        // subscribed independently of candle-history availability.
+        // Queue historical data
         // =========================================================
 
-        var subscriptions = _watchList.Current
-            .Where(ShouldSubscribe)
+        var historicalCandidates = stockList
+            .Where(x => !x.IsOwned && !_historyCache.Exists(x.SymbolToken))
+            .OrderByDescending(x => x.Priority)
+            .ThenByDescending(x => x.ChangePercent)
+            .Take(stockList.Count)
+            .ToList();
+
+        foreach (var stock in historicalCandidates)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!_historyQueue.IsQueued(stock.SymbolToken))
+            {
+                _historyCache.AddPending(stock.SymbolToken);
+                var priority = Math.Max(stock.Priority, 1);
+                _historyQueue.Enqueue(stock.SymbolToken, priority);
+                _logger.LogDebug(
+                    "Historical data queued for {Symbol} ({Token}) with priority {Priority}.",
+                    stock.Symbol, stock.SymbolToken, priority);
+            }
+        }
+
+        // Build the desired subscription set. All shortlisted candidates are
+        // subscribed immediately; historical readiness does not gate market data.
+
+        // Subscribe all ten shortlisted equities immediately. Historical candles
+        // seed the EMA when available; otherwise live candles warm up the strategy.
+        var desiredStocks = _watchList.Current
+            .Where(x => x.IsOwned || x.InstrumentType == activeInstrumentType)
             .OrderByDescending(x => x.IsOwned)
             .ThenByDescending(x => x.Priority)
+            .ToList();
+        var subscriptions = desiredStocks
             .Select(x => new MarketSubscription(x.SymbolToken, x.Exchange))
             .ToList();
-        var desiredTokens = subscriptions.Select(x => x.SymbolToken).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var desiredTokens = subscriptions.Select(x => x.SymbolToken)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        await _marketDataProvider.SetSubscriptionsAsync(subscriptions);
+        foreach (var stock in desiredStocks)
+            stock.IsSubscribed = false;
 
-        var openPositions = stockList.Count(x => x.IsOwned);
+        try
+        {
+            await _marketDataProvider.SetSubscriptionsAsync(subscriptions);
+            foreach (var stock in desiredStocks)
+                stock.IsSubscribed = desiredTokens.Contains(stock.SymbolToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to apply the top-ten market-data subscriptions. The shortlist will still be published to the UI.");
+        }
 
-        var unownedCandidates = stockList.Count(x => !x.IsOwned);
+        var openPositions = desiredStocks.Count(x => x.IsOwned);
 
-        _logger.LogDebug("FLOW STAGE MarketDiscovery.Subscriptions Source={Source}, DesiredSubscriptions={DesiredSubscriptions}, OpenPositions={OpenPositions}, UnownedCandidates={UnownedCandidates}",
-            source, desiredTokens.Count, openPositions, unownedCandidates);
+        var nearBuy = stockList.Count(x =>
+            !x.IsOwned && string.Equals(x.Signal, "BUY", StringComparison.OrdinalIgnoreCase));
+
+        var historicalLoading = stockList.Count(x => !x.HistoricalLoaded);
+
+        _logger.LogDebug("FLOW STAGE MarketDiscovery.Subscriptions Source={Source}, DesiredSubscriptions={DesiredSubscriptions}, OpenPositions={OpenPositions}, NearBuy={NearBuy}, HistoricalLoading={HistoricalLoading}",
+            source, desiredTokens.Count, openPositions, nearBuy, historicalLoading);
 
         // Discovery is authoritative for the dashboard snapshot. Publish after
-        // every successful discovery cycle.
+        // every successful discovery cycle so a client that connected before
+        // discovery does not have to wait for BuyTradingBackgroundService.
         await PublishWatchlistAsync();
 
-        _logger.LogDebug("FLOW END MarketDiscovery Source={Source}, WatchlistCount={WatchlistCount}",
-            source, _watchList.Current.Count);
+        _logger.LogDebug("FLOW END MarketDiscovery Source={Source}, WatchlistCount={WatchlistCount}, HistoryPending={HistoryPending}",
+            source, _watchList.Current.Count, _historyCache.GetPendingTokens().Count);
     }
 
     private async Task PublishWatchlistAsync()
@@ -248,8 +342,6 @@ public class MarketDiscoveryBackgroundService : BackgroundService
                 return x;
             })
             .OrderByDescending(x => x.IsOwned)
-            .ThenByDescending(x => x.PullbackDetected)
-            .ThenByDescending(x => x.IsManuallySubscribed)
             .ThenByDescending(x => x.Priority)
             .ThenByDescending(x => x.ChangePercent)
             .ToList();
@@ -263,15 +355,6 @@ public class MarketDiscoveryBackgroundService : BackgroundService
             // UI publication must never stop market discovery/subscriptions.
             _logger.LogWarning(ex, "Failed to publish market watchlist snapshot to SignalR.");
         }
-    }
-
-    private static bool ShouldSubscribe(Gainer stock)
-    {
-        // Subscribe the selected top-ten equity universe immediately; the chart
-        // creates new candles from ticks after its explicit history request.
-        return stock.InstrumentType == InstrumentType.Equity
-            && !string.IsNullOrWhiteSpace(stock.SymbolToken)
-            && (stock.IsOwned || stock.IsManuallySubscribed || !stock.IsManuallyUnsubscribed);
     }
 
 }

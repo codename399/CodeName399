@@ -5,7 +5,7 @@ namespace CodeName399.Kite.API.Services;
 
 /// <summary>
 /// Central SmartAPI client-code rate limiter using the limits published in the
-/// broker-documented SmartAPI rate limits.  Limits are intentionally
+/// supplied 2026 SmartAPI RateLimit/CAS document.  Limits are intentionally
 /// exact; callers should still batch requests where the API supports batching.
 /// </summary>
 public sealed class SmartApiRateLimiter

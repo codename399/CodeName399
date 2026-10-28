@@ -72,7 +72,7 @@ public class AngelBinaryParser
     {
         // Preserve the broker's depth packet in structured form where the standard
         // 20-byte depth records are present. We keep the first five levels on each
-        // side because those are sufficient for the market-data model.
+        // side because those are sufficient for the market-data/research model.
         if (packet.Length > 43)
             ParseFiveLevelDepth(packet, tick, 43, Math.Min(20, (packet.Length - 43) / 20));
     }

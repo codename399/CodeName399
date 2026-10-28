@@ -23,6 +23,8 @@ public sealed class TradeIndicatorSnapshot
     public double TotalBuyQuantity { get; set; }
     public double TotalSellQuantity { get; set; }
     public long Volume { get; set; }
+    public bool HistoricalLoaded { get; set; }
+    public DateTime LastHistoricalUpdate { get; set; }
     public string Signal { get; set; } = "";
     public string Reason { get; set; } = "";
 }

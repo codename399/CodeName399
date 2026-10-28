@@ -3,7 +3,44 @@ export interface InstrumentTradingSettings {
   productType: string;
   orderType: string;
   duration: string;
-  /* Execution defaults used by explicit manual order endpoints. */
+  atrStopMultiplier: number;
+  maximumStopPercent: number;
+  minimumStopPercent: number;
+  allowLong: boolean;
+  exitOrderTimeoutSeconds: number;
+  maxMarketDataAgeSeconds: number;
+  maximumExitRetries: number;
+  maximumOpenPositions: number;
+}
+
+export interface ExitSettings {
+  trailingStopAtrMultiplier: number;
+  trailingProfitRetentionPercent: number;
+}
+
+export interface PredictionSettings {
+  enabled: boolean;
+  targetNetPercent: number;
+  roundTripCostPercent: number;
+  futureWindowSeconds: number;
+  minimumHistoryTicks: number;
+  predictionSpacingSeconds: number;
+  maximumHistoryTicksPerSymbol: number;
+  maximumSamples: number;
+  minimumBuyProbability: number;
+  minimumHoldProbability: number;
+  liveHistoryTicks: number;
+  modelFileName: string;
+  trainingDataPath: string;
+  trainFraction: number;
+  autoTrainModel: boolean;
+  autoTrainCheckIntervalMinutes: number;
+  autoTrainStartupDelaySeconds: number;
+  autoTrainMinimumArchiveAgeMinutes: number;
+  simulationStartingCapital: number;
+  simulationMaximumRiskPerTrade: number;
+  simulationMaxCapitalPerTradePercent: number;
+  simulationProtectiveStopPercent: number;
 }
 
 export interface RawMarketDataSettings {
@@ -11,6 +48,7 @@ export interface RawMarketDataSettings {
   storagePath: string;
   maximumZipSizeMb: number;
   rollOverAtPercent: number;
+  recordOnlyDuringMarketHours: boolean;
 }
 
 /**
@@ -22,34 +60,60 @@ export interface TradingConfiguration {
   enableAutoTrading: boolean;
   paperTrading: boolean;
   paperTradingAsLive: boolean;
-  gainersPageSize: number;
-  minimumBuyProfitChangePercent: number;
-  enablePullbackOpportunityNotifications: boolean;
-  enableNetProfitOpportunityNotifications: boolean;
   enableNotification: boolean;
 
   equity: InstrumentTradingSettings;
 
+  riskPercentage: number;
   maxCapitalPerTradePercent: number;
+  maxBrokerFailuresBeforeKillSwitch: number;
+  brokerFailureWindowMinutes: number;
   ignoreMarketHours: boolean;
-  paperTradingBalance: number;
 
   marketOpenTime: string;
   marketCloseTime: string;
   intradayEntryCutoffTime: string;
+  equityMisAutoSquareOffTime: string;
+  roboAutoSquareOffTime: string;
+
+  casTransitionStart: string;
+  casOrderEntryStart: string;
+  casMarketOnlyEnd: string;
+  casLimitOnlyEnd: string;
+  casRandomCloseSafetyCutoff: string;
+  casEnd: string;
+  casPostCloseEnd: string;
+  casPriceBandPercent: number;
 
   watchListRefreshMinutes: number;
+  excludedSymbols: string[];
+  maxCandidates: number;
   lastDailySummarySent: string | null;
   instrumentLoadedAt: string | null;
+  marketTimeZoneId: string;
   tradingHolidays: string[];
 
-  researchDataVersion: string;
+  maximumTotalOpenRisk: number;
+  riskReservationSeconds: number;
+  enableEntryExecutionAudit: boolean;
   enableScripConsentForCashOrders: boolean;
   webSocketHeartbeatSeconds: number;
   webSocketPongTimeoutSeconds: number;
   webSocketRetryInitialSeconds: number;
   webSocketRetryMaxSeconds: number;
+  brokerPositionConfirmationDelaySeconds: number;
+  squareOffRetryDelaySeconds: number;
+  stopLossConfirmationSeconds: number;
+
+  buyTradingInterval: number;
+  sellTradingInterval: number;
   visibleColumns: string[];
 
+  autoSquareOff: boolean;
+  paperTradingBalance: number;
+
+  researchDataVersion: string;
+  exit: ExitSettings;
+  prediction: PredictionSettings;
   rawMarketData: RawMarketDataSettings;
 }

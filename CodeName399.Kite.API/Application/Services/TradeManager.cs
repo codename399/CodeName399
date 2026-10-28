@@ -466,7 +466,7 @@ namespace CodeName399.Kite.API.Services
                 ? Math.Max(0, trade.EntryPrice - stopLoss)
                 : Math.Max(0, stopLoss - trade.EntryPrice);
 
-            // Trailing activation is owned by the explicit sell endpoint after
+            // Activation is owned exclusively by SellTradingService after
             // this stock's own executable-side net profit is positive.
             // UpdateTrailing only ratchets an already-active trailing stop.
             if (!trade.TrailingActivated)
@@ -813,7 +813,6 @@ namespace CodeName399.Kite.API.Services
                 // Closed trades are never retained in the recovery store.
                 await _repository.DeleteAsync(trade.Id);
                 _trades.TryRemove(TradeKey(trade), out _);
-                _watchList.MarkSold(trade.SymbolToken);
 
                 ReleasePosition(trade);
                 ReleaseSymbol(trade.Symbol);
@@ -932,6 +931,61 @@ namespace CodeName399.Kite.API.Services
             existingTrade = trade;
 
             return true;
+        }
+
+        public bool UsesTrailingConfirmation(TradeOrder trade)
+        {
+            return trade.Direction == TradeDirection.Short
+                ? trade.LowestPrice < trade.EntryPrice && trade.StopLoss <= trade.EntryPrice
+                : trade.HighestPrice > trade.EntryPrice && trade.StopLoss >= trade.EntryPrice;
+        }
+
+        public bool ShouldConfirmTrailingExit(TradeOrder trade, decimal currentPrice)
+        {
+            bool breached = trade.Direction == TradeDirection.Short
+                ? currentPrice >= trade.StopLoss
+                : currentPrice <= trade.StopLoss;
+
+            bool recovered = trade.Direction == TradeDirection.Short
+                ? currentPrice < trade.StopLoss
+                : currentPrice > trade.StopLoss;
+
+            if (!UsesTrailingConfirmation(trade))
+                return breached;
+
+            if (!trade.StopLossTriggered)
+            {
+                if (breached)
+                {
+                    trade.StopLossTriggered = true;
+                    trade.StopLossTriggerPrice = currentPrice;
+                    trade.StopLossTriggerTime = DateTime.UtcNow;
+                    Update(trade);
+                }
+
+                return false;
+            }
+
+            if (recovered)
+            {
+                trade.StopLossTriggered = false;
+                trade.StopLossTriggerPrice = 0;
+                trade.StopLossTriggerTime = null;
+                Update(trade);
+                return false;
+            }
+
+            if (trade.StopLossTriggerTime.HasValue
+                && DateTime.UtcNow - trade.StopLossTriggerTime.Value >= TimeSpan.FromSeconds(Math.Max(0, _tradingSettingsProvider.Current.StopLossConfirmationSeconds)))
+            {
+                trade.StopLossTriggered = false;
+                trade.StopLossTriggerPrice = 0;
+                trade.StopLossTriggerTime = null;
+                Update(trade);
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>

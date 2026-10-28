@@ -38,7 +38,7 @@ public sealed class TradeCloseHistoryStore
             ExitCategory = trade.ExitCategory,
             ExitTrigger = trade.ExitTrigger,
             EntryDecision = trade.EntryDecision,
-            EntryReason = trade.EntryReason,
+            EntryReason = trade.EntryReason
         };
 
         var path = Path.Combine(_rootPath, $"{record.ExitTime:yyyy-MM-dd}.jsonl");

@@ -12,28 +12,70 @@ public sealed class MarketClock
     {
         _settings = settings;
         _nowProvider = nowProvider ?? (() =>
-            TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, IndiaTimeZone));
+            TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ResolveConfiguredTimeZone()));
     }
 
     public DateTime Now => _nowProvider();
     public DateTime Today => Now.Date;
+    public DateTime MarketOpen => Today.Add(_settings.Current.MarketOpenTime);
+    public DateTime MarketClose => Today.Add(_settings.Current.MarketCloseTime);
+    public DateTime AutoSquareOffTime => Today.Add(GetAutoSquareOffTime(_settings.Current));
+
     public bool IsTradingDay => Now.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday)
         && !_settings.Current.TradingHolidays.Contains(DateOnly.FromDateTime(Now));
 
     public bool IsMarketOpen => _settings.Current.IgnoreMarketHours ||
         (IsTradingDay && Now.TimeOfDay >= _settings.Current.MarketOpenTime &&
-         Now.TimeOfDay < _settings.Current.MarketCloseTime);
+         Now.TimeOfDay <= _settings.Current.MarketCloseTime);
 
+    /// <summary>
+    /// Returns whether live raw market-data recording is allowed by the actual
+    /// exchange session. This intentionally ignores IgnoreMarketHours because
+    /// that setting is a trading/test override and must not cause raw recording
+    /// to continue outside market hours.
+    /// </summary>
+    public bool IsRawMarketDataRecordingOpen(DateTime? localNow = null)
+    {
+        var now = localNow ?? Now;
+        var date = DateOnly.FromDateTime(now);
+        var isTradingDay = now.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday)
+            && !_settings.Current.TradingHolidays.Contains(date);
 
-    public bool IsNewIntradayEntryWindowOpen =>
-        _settings.Current.IgnoreMarketHours ||
+        return isTradingDay
+            && now.TimeOfDay >= _settings.Current.MarketOpenTime
+            && now.TimeOfDay <= _settings.Current.MarketCloseTime;
+    }
+
+    public bool IsNewIntradayEntryWindowOpen => _settings.Current.IgnoreMarketHours ||
         (IsTradingDay && Now.TimeOfDay >= _settings.Current.MarketOpenTime &&
-         Now.TimeOfDay < _settings.Current.IntradayEntryCutoffTime);
+         Now.TimeOfDay < GetEntryCutoffTime(_settings.Current));
 
-    public TimeSpan GetAutoSquareOffTime(TradingConfiguration settings, string? productType = null)
-        => settings.MarketCloseTime;
+    public bool IsWithinCasWindow => IsTradingDay
+        && Now.TimeOfDay >= _settings.Current.CasTransitionStart
+        && Now.TimeOfDay < _settings.Current.CasPostCloseEnd;
+
+    public DateTime Combine(DateOnly date, TimeSpan time) => date.ToDateTime(TimeOnly.FromTimeSpan(time));
 
     public TimeSpan GetSessionClose() => _settings.Current.MarketCloseTime;
+
+    public TimeSpan GetEntryCutoffTime(TradingConfiguration settings, string? productType = null)
+        => new[] { settings.IntradayEntryCutoffTime, GetAutoSquareOffTime(settings, productType) }.Min();
+
+    public TimeSpan GetAutoSquareOffTime(TradingConfiguration settings, string? productType = null)
+    {
+        var product = string.IsNullOrWhiteSpace(productType) ? settings.Equity.ProductType : productType;
+        if (product.Equals("BO", StringComparison.OrdinalIgnoreCase) ||
+            product.Equals("ROBO", StringComparison.OrdinalIgnoreCase))
+            return settings.RoboAutoSquareOffTime;
+
+        return settings.EquityMisAutoSquareOffTime;
+    }
+
+    private TimeZoneInfo ResolveConfiguredTimeZone()
+    {
+        try { return TimeZoneInfo.FindSystemTimeZoneById(_settings.Current.MarketTimeZoneId); }
+        catch { return IndiaTimeZone; }
+    }
 
     private static TimeZoneInfo ResolveIndiaTimeZone()
     {

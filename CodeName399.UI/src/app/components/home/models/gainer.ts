@@ -25,8 +25,6 @@ export interface Gainer {
 
   currentPrice: number;
   previousClose: number;
-  ema9?: number;
-  ema21?: number;
   changePercent: number;
   atr: number;
   recoveryScore: number;
@@ -37,22 +35,8 @@ export interface Gainer {
   reason: string;
   suggestion: string;
   isSubscribed: boolean;
-  isManuallySubscribed?: boolean;
-  isManuallyUnsubscribed?: boolean;
-  pullbackDetected?: boolean;
-  minimumBuyQuantity?: number;
-  estimatedCharges?: number;
-  ownedEstimatedCharges?: number;
-  minimumInvestmentWithCharges?: number;
-  sufficientFunds?: boolean | null;
-  tickDayVolume?: number;
-  tickExchangeTime?: string;
-  lastTickUpdated?: string;
-  bid?: number;
-  ask?: number;
 
   stopLoss: number;
-  target?: number;
 
   isOwned: boolean;
   quantity: number;

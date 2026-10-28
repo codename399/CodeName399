@@ -100,11 +100,6 @@ namespace CodeName399.Kite.API.Controllers
 
                 return Ok(configuration);
             }
-            catch (ArgumentException ex)
-            {
-                _logger.LogWarning(ex, "Trading configuration failed validation.");
-                return BadRequest(new { success = false, message = ex.Message });
-            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to update trading configuration.");

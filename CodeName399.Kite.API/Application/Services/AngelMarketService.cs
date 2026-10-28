@@ -80,16 +80,25 @@ public sealed class AngelMarketService : IAngelMarketService
             OwnedQuotes = quotes.Where(q => openTokens.Contains(q.SymbolToken) || holdings.Contains(q.TradingSymbol)).ToList()
         };
 
-        // Discovery is intentionally limited to positive-change, actively traded
-        // equities. Volume is the primary activity ranking; percent change breaks ties.
-        // Owned positions are kept separately so they remain visible and manageable.
-        const int maxCandidates = 10;
-        scannerQuotes.Quotes = scannerQuotes.Quotes
-            .Where(x => x.Ltp > 0 && x.Close > 0 && x.Ltp > x.Close && x.TradeVolume > 0)
-            .OrderByDescending(x => x.TradeVolume)
-            .ThenByDescending(x => (x.Ltp - x.Close) / x.Close)
-            .Take(maxCandidates)
+        var availableCandidateCount = scannerQuotes.Quotes.Count;
+        // Shortlist the ten most active equity stocks without requiring a
+        // positive daily change or a price above the day's open.
+        // Activity is ranked first; daily change and intraday movement are tie-breakers only.
+        var eligibleQuotes = scannerQuotes.Quotes
+            .Where(x => x.Ltp > 0m)
+            .Where(x => GetActivityVolume(x) > 0L)
             .ToList();
+
+        scannerQuotes.Quotes = eligibleQuotes
+            .OrderByDescending(GetActivityVolume)
+            .ThenByDescending(x => (x.Ltp - x.Close) / x.Close)
+            .ThenByDescending(x => (x.Ltp - x.Open) / x.Open)
+            .Take(10)
+            .ToList();
+
+        _logger.LogInformation(
+            "TOP10 EQUITY SHORTLIST UniverseQuotes={UniverseQuotes} EligibleQuotes={EligibleQuotes} SelectedTop10={SelectedTop10} PositiveDailyChangeRequired=false AboveDayOpenRequired=false RankedBy=ActivityVolume,DailyChange,IntradayRise",
+            availableCandidateCount, eligibleQuotes.Count, scannerQuotes.Quotes.Count);
 
         scannerQuotes.OwnedQuotes = scannerQuotes.OwnedQuotes
             .GroupBy(x => x.SymbolToken, StringComparer.OrdinalIgnoreCase)
@@ -98,6 +107,7 @@ public sealed class AngelMarketService : IAngelMarketService
 
         var scanned = await _marketScanner.BuildAsync(
             scannerQuotes.Quotes.Concat(scannerQuotes.OwnedQuotes).ToList(),
+            login.JwtToken,
             holdings);
 
         return scanned
@@ -107,12 +117,19 @@ public sealed class AngelMarketService : IAngelMarketService
             .ToList();
     }
 
+    private static long GetActivityVolume(MarketQuoteData quote) =>
+        Math.Max(quote.TradeVolume, Math.Max(quote.DayVolume, Math.Max(quote.Volume, quote.LastTradedQuantity)));
+
     private async Task<List<MarketQuoteData>> GetEquityQuotesAsync(
         List<Instrument> all,
         string jwt,
         List<TradeOrder> openTrades)
     {
         var settings = _settings.Current;
+
+        var excluded = (settings.ExcludedSymbols ?? [])
+            .Select(x => x.ToUpperInvariant())
+            .ToHashSet();
 
         var exchange = string.IsNullOrWhiteSpace(settings.Equity.Exchange)
             ? "NSE"
@@ -121,9 +138,8 @@ public sealed class AngelMarketService : IAngelMarketService
         var instruments = all
             .Where(x => x.InstrumentType == InstrumentType.Equity)
             .Where(x => string.Equals(x.exch_seg, exchange, StringComparison.OrdinalIgnoreCase))
+            .Where(x => !excluded.Contains(x.symbol.ToUpperInvariant()))
             .ToList();
-        if (instruments.Count == 0)
-            throw new InvalidOperationException($"No equity instruments are loaded for exchange {exchange}.");
 
         var quotes = await GetQuotesAsync(instruments, jwt);
 
@@ -138,8 +154,6 @@ public sealed class AngelMarketService : IAngelMarketService
 
         if (missingOpen.Count > 0)
             quotes.AddRange(await GetQuotesAsync(missingOpen, jwt));
-        if (quotes.Count == 0)
-            throw new InvalidOperationException($"The broker returned no equity quotes for exchange {exchange}; preserve the last known watchlist and retry.");
 
         return quotes;
     }
@@ -179,12 +193,6 @@ public sealed class AngelMarketService : IAngelMarketService
                 if (quote.Ask <= 0)
                     quote.Ask = quote.Depth?.Sell?.Where(x => x.Price > 0).Select(x => x.Price).DefaultIfEmpty(0m).Min() ?? 0m;
 
-                // Normalize volume aliases returned by different broker payload variants.
-                if (quote.TradeVolume <= 0)
-                    quote.TradeVolume = quote.DayVolume > 0 ? quote.DayVolume : quote.Volume;
-                if (quote.DayVolume <= 0 && quote.TradeVolume > 0)
-                    quote.DayVolume = quote.TradeVolume;
-
                 quote.InstrumentType = InstrumentType.Equity;
                 quote.Exchange = exchange;
                 quote.QuoteTimeUtc = DateTime.UtcNow;
@@ -218,7 +226,8 @@ public sealed class AngelMarketService : IAngelMarketService
 
             quote.InstrumentType = InstrumentType.Equity;
             quote.Exchange = instrument.exch_seg;
-            quote.TradingSymbol ??= instrument.symbol;
+            if (string.IsNullOrWhiteSpace(quote.TradingSymbol))
+                quote.TradingSymbol = instrument.symbol;
         }
     }
 }

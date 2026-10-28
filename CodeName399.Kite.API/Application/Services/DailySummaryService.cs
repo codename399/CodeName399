@@ -31,7 +31,7 @@ namespace CodeName399.Kite.API.Services
 
         public async Task<DailyTradingSummary> GetDailySummaryAsync(DateOnly date)
         {
-            var ist = MarketClock.IndiaTimeZone;
+            var ist = TimeZoneInfo.FindSystemTimeZoneById("Asia/Kolkata");
             var startUtc = TimeZoneInfo.ConvertTimeToUtc(date.ToDateTime(TimeOnly.MinValue), ist);
             var endUtc = TimeZoneInfo.ConvertTimeToUtc(date.AddDays(1).ToDateTime(TimeOnly.MinValue), ist);
 
@@ -107,7 +107,7 @@ namespace CodeName399.Kite.API.Services
         {
             try
             {
-                var ist = MarketClock.IndiaTimeZone;
+                var ist = TimeZoneInfo.FindSystemTimeZoneById("Asia/Kolkata");
 
                 var nowIst = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ist);
 

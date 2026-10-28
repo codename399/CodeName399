@@ -1,4 +1,3 @@
-using CodeName399.Kite.API.Services;
 using CodeName399.Kite.API.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,7 +17,7 @@ public sealed class TradingSummaryController : ControllerBase
     public async Task<IActionResult> GetDailySummary([FromQuery] DateOnly? date = null)
     {
         var requestedDate = date ?? DateOnly.FromDateTime(
-            TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, MarketClock.IndiaTimeZone));
+            TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kolkata")));
         return Ok(await _summary.GetDailySummaryAsync(requestedDate));
     }
 }

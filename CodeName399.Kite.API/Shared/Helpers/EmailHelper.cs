@@ -248,7 +248,29 @@ namespace CodeName399.Kite.API.Helpers
 
         private static string H(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
 
-        private static decimal CalculateRiskReward(TradeOrder trade) => 0m;
+        private static decimal CalculateRiskReward(TradeOrder trade)
+        {
+            if (trade.Quantity <= 0 || trade.EntryPrice <= 0m || trade.StopLoss <= 0m)
+                return 0m;
+
+            // Use the actual stored gross reward estimate when available. The
+            // current strategy uses a 1:2 risk/reward estimate for reporting;
+            // this does not introduce a fixed-target exit.
+            var riskPerShare = trade.Direction == TradeDirection.Short
+                ? trade.StopLoss - trade.EntryPrice
+                : trade.EntryPrice - trade.StopLoss;
+            if (riskPerShare <= 0m)
+                return 0m;
+
+            var totalRisk = riskPerShare * trade.Quantity;
+            var grossReward = trade.EstimatedGrossProfit > 0m
+                ? trade.EstimatedGrossProfit
+                : totalRisk * 2m;
+
+            return totalRisk > 0m
+                ? Math.Round(grossReward / totalRisk, 2, MidpointRounding.AwayFromZero)
+                : 0m;
+        }
 
         private static void CsvRow(StringBuilder sb, string field, object? value)
         {
@@ -268,7 +290,7 @@ namespace CodeName399.Kite.API.Helpers
                 trade.Direction == TradeDirection.Short
                     ? trade.StopLoss - trade.EntryPrice
                     : trade.EntryPrice - trade.StopLoss;
-            decimal rr = 0m;
+            decimal rr = CalculateRiskReward(trade);
 
             string color = paperTrading ? "#0d6efd" : "#198754";
             string action = trade.Direction == TradeDirection.Short ? "SHORT" : "BUY";
@@ -324,11 +346,13 @@ Instrument: {{trade.InstrumentType}} | Direction: {{trade.Direction}} | Entry: {
 <table>
 <tr><th>Field</th><th>Value</th></tr>
 <tr><td>Quantity</td><td>{{trade.Quantity}}</td></tr>
-<tr><td>Entry Price</td><td>₹{{trade.EntryPrice:N2}}</td></tr>
+<tr><td>Quantity Type</td><td>{{trade.QuantityType}}</td></tr>
+{{(string.Equals(trade.QuantityType, "Fixed", StringComparison.OrdinalIgnoreCase) ? $"<tr><td>Configured Fixed Quantity</td><td>{trade.FixedQuantityConfigured:N0}</td></tr><tr><td>Market Depth Side</td><td>{WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(trade.MarketDepthSide) ? "N/A" : trade.MarketDepthSide)}</td></tr><tr><td>Executable Price Used for Market Depth</td><td>₹{trade.MarketDepthExecutablePrice:N2}</td></tr><tr><td>Quantity Available at Executable Price</td><td>{trade.MarketDepthAvailableQuantity:N0}</td></tr><tr><td>Final Requested Quantity (minimum of configured and available)</td><td>{trade.Quantity:N0}</td></tr>" : "")}}
+<tr><td>Entry / Marginal Execution Price</td><td>₹{{trade.EntryPrice:N2}}</td></tr>
 <tr><td>Stop Loss</td><td>₹{{trade.StopLoss:N2}}</td></tr>
 <tr><td>Investment</td><td>₹{{investment:N2}}</td></tr>
 <tr><td>Risk Reward</td><td>{{rr:F2}} : 1</td></tr>
-<tr><td>Estimated Net Profit</td><td>₹{{trade.EstimatedNetProfit:N2}}</td></tr>
+<tr><td>Estimated Target Net Profit (after charges, 1:2 risk/reward estimate)</td><td>₹{{trade.EstimatedNetProfit:N2}}</td></tr>
 <tr><td>Estimated Charges</td><td>₹{{trade.EstimatedCharges:N2}}</td></tr>
 <tr><td>Mode</td><td>{{(paperTrading ? "Paper Trading" : "Live Trading")}}</td></tr>
 </table>
@@ -575,7 +599,7 @@ Trade Details
 
 <tr>
 <td class="metric">Quantity</td>
-<td>{{trade.Quantity}}</td>
+<td>{{trade.Quantity}} ({{trade.QuantityType}})</td>
 </tr>
 
 <tr>

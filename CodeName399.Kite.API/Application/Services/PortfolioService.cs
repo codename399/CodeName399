@@ -63,8 +63,16 @@ namespace CodeName399.Kite.API.Services
                     return [];
                 }
 
+                var excluded =
+                    _tradingSettingsProvider
+                        .Current.ExcludedSymbols?.Select(x => x.Trim().ToUpperInvariant())
+                        .ToHashSet()
+                    ?? [];
+
                 return result
-                    .Data.Where(x => x.Quantity > 0)
+                    .Data.Where(x =>
+                        x.Quantity > 0 && !excluded.Contains(x.TradingSymbol.ToUpperInvariant())
+                    )
                     .Select(x => x.TradingSymbol)
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
             }

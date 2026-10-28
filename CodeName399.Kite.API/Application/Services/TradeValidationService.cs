@@ -1,4 +1,6 @@
 using CodeName399.Kite.API.Diagnostics;
+using CodeName399.Kite.API.Helpers;
+using CodeName399.Kite.API.Helpers.Calculators;
 using CodeName399.Kite.API.Models;
 using CodeName399.Kite.API.Services.Brokerage;
 
@@ -38,23 +40,33 @@ public sealed class TradeValidationService
         result.ExitCharges = stopCharges;
         result.StopLossCharges = stopCharges;
         result.Charges = BrokerageCharge.Combine(entryCharges, stopCharges);
-        result.GrossProfit = 0m;
-        result.NetProfit = 0m;
-        result.Reward = 0m;
-        result.Risk = Math.Max(0m, stock.CurrentPrice - stock.StopLoss) * quantity;
-        result.NetReward = 0m;
+
+        // Estimate the 1:2 reward level for reporting/validation only. This does
+        // not add a fixed-target exit; the live exit remains stop/break-even/trailing.
+        var riskPerShare = Math.Max(0m, stock.CurrentPrice - stock.StopLoss);
+        result.Risk = riskPerShare * quantity;
+        var estimatedTargetPrice = OrderPriceValidator.RoundUp(stock.CurrentPrice + (riskPerShare * 2m));
+        var targetExitCharges = await _brokerage.CalculateAsync(
+            stock.Symbol, stock.SymbolToken, estimatedTargetPrice, quantity,
+            BrokerageTransactionType.Sell, stock.Exchange, stock.ProductType);
+        var targetRoundTripCharges = BrokerageCharge.Combine(entryCharges, targetExitCharges);
+        result.Reward = Math.Max(0m, estimatedTargetPrice - stock.CurrentPrice) * quantity;
+        result.GrossProfit = result.Reward;
+        result.NetProfit = result.GrossProfit - targetRoundTripCharges.TotalCharges;
+        result.NetReward = result.NetProfit;
         result.NetRisk = result.Risk + result.Charges.TotalCharges;
-        result.RiskRewardRatio = 0m;
-        result.NetRiskRewardRatio = 0m;
+        result.RiskRewardRatio = result.Risk > 0m ? result.Reward / result.Risk : 0m;
+        result.NetRiskRewardRatio = result.NetRisk > 0m ? result.NetReward / result.NetRisk : 0m;
         result.Investment = stock.CurrentPrice * quantity;
-        result.ROI = 0m;
+        result.ROI = result.Investment > 0m ? result.NetProfit / result.Investment * 100m : 0m;
         var turnover = stock.CurrentPrice * quantity;
         result.ChargePercent = turnover > 0m ? Math.Round(result.Charges.TotalCharges / turnover * 100m, 2) : 0m;
         result.CanTrade = true;
         result.Reason = "Risk and charges validation passed.";
 
-        _logger.LogDebug("Risk/charges validation passed. Symbol={Symbol}, Quantity={Quantity}, Risk={Risk}, EntryCharges={EntryCharges}",
-            stock.Symbol, quantity, result.Risk, entryCharges.TotalCharges);
+        _logger.LogDebug("Risk/charges validation passed. Symbol={Symbol}, Quantity={Quantity}, Risk={Risk:F2}, TargetGrossProfit={GrossProfit:F2}, TargetNetProfit={NetProfit:F2}, TargetNetRR={NetRiskRewardRatio:F3}, EntryCharges={EntryCharges:F2}, TargetExitCharges={TargetExitCharges:F2}",
+            stock.Symbol, quantity, result.NetRisk, result.GrossProfit, result.NetProfit,
+            result.NetRiskRewardRatio, entryCharges.TotalCharges, targetExitCharges.TotalCharges);
         return result;
     }
 

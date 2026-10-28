@@ -15,6 +15,7 @@ namespace CodeName399.Kite.API.Services
     {
         private readonly MarketClock _marketClock;
         private readonly IIndicatorService _indicatorService;
+        private readonly EmaCrossoverStrategyService _emaStrategy;
 
         public SellTradingService(
             IAngelOneService angel,
@@ -30,6 +31,7 @@ namespace CodeName399.Kite.API.Services
             SymbolLockService symbolLocks,
             MarketClock marketClock,
             IIndicatorService indicatorService,
+            EmaCrossoverStrategyService emaStrategy,
             ILogger<SellTradingService> logger
         )
             : base(
@@ -49,6 +51,7 @@ namespace CodeName399.Kite.API.Services
         {
             _marketClock = marketClock;
             _indicatorService = indicatorService;
+            _emaStrategy = emaStrategy;
             _orderWebSocket.OrderUpdated += OnOrderUpdated;
         }
 
@@ -151,12 +154,34 @@ namespace CodeName399.Kite.API.Services
                     if (trade.Status != TradeStatus.Open)
                         continue;
 
-                    // Automatic order placement is intentionally disabled.
-                    // Exit decisions must be submitted through the explicit sell endpoint.
-                    _logger.LogDebug(
-                        "Automatic sell skipped for {Symbol}; use the manual sell endpoint.",
-                        trade.Symbol);
-                    continue;
+                    // Exit only on the protective/trailing stop. EMA bearish
+                    // crossovers are intentionally NOT exit triggers: the strategy
+                    // exits when the charge-aware stop is breached, not on a lagging
+                    // indicator flip.
+                    // Use the executable side, not LTP, so spread does not make the
+                    // stop appear safer than the price at which a long can be sold.
+                    var executableExitPrice = trade.Direction == TradeDirection.Short
+                        ? (stock.TickAsk > 0m ? stock.TickAsk : stock.Ask > 0m ? stock.Ask : stock.CurrentPrice)
+                        : (stock.TickBid > 0m ? stock.TickBid : stock.Bid > 0m ? stock.Bid : stock.CurrentPrice);
+                    var stopLossConfirmed = trade.StopLoss > 0m && executableExitPrice > 0m &&
+                        (trade.Direction == TradeDirection.Short
+                            ? executableExitPrice >= trade.StopLoss
+                            : executableExitPrice <= trade.StopLoss);
+                    if (!stopLossConfirmed)
+                        continue;
+
+                    string reason = trade.TrailingActivated
+                        ? "Trailing Stop"
+                        : "Protective Stop Loss";
+                    trade.ExitCategory = trade.TrailingActivated ? "PROFIT_PROTECTION" : "RISK";
+                    trade.ExitDecision = "EXECUTABLE_STOP_BREACH";
+                    trade.ExitTrigger = trade.TrailingActivated ? "TRAILING_STOP" : "STOP_LOSS";
+                    trade.ExitTriggerPrice = executableExitPrice;
+                    _logger.LogWarning(
+                        "SELL TRIGGERED BY EXECUTABLE STOP Symbol={Symbol} Token={Token} Direction={Direction} LTP={LTP:F6} Bid={Bid:F6} Ask={Ask:F6} ExecutableExitPrice={ExitPrice:F6} StopLoss={StopLoss:F6} TrailingActivated={TrailingActivated} Trigger={Trigger}",
+                        trade.Symbol, trade.SymbolToken, trade.Direction, stock.CurrentPrice,
+                        stock.TickBid > 0m ? stock.TickBid : stock.Bid, stock.TickAsk > 0m ? stock.TickAsk : stock.Ask,
+                        executableExitPrice, trade.StopLoss, trade.TrailingActivated, trade.ExitTrigger);
 
                     trade.StopLossTriggered = false;
                     trade.StopLossTriggerPrice = 0;
@@ -170,11 +195,13 @@ namespace CodeName399.Kite.API.Services
 
                     if (trade.ExecutionMode == TradeExecutionMode.Paper)
                     {
-                        trade.ExitPrice = trade.Direction == TradeDirection.Short ? (stock.Ask > 0 ? stock.Ask : stock.CurrentPrice) : (stock.Bid > 0 ? stock.Bid : stock.CurrentPrice);
+                        trade.ExitPrice = trade.Direction == TradeDirection.Short
+                            ? (stock.TickAsk > 0m ? stock.TickAsk : stock.Ask > 0m ? stock.Ask : stock.CurrentPrice)
+                            : (stock.TickBid > 0m ? stock.TickBid : stock.Bid > 0m ? stock.Bid : stock.CurrentPrice);
 
                         trade.ExitTime = DateTime.UtcNow;
 
-                        trade.ExitReason = "Manual sell";
+                        trade.ExitReason = reason;
 
                         trade.ExitIndicators = ResolveExitIndicators(trade, stock);
                         trade.ExitHistoricalContextJson = await CaptureHistoricalContextAsync(stock);
@@ -299,8 +326,8 @@ namespace CodeName399.Kite.API.Services
             //------------------------------------------------------
 
             decimal executableExitPrice = trade.Direction == TradeDirection.Short
-                ? (stock.Ask > 0 ? stock.Ask : stock.CurrentPrice)
-                : (stock.Bid > 0 ? stock.Bid : stock.CurrentPrice);
+                ? (stock.TickAsk > 0m ? stock.TickAsk : stock.Ask > 0m ? stock.Ask : stock.CurrentPrice)
+                : (stock.TickBid > 0m ? stock.TickBid : stock.Bid > 0m ? stock.Bid : stock.CurrentPrice);
 
             if (executableExitPrice <= 0)
                 return;
@@ -581,7 +608,7 @@ namespace CodeName399.Kite.API.Services
 
         private static TradeIndicatorSnapshot? ResolveExitIndicators(TradeOrder trade, Gainer? watch)
         {
-            if (watch != null && watch.ATR > 0m)
+            if (watch != null && watch.HistoricalLoaded && watch.ATR > 0m)
                 return IndicatorMapper.ToTradeIndicatorSnapshot(watch);
             return trade.EntryIndicators;
         }

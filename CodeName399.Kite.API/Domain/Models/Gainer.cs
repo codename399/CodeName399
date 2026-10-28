@@ -20,6 +20,10 @@ public class Gainer
     public DateTime LastTickUpdated { get; set; }
     public decimal PreviousClose { get; set; }
     public decimal ChangePercent { get; set; }
+    public decimal Ema9 { get; set; }
+    public decimal Ema21 { get; set; }
+    public decimal EmaGapPercent { get; set; }
+    public bool EmaCrossoverPending { get; set; }
     public decimal ATR { get; set; }
     public decimal RecoveryScore { get; set; }
     public decimal BreakoutStrength { get; set; }
@@ -30,6 +34,12 @@ public class Gainer
     public decimal StopLoss { get; set; }
     public bool IsOwned { get; set; }
     public int Quantity { get; set; }
+
+    // Fixed-quantity sizing snapshot used by the BUY email to explain market-depth capping.
+    public int FixedQuantityConfigured { get; set; }
+    public long MarketDepthAvailableQuantity { get; set; }
+    public decimal MarketDepthExecutablePrice { get; set; }
+    public string MarketDepthSide { get; set; } = string.Empty;
     public decimal AveragePrice { get; set; }
     public decimal InvestedAmount { get; set; }
     public decimal CurrentValue { get; set; }
@@ -40,16 +50,8 @@ public class Gainer
     public MarketQuoteData Quote { get; set; } = new();
     public int Priority { get; set; }
     public bool IsSubscribed { get; set; }
-
-    // Dashboard execution estimates, refreshed with the latest market price.
-    public int MinimumBuyQuantity { get; set; }
-    public decimal EstimatedCharges { get; set; }
-    public decimal OwnedEstimatedCharges { get; set; }
-    public decimal MinimumInvestmentWithCharges { get; set; }
-    public bool? SufficientFunds { get; set; }
-    public bool PullbackDetected { get; set; }
-    public bool IsManuallySubscribed { get; set; }
-    public bool IsManuallyUnsubscribed { get; set; }
+    public DateTime LastHistoricalUpdate { get; set; }
+    public bool HistoricalLoaded { get; set; }
 
     // Raw latest broker tick state used for UI/live monitoring.
     public int TickExchangeType { get; set; }

@@ -43,4 +43,5 @@ public interface IAngelOneService
     Task RefreshPositionsAsync();
 
     Task<OrderData?> GetIndividualOrderAsync(string uniqueOrderId);
+    Task<CodeName399.Kite.API.Models.ReferencePriceSnapshot?> GetReferencePriceAsync(string exchange, string symbolToken, string tradingSymbol, CancellationToken cancellationToken = default);
 }

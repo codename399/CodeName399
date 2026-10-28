@@ -102,8 +102,6 @@ export class ApiConstants {
   readonly marketHub =
     '/marketHub';
 
-  readonly marketSubscribe = '/api/market';
-
   // ---------------- Dashboard ----------------
 
   readonly dashboardSummary =

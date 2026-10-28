@@ -27,11 +27,11 @@ public sealed class HistoricalRateLimiter
                 AutoReplenishment = true
             });
 
-        // Keep a large safety margin below broker-side rolling limits. Fixed-window limits can burst at boundaries, so 60/min is safer than the nominal maximum.
+        // Use a conservative 30 requests/minute to reduce rolling-window throttling; the per-second limiter also spaces requests.
         _perMinuteLimiter = new FixedWindowRateLimiter(
             new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 60,
+                PermitLimit = 30,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 5000,
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
@@ -95,7 +95,7 @@ public sealed class HistoricalRateLimiter
         // A rate-limit response is a server-side signal that this client should
         // slow down. Re-enter the central limiter before every retry instead of
         // sleeping and immediately sending another request outside the limiter.
-        var delay = TimeSpan.FromSeconds(3);
+        var delay = TimeSpan.FromSeconds(5);
 
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
@@ -109,7 +109,7 @@ public sealed class HistoricalRateLimiter
                 when (ex.StatusCode == HttpStatusCode.Forbidden ||
                       ex.Response.Contains("exceeding access rate", StringComparison.OrdinalIgnoreCase))
             {
-                ReportRateLimit(TimeSpan.FromSeconds(30));
+                ReportRateLimit(TimeSpan.FromSeconds(60));
 
                 if (attempt == maxRetries)
                     break;
@@ -124,7 +124,7 @@ public sealed class HistoricalRateLimiter
 
                 // Cap the exponential backoff so one bad request does not
                 // stall the entire historical queue indefinitely.
-                delay = TimeSpan.FromSeconds(Math.Min(delay.TotalSeconds * 2, 30));
+                delay = TimeSpan.FromSeconds(Math.Min(delay.TotalSeconds * 2, 60));
             }
         }
 

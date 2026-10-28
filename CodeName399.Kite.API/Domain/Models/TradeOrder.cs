@@ -31,6 +31,14 @@ namespace CodeName399.Kite.API.Models
         public string Duration { get; set; } = "DAY";
 
         public int Quantity { get; set; }
+        public string QuantityType { get; set; } = "Dynamic";
+
+        /// <summary>Configured fixed quantity before capping against executable-price market depth.</summary>
+        public int FixedQuantityConfigured { get; set; }
+        /// <summary>Displayed quantity available at the executable price when the entry was sized.</summary>
+        public long MarketDepthAvailableQuantity { get; set; }
+        public decimal MarketDepthExecutablePrice { get; set; }
+        public string MarketDepthSide { get; set; } = string.Empty;
 
         public decimal EntryPrice { get; set; }
 
@@ -42,6 +50,19 @@ namespace CodeName399.Kite.API.Models
         public decimal CurrentPrice { get; set; }
 
         public DateTime EntryTime { get; set; }
+
+        /// <summary>EMA values captured when the entry signal was accepted.</summary>
+        public decimal EntryEma9 { get; set; }
+        public decimal EntryEma21 { get; set; }
+        public decimal EntryEmaGapPercent { get; set; }
+        public DateTime? EmaCrossoverTime { get; set; }
+
+        /// <summary>Entry regime and pullback-recovery confirmation snapshot.</summary>
+        public decimal EntryChoppinessIndex { get; set; }
+        public decimal EntryStochRsiK { get; set; }
+        public decimal EntryStochRsiD { get; set; }
+        public decimal EntryPullbackLow { get; set; }
+        public decimal EntryRecoverySwingHigh { get; set; }
 
         public string BuyOrderId { get; set; } = "";
 

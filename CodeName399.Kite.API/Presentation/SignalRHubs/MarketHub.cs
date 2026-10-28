@@ -17,21 +17,13 @@ namespace CodeName399.Kite.API.SignalRHubs
         {
             await base.OnConnectedAsync();
 
-            await SendSnapshotAsync();
-        }
-
-        public Task RequestGainersSnapshot() => SendSnapshotAsync();
-
-        private Task SendSnapshotAsync()
-        {
-            var gainers = _watchList.Current
-                .OrderByDescending(x => x.IsOwned)
-                .ThenByDescending(x => x.PullbackDetected)
-                .ThenByDescending(x => x.IsManuallySubscribed)
+            var gainers = _watchList
+                .Current.OrderByDescending(x => x.IsOwned)
                 .ThenByDescending(x => x.Priority)
                 .ThenByDescending(x => x.ChangePercent)
                 .ToList();
-            return Clients.Caller.SendAsync("GainersUpdated", gainers);
+
+            await Clients.Caller.SendAsync("GainersUpdated", gainers);
         }
     }
 }

@@ -13,6 +13,7 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
     private readonly TradingSettingsProvider _settings;
 
     private readonly ILogger<RawMarketDataArchiveService> _logger;
+    private readonly MarketClock _marketClock;
     private readonly Channel<RawMarketTickRecord> _channel = Channel.CreateBounded<RawMarketTickRecord>(new BoundedChannelOptions(100_000)
     {
         FullMode = BoundedChannelFullMode.Wait,
@@ -25,9 +26,11 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
 
     public RawMarketDataArchiveService(
         ILogger<RawMarketDataArchiveService> logger,
+        MarketClock marketClock,
         TradingSettingsProvider settings)
     {
         _logger = logger;
+        _marketClock = marketClock;
         _settings = settings;
     }
 
@@ -43,6 +46,11 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
         var raw = _settings.Current.RawMarketData ?? new RawMarketDataSettings();
         if (!raw.Enabled) return;
 
+        // Raw live market-data recording is strictly session-bound.
+        // Do not use MarketClock.IsMarketOpen here because IgnoreMarketHours is
+        // intentionally a trading/test override and must not enable recording
+        // outside the actual exchange session.
+        if (raw.RecordOnlyDuringMarketHours && !_marketClock.IsRawMarketDataRecordingOpen()) return;
         var record = RawMarketTickRecord.From(tick);
         if (!_channel.Writer.TryWrite(record))
         {
@@ -89,8 +97,7 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
             var directory = Path.Combine(rootPath, date.ToString("yyyy-MM-dd"));
             Directory.CreateDirectory(directory);
             part++;
-            var indiaNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, MarketClock.IndiaTimeZone);
-            var path = Path.Combine(directory, $"market-ticks-{indiaNow:HHmmssfff}-part{part:000}.zip");
+            var path = Path.Combine(directory, $"market-ticks-{DateTime.UtcNow:HHmmssfff}-part{part:000}.zip");
             file = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read, 256 * 1024, useAsync: true);
             archive = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true);
             entry = archive.CreateEntry("market-ticks.jsonl", CompressionLevel.Fastest).Open();
@@ -103,10 +110,7 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
             {
                 try
                 {
-                    var archiveTime = record.ExchangeTimeUtc == default
-                        ? TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, MarketClock.IndiaTimeZone)
-                        : TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(record.ExchangeTimeUtc, DateTimeKind.Utc), MarketClock.IndiaTimeZone);
-                    var date = archiveTime.Date;
+                    var date = record.ExchangeTimeUtc == default ? DateTime.UtcNow.Date : record.ExchangeTimeUtc.Date;
                     if (archive == null || date != currentDate)
                         await OpenArchiveAsync(date);
 
@@ -167,8 +171,7 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
         {
             await CloseAsync();
             part++;
-            var indiaNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, MarketClock.IndiaTimeZone);
-            var path = Path.Combine(directory, $"historical-{safeExchange}-{safeToken}-{safeInterval}-{indiaNow:yyyyMMddHHmmssfff}-part{part:000}.zip");
+            var path = Path.Combine(directory, $"historical-{safeExchange}-{safeToken}-{safeInterval}-{DateTime.UtcNow:yyyyMMddHHmmssfff}-part{part:000}.zip");
             file = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read, 128 * 1024, useAsync: true);
             archive = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true);
             entry = archive.CreateEntry("historical-candles.jsonl", CompressionLevel.Fastest).Open();

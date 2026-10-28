@@ -1,8 +1,9 @@
 using CodeName399.Kite.API.BackgroundServices;
 using CodeName399.Kite.API.Constants;
 using CodeName399.Kite.API.Helpers;
+using CodeName399.Kite.API.Indicators.Calculators;
+using CodeName399.Kite.API.Indicators.Engine;
 using CodeName399.Kite.API.Models;
-using CodeName399.Kite.API.Models.Configuration;
 using CodeName399.Kite.API.Repositories;
 using CodeName399.Kite.API.Repositories.Interface;
 using CodeName399.Kite.API.Repository;
@@ -63,18 +64,26 @@ namespace CodeName399.Extensions
             services.AddSingleton<AngelBinaryParser>();
             services.AddSingleton<IMarketDataProvider, MarketDataProvider>();
             services.AddSingleton<WatchListService>();
+            services.AddSingleton<HistoricalCacheService>();
             services.AddSingleton<IAngelWebSocketClient, AngelWebSocketClient>();
             services.AddSingleton<IMarketHoursService, MarketHoursService>();
             services.AddSingleton<IBrokerageCalculatorService, BrokerageCalculatorService>();
             services.AddSingleton<OrderStatusCache>();
             services.AddSingleton<IAngelOrderWebSocket, AngelOrderWebSocket>();
+            services.AddSingleton<HistoricalDownloadQueue>();
             services.AddSingleton<TradeManager>();
             services.AddSingleton<SymbolLockService>();
             services.AddSingleton<RequestHelper>();
+            services.AddSingleton<AtrIndicator>();
+            services.AddSingleton<IndicatorEngine>();
             services.AddSingleton<HistoricalRateLimiter>();
             services.AddSingleton<SmartApiRateLimiter>();
+            services.AddSingleton<IntradayRiskGuard>();
             services.AddSingleton<MarketClock>();
+            services.AddSingleton<EmaCrossoverStrategyService>();
             services.AddSingleton<PaperPortfolioService>();
+            services.AddSingleton<CasEligibilityService>();
+            services.AddSingleton<CasTradingRulesService>();
         }
 
         public static void AddScopedServiceDependencies(this IServiceCollection services)
@@ -85,6 +94,11 @@ namespace CodeName399.Extensions
             services.AddScoped<DashboardService>();
             services.AddScoped<IHistoricalDataService, HistoricalDataService>();
             services.AddScoped<MarketScannerService>();
+            services.AddScoped<IIndicatorService, IndicatorService>();
+            services.AddScoped<TradeValidationService>();
+            services.AddScoped<BuyTradingService>();
+            services.AddScoped<SellTradingService>();
+            services.AddScoped<SquareOffService>();
             services.AddScoped<IDailySummaryService, DailySummaryService>();
             services.AddScoped<BrokerReconciliationService>();
         }
@@ -101,10 +115,14 @@ namespace CodeName399.Extensions
             services.AddHostedService<AngelWebSocketBackgroundService>();
             services.AddHostedService<MarketDiscoveryBackgroundService>();
             services.AddHostedService<OrderWebSocketBackgroundService>();
+            services.AddHostedService<BuyTradingBackgroundService>();
+            services.AddHostedService<SellTradingBackgroundService>();
             services.AddHostedService<BrokerReconciliationBackgroundService>();
-            services.AddHostedService<PaperBalancePersistenceBackgroundService>();
+            services.AddHostedService<HistoricalCacheBackgroundService>();
             services.AddHostedService<TradeInitializationHostedService>();
+            services.AddHostedService<TradingSchedulerBackgroundService>();
             services.AddHostedService<TradingTickBackgroundService>();
+            services.AddHostedService<ExitRecoveryBackgroundService>();
         }
 
         public static void AddRepositoryDependencies(this IServiceCollection services)
@@ -127,9 +145,6 @@ namespace CodeName399.Extensions
             );
             services.Configure<AngelOneConfiguration>(
                 builder.Configuration.GetSection(Constant.AngelOne)
-            );
-            services.Configure<TradingConfiguration>(
-                builder.Configuration.GetSection("TradingConfiguration")
             );
             services.Configure<KiteDatabaseSetting>(
                 builder.Configuration.GetSection(BaseConstant.MongoDatabaseSetting)
