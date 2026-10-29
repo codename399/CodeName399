@@ -1,0 +1,131 @@
+File TradingBackgroundService
+
+Load Instruments (Equity Only) (move method to load instruments into common service, add method in common service and use it in TradingBackgroundService)
+Fetch Quotes (move method to fetch quotes into common service,add method in common service and use it in TradingBackgroundService)
+Fetch owned stocks from trade repository and orderwebsocket (add method in common service and use it in TradingBackgroundService)
+Fetch top10 highly active and highly traded and not present in owned stocks (add method in common service and use it in TradingBackgroundService)
+Fetch 1 minute candles for top10 stocks with 3 stocks at a time (move method to load history into common service, add method in common service and use it in TradingBackgroundService)
+Calculate ema9 and ema21 for candle loaded stocks when enough candles are available(add method in common service and use it in TradingBackgroundService)
+Check if ema9 is above ema21 then check if ema9 was below ema21 in previuos candle(add method in common service and use it in TradingBackgroundService)
+keep calling processtrades method at every candle close, not on every random minute but on actual candle close
+
+-----Buying flow------------
+Buy method locks this stock then fetches marginal price for the stock
+Then fetches lowest price change in last five 1 minute candles
+Then applies this formula to get quantity 
+
+*-------formula-----*
+buyprice = (marginalprice * quantity) + buycharges
+sellprice = ((marginalprice + (lowest price change in last five 1 minute candles)) * quantity) + sell charges
+
+find quantity where sellprice - buyprice > buy charges + sell charges
+
+then check if that much quantity is available to buy in market at current price
+if quantity is available buy maximum quantity that can be bought at that price using available funds
+*-------------------*
+place actual buy order on platform if autotrading is enabled
+subscribe the stock in websocket to monitor live ticks
+place stop loss of 0.5%
+mark the stock as owned
+add the stock in trade order repo
+update balance
+if quantity is less than calculated quantity release the stock
+--------------------------------
+
+-------Selling flow-------------
+use live ticks
+identify when price moves above total charges, activate trailing stop
+sell when trailing stop hits or stop loss hits
+release the lock
+remove ownership of the stock
+update balance
+place actual sell order on platform if autotrading is enabled
+--------------------------------
+
+---------Buy email-----------
+Should contain only following fields:
+stock name
+entry marginal price
+entry time(india time)
+lowest price change in last five 1 minute candles
+quantity 
+total investment in marginal price
+buy charges
+sell charges
+stop loss
+ema9
+ema21
+-----------------------------
+
+---------Sell email----------------
+Should contain only following fields:
+stock name
+entry marginal price
+exit marginal price
+entry time(india time)
+exit time(india time)
+lowest price change in last five 1 minute candles
+quantity 
+total investment in marginal price
+gross profit/loss
+net profit/loss
+buy charges
+sell charges
+stop loss
+ema9
+ema21
+------------------------------------
+
+--------------Gainer fields--------------
+isowned
+stock name
+ltp
+price change percent
+net profit loss
+gross profit loss
+stoploss
+open
+high
+low
+close
+ema9
+ema21
+status
+------------------------------------------
+
+-----------Trading COnfiguration fields----
+Paper/Auto trading (disabled:Paper trading, enabled auto trading  disabled by default)
+number of candles fetched at once(default 3)
+number of candles for lowest price change (default 5)
+stop loss percent (default 0.5%)
+number of top candidates (default 10)
+market open time(default 9:15 am)
+market close time (default:3:30 pm)
+paper trading balance (default:100000)
+lastdailysummarysentat
+lastinstrumentloadedat
+
+
+
+auto square off at market close
+send daily summary email at market close
+keep calling processtrades method at every candle close, not on every random minute but on actual candle close
+at end of process trades method everytime check if market is closed then auto square off all stocks then check and send daily summary email if not sent
+
+--------------Instructions-----------
+Manage everything in below files only and remove all other files:
+
+Marketservice (Backgroundservice)
+CommonService containg all the methods needed by market service (instrument loading,quotes loading,fetching top10 ,fetching owned stocks,fetching candles,calculating ema9 & ema21, checking for buy eligibilty,buy method,sell method,marginal price calculation,charges calculation,quantity calculation,balance updation, sell method,stop loss calculation)
+TradeConfigruation (should contain only add update and get)
+TradeOrderRepository( should contain only add update delete and get)
+MarketHourService (should contain only is open and is closed)
+Login Service
+Email Service
+Stock Lock Service
+All Websockets
+Needed models only
+Make gainer and visible columns and configuration changes in UI
+----------------------------------------------
+
+
