@@ -1,0 +1,10 @@
+EMA bearish crossover exit patch
+
+- Added a latched bearish EMA crossover signal to EmaCrossoverStrategyService.
+- A bearish crossover is detected using the same six-decimal EMA values used for entry: previous EMA9 >= previous EMA21 and current EMA9 < current EMA21.
+- SellTradingService now exits an open position when either the existing protective/trailing stop condition fires or the EMA bearish crossover signal is consumed.
+- EMA exit logs include symbol/token, current price, EMA9, EMA21, gap percentage, and crossover candle time.
+- EMA crossover exit reason: "EMA9 crossed below EMA21"; trigger: EMA_BEARISH_CROSSOVER.
+- Existing stop-loss and trailing-stop exits remain enabled.
+
+Build verification: not run because the .NET SDK is unavailable in the patching environment.

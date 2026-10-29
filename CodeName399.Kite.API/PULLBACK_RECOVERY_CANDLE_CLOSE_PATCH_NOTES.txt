@@ -1,0 +1,11 @@
+PATCH: Confirm pullback and recovery only after a completed one-minute candle
+
+Changes:
+- Removed intrabar live-tick pullback/recovery confirmation from entry decisions.
+- Pullback is recorded only when a completed one-minute candle closes at least the configured 0.05% below the post-crossover high.
+- Recovery is considered only on a later completed candle; its close must recover at least the configured 0.02% from the recorded pullback low and close above the previous candle high.
+- Stochastic RSI and Choppiness Index gates are evaluated from completed candles for this confirmation.
+- Entry confirmation logs include the candle close time and OHLC details.
+- EMA crossover detection and exit handling otherwise remain unchanged.
+
+Note: A completed candle is finalized when the first tick of the next minute arrives. This avoids treating an unfinished candle as closed. The project could not be built in this environment because the .NET SDK is unavailable; run dotnet build on the target development machine before deployment.

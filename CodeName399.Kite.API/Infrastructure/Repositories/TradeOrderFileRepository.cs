@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CodeName399.Kite.API.Domain.Models;
 using CodeName399.Kite.API.Helpers;
 using CodeName399.Kite.API.Models;
 using CodeName399.Kite.API.Models.Enum;

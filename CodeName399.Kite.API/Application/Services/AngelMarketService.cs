@@ -81,11 +81,11 @@ public sealed class AngelMarketService : IAngelMarketService
         };
 
         var availableCandidateCount = scannerQuotes.Quotes.Count;
-        // Shortlist the ten most active equity stocks without requiring a
-        // positive daily change or a price above the day's open.
-        // Activity is ranked first; daily change and intraday movement are tie-breakers only.
+        // Shortlist the ten most active equity stocks that are positive for the
+        // day and currently trading above their open. Activity is ranked first,
+        // with daily gain and intraday rise as deterministic tie-breakers.
         var eligibleQuotes = scannerQuotes.Quotes
-            .Where(x => x.Ltp > 0m)
+            .Where(x => x.Ltp > 0m && x.Close > 0m && x.Ltp > x.Close)
             .Where(x => GetActivityVolume(x) > 0L)
             .ToList();
 
@@ -97,7 +97,7 @@ public sealed class AngelMarketService : IAngelMarketService
             .ToList();
 
         _logger.LogInformation(
-            "TOP10 EQUITY SHORTLIST UniverseQuotes={UniverseQuotes} EligibleQuotes={EligibleQuotes} SelectedTop10={SelectedTop10} PositiveDailyChangeRequired=false AboveDayOpenRequired=false RankedBy=ActivityVolume,DailyChange,IntradayRise",
+            "TOP10 EQUITY SHORTLIST UniverseQuotes={UniverseQuotes} EligibleQuotes={EligibleQuotes} SelectedTop10={SelectedTop10} PositiveDailyAndRisingFromOpen=true RankedBy=ActivityVolume,DailyChange,IntradayRise",
             availableCandidateCount, eligibleQuotes.Count, scannerQuotes.Quotes.Count);
 
         scannerQuotes.OwnedQuotes = scannerQuotes.OwnedQuotes

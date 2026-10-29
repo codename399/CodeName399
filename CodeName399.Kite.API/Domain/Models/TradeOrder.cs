@@ -31,14 +31,6 @@ namespace CodeName399.Kite.API.Models
         public string Duration { get; set; } = "DAY";
 
         public int Quantity { get; set; }
-        public string QuantityType { get; set; } = "Dynamic";
-
-        /// <summary>Configured fixed quantity before capping against executable-price market depth.</summary>
-        public int FixedQuantityConfigured { get; set; }
-        /// <summary>Displayed quantity available at the executable price when the entry was sized.</summary>
-        public long MarketDepthAvailableQuantity { get; set; }
-        public decimal MarketDepthExecutablePrice { get; set; }
-        public string MarketDepthSide { get; set; } = string.Empty;
 
         public decimal EntryPrice { get; set; }
 

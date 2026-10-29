@@ -346,16 +346,7 @@ Instrument: {{trade.InstrumentType}} | Direction: {{trade.Direction}} | Entry: {
 <table>
 <tr><th>Field</th><th>Value</th></tr>
 <tr><td>Quantity</td><td>{{trade.Quantity}}</td></tr>
-<tr><td>Quantity Sizing</td><td>Round-trip charge-cover calculation</td></tr>
-<tr><td>Market Depth Side</td><td>{{WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(trade.MarketDepthSide) ? "N/A" : trade.MarketDepthSide)}}</td></tr>
-<tr><td>Executable Price Used for Market Depth</td><td>₹{{trade.MarketDepthExecutablePrice:N4}}</td></tr>
-<tr><td>Quantity Available at Executable Price</td><td>{{trade.MarketDepthAvailableQuantity:N0}}</td></tr>
-<tr><td>EMA9 at Entry</td><td>{{trade.EntryEma9:F8}}</td></tr>
-<tr><td>EMA21 at Entry</td><td>{{trade.EntryEma21:F8}}</td></tr>
-<tr><td>EMA Gap (%)</td><td>{{trade.EntryEmaGapPercent:F6}}</td></tr>
-<tr><td>Choppiness Index</td><td>{{trade.EntryChoppinessIndex:F2}}</td></tr>
-<tr><td>Stochastic RSI K / D</td><td>{{trade.EntryStochRsiK:F2}} / {{trade.EntryStochRsiD:F2}}</td></tr>
-<tr><td>Entry / Marginal Execution Price</td><td>₹{{trade.EntryPrice:N2}}</td></tr>
+<tr><td>Entry Price (Market Fill)</td><td>₹{{trade.EntryPrice:N2}}</td></tr>
 <tr><td>Stop Loss</td><td>₹{{trade.StopLoss:N2}}</td></tr>
 <tr><td>Investment</td><td>₹{{investment:N2}}</td></tr>
 <tr><td>Risk Reward</td><td>{{rr:F2}} : 1</td></tr>
@@ -606,7 +597,7 @@ Trade Details
 
 <tr>
 <td class="metric">Quantity</td>
-<td>{{trade.Quantity}} (charge-cover quantity)</td>
+<td>{{trade.Quantity}}</td>
 </tr>
 
 <tr>
@@ -617,31 +608,6 @@ Trade Details
 <tr>
 <td class="metric">Exit Price</td>
 <td>₹{{trade.ExitPrice:N2}}</td>
-</tr>
-
-<tr>
-<td class="metric">EMA9 at Entry</td>
-<td>{{trade.EntryEma9:F8}}</td>
-</tr>
-
-<tr>
-<td class="metric">EMA21 at Entry</td>
-<td>{{trade.EntryEma21:F8}}</td>
-</tr>
-
-<tr>
-<td class="metric">EMA Gap (%)</td>
-<td>{{trade.EntryEmaGapPercent:F6}}</td>
-</tr>
-
-<tr>
-<td class="metric">Choppiness Index</td>
-<td>{{trade.EntryChoppinessIndex:F2}}</td>
-</tr>
-
-<tr>
-<td class="metric">Stochastic RSI K / D</td>
-<td>{{trade.EntryStochRsiK:F2}} / {{trade.EntryStochRsiD:F2}}</td>
 </tr>
 
 <tr>

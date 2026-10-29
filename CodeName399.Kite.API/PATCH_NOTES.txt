@@ -1,0 +1,14 @@
+CodeName399.Kite.API patch notes
+
+1. Removed the obsolete model artifact and its associated project baggage.
+2. Removed the pullback requirement from entry. Entries are triggered by the live-tick transition EMA9 <= EMA21 to EMA9 > EMA21.
+3. Renamed the strategy service and signal types to EmaCrossoverStrategyService / EmaCrossoverSignal to reflect the actual rule.
+4. Discovery selects at most ten actively traded equity candidates with positive daily change that are trading above the day open. Ranking is activity volume, daily change, then rise from open.
+5. The shortlist is published to the UI through SignalR after each discovery cycle and when a client connects. Open positions remain included for lifecycle management.
+6. Market discovery no longer stops or clears the shortlist when the market-hours gate is closed. Buy and sell workers continue to enforce their own session rules.
+7. A transient empty discovery response preserves the previous watchlist and subscriptions instead of clearing the UI.
+8. All selected shortlist stocks are subscribed immediately. Historical data seeds EMA where available; otherwise live candles warm up the strategy.
+9. Historical seeding now merges loaded history with any live candles that arrived while the history request was running.
+10. Corrected IsSubscribed semantics so it reflects the actual selected subscription set, not merely a scanner candidate.
+11. Fixed empty TradingSymbol metadata so valid quote rows are not discarded by the scanner.
+12. Added explicit shortlist diagnostics, including universe count, eligible count, and selected count.

@@ -1,7 +1,7 @@
 using CodeName399.Kite.API.Models;
 using CodeName399.Kite.API.Models.Enum;
 
-namespace CodeName399.Kite.API.Repository;
+namespace CodeName399.Kite.API.Domain.Models;
 
 /// <summary>
 /// Minimal durable state required to recover an active trade after process restart.

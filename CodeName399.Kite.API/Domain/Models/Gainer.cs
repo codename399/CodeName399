@@ -34,12 +34,6 @@ public class Gainer
     public decimal StopLoss { get; set; }
     public bool IsOwned { get; set; }
     public int Quantity { get; set; }
-
-    // Fixed-quantity sizing snapshot used by the BUY email to explain market-depth capping.
-    public int FixedQuantityConfigured { get; set; }
-    public long MarketDepthAvailableQuantity { get; set; }
-    public decimal MarketDepthExecutablePrice { get; set; }
-    public string MarketDepthSide { get; set; } = string.Empty;
     public decimal AveragePrice { get; set; }
     public decimal InvestedAmount { get; set; }
     public decimal CurrentValue { get; set; }

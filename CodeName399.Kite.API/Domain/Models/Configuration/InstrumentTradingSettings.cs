@@ -11,8 +11,8 @@ public class InstrumentTradingSettings
     public string Duration { get; set; } = "DAY";
 
     public decimal AtrStopMultiplier { get; set; } = 1.20m;
-    public decimal MaximumStopPercent { get; set; } = 1.50m;
-    public decimal MinimumStopPercent { get; set; } = 0.50m;
+    public decimal MaximumStopPercent { get; set; } = 1m;
+    public decimal MinimumStopPercent { get; set; } = 1m;
     public bool AllowLong { get; set; } = true;
 
     public int ExitOrderTimeoutSeconds { get; set; } = 10;

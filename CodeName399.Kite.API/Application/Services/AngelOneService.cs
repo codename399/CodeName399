@@ -1,4 +1,4 @@
-using CodeName399.Kite.API.Constants;
+﻿using CodeName399.Kite.API.Constants;
 using CodeName399.Kite.API.Extensions;
 using CodeName399.Kite.API.Helpers;
 using CodeName399.Kite.API.Models;
@@ -738,9 +738,11 @@ public partial class AngelOneService : IAngelOneService
         bool forceLive = false
     )
     {
-        if (_tradingSettingsProvider.Current.PaperTrading && !forceLive)
-            return price * quantity;
-
+        // Margin calculation is read-only and should use the broker's actual
+        // product-specific requirement even in paper-trading mode. Returning
+        // price * quantity here incorrectly treats paper trades as full-cash-funded
+        // orders and makes affordable quantity much lower than the platform's
+        // INTRADAY margin (for example, 5x leverage).
         return await GetRequiredMarginAsync(
             new MarginRequest
             {

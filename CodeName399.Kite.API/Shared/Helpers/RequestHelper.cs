@@ -45,7 +45,7 @@ public class RequestHelper
                 {
                     // Report the cooldown here; HistoricalRateLimiter owns the
                     // rate-limit diagnostic so we do not emit a duplicate HTTP error.
-                    _rateLimiter.ReportGlobalRateLimit(TimeSpan.FromSeconds(60));
+                    _rateLimiter.ReportGlobalRateLimit(TimeSpan.FromSeconds(15));
                 }
                 else
                 {
@@ -91,7 +91,7 @@ public class RequestHelper
                 {
                     // Report the cooldown here; HistoricalRateLimiter owns the
                     // rate-limit diagnostic so we do not emit a duplicate HTTP error.
-                    _rateLimiter.ReportGlobalRateLimit(TimeSpan.FromSeconds(60));
+                    _rateLimiter.ReportGlobalRateLimit(TimeSpan.FromSeconds(15));
                 }
                 else
                 {

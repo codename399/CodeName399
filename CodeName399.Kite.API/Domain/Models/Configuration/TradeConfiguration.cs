@@ -24,6 +24,10 @@ namespace CodeName399.Kite.API.Models.Configuration
 
         public decimal RiskPercentage { get; set; } = 2;
 
+        /// <summary>Number of completed one-minute candles used to estimate the average absolute close-to-close price change for charge-cover calculations.</summary>
+        public int ChargeCoverAveragePriceChangeCandles { get; set; } = 5;
+
+        public decimal MaxCapitalPerTradePercent { get; set; } = 10m;
 
         public int MaxBrokerFailuresBeforeKillSwitch { get; set; } = 5;
         public int BrokerFailureWindowMinutes { get; set; } = 2;
@@ -34,7 +38,7 @@ namespace CodeName399.Kite.API.Models.Configuration
 
         // Equity market close. New intraday entries are cut off before auto-square-off.
         public TimeSpan MarketCloseTime { get; set; } = new TimeSpan(15, 30, 0);
-        public TimeSpan IntradayEntryCutoffTime { get; set; } = new TimeSpan(15, 0, 0);
+        public TimeSpan IntradayEntryCutoffTime { get; set; } = new TimeSpan(15, 20, 0);
         public TimeSpan EquityMisAutoSquareOffTime { get; set; } = new TimeSpan(15, 10, 0);
         public TimeSpan RoboAutoSquareOffTime { get; set; } = new TimeSpan(15, 05, 0);
 
@@ -53,25 +57,7 @@ namespace CodeName399.Kite.API.Models.Configuration
         public List<string> ExcludedSymbols { get; set; } =
             new List<string> { "TATSILV-EQ", "AONEGOLD-EQ", "ACUTAAS-EQ", "IDEA-EQ" };
 
-
-        /// <summary>Maximum stock price allowed in the top-gainers discovery shortlist.</summary>
-        public decimal MaximumStockPrice { get; set; } = 50m;
-
-        /// <summary>PullbackRecovery, EmaCrossover, or Both.</summary>
-        public string EntryType { get; set; } = "PullbackRecovery";
-
-        public bool EnableSidewaysMarketFilter { get; set; } = true;
-        public bool EnableChoppinessIndicator { get; set; } = true;
-        public int ChoppinessPeriod { get; set; } = 14;
-        public decimal SidewaysChoppinessThreshold { get; set; } = 61.8m;
-
-        /// <summary>Minimum favorable price move used to estimate charge-covering quantity.</summary>
-        public decimal ChargeCoverPriceIncrement { get; set; } = 0.01m;
-        public decimal StopLossPercent { get; set; } = 0.1m;
-        public int MaximumDiscoveryCandidates { get; set; } = 10;
-        public int BuyCutoffMinutesBeforeClose { get; set; } = 30;
-
-        // Quantity is always calculated from round-trip charges and available intraday margin.
+        public int MaxCandidates { get; set; } = 500;
 
         public DateOnly? LastDailySummarySent { get; set; } = null;
 

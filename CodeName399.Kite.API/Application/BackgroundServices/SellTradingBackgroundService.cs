@@ -42,7 +42,7 @@ namespace CodeName399.Kite.API.BackgroundServices
 
                     var sellService = scope.ServiceProvider.GetRequiredService<SellTradingService>();
 
-                    const int maxCandidates = 10;
+                    var maxCandidates = Math.Max(1, _settings.Current.MaxCandidates);
                     var gainers = _watchList.Current
                         .Where(x => x.IsOwned || x.InstrumentType == InstrumentType.Equity)
                         .Where(x => x.IsOwned || x.HistoricalLoaded)
