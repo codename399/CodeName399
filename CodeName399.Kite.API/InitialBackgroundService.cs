@@ -67,7 +67,7 @@ namespace CodeName399.Kite.API
                         9, 15, 0,
                         DateTimeKind.Unspecified);
 
-                    var candles = await _commonService.DownloadCandlesInBatchesAsync(
+                    await _commonService.DownloadCandlesInBatchesAsync(
                         quotes,
                         instruments,
                         login.JwtToken,

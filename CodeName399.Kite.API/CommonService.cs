@@ -1,4 +1,4 @@
-namespace CodeName399.Kite.API
+﻿namespace CodeName399.Kite.API
 {
     using CodeName399.Kite.API.Constants;
     using CodeName399.Kite.API.Extensions;
@@ -227,7 +227,7 @@ namespace CodeName399.Kite.API
         /// Downloads candles for the supplied quotes by calling DownloadCandleAsync
         /// for at most three instrument tokens concurrently per batch.
         /// </summary>
-        public async Task<Dictionary<string, List<Candle>>> DownloadCandlesInBatchesAsync(
+        public async Task DownloadCandlesInBatchesAsync(
             List<MarketQuoteData> quotes,
             List<Instrument> instruments,
             string jwtToken,
@@ -240,7 +240,7 @@ namespace CodeName399.Kite.API
             var candlesByToken = new Dictionary<string, List<Candle>>(StringComparer.OrdinalIgnoreCase);
 
             if (quotes == null || quotes.Count == 0 || instruments == null || instruments.Count == 0)
-                return candlesByToken;
+                return;
 
             if (string.IsNullOrWhiteSpace(jwtToken))
                 throw new ArgumentException("JWT token is required to download historical candles.", nameof(jwtToken));
@@ -297,7 +297,17 @@ namespace CodeName399.Kite.API
 
                 var batchResults = await Task.WhenAll(tasks);
                 foreach (var result in batchResults)
+                {
                     candlesByToken[result.Token] = result.Candles;
+
+                    // Calculate indicators immediately after each token's candles are downloaded
+                    // and write them directly into the corresponding quote.
+                    var quote = quotes.FirstOrDefault(
+                        q => string.Equals(q.SymbolToken?.Trim(), result.Token, StringComparison.OrdinalIgnoreCase));
+
+                    if (quote != null)
+                        UpdateQuoteIndicators(quote, result.Candles, interval);
+                }
 
                 await Task.Delay(TimeSpan.FromSeconds(batchDelay));
             }
@@ -308,8 +318,105 @@ namespace CodeName399.Kite.API
                 requestedTokens.Count,
                 interval,
                 batchSize);
+        }
 
-            return candlesByToken;
+        private void UpdateQuoteIndicators(MarketQuoteData quote, List<Candle> candles, string interval)
+        {
+            // EMA21 for the previous candle requires at least 21 candles before the latest one.
+            // 22 candles therefore provide current and previous-candle EMA9/EMA21 values.
+            if (candles == null || candles.Count < 22)
+            {
+                _logger.LogDebug(
+                    "Skipping indicator update for {Symbol} (token {Token}): {Count} {Interval} candles; 22 required.",
+                    quote.TradingSymbol,
+                    quote.SymbolToken,
+                    candles?.Count ?? 0,
+                    interval);
+                return;
+            }
+
+            var orderedCandles = candles
+                .Where(c => c != null && c.Close > 0 && c.High > 0 && c.Low > 0 && c.High >= c.Low)
+                .GroupBy(c => c.Timestamp)
+                .Select(g => g.Last())
+                .OrderBy(c => c.Timestamp)
+                .ToList();
+
+            if (orderedCandles.Count < 22)
+                return;
+
+            var previousCandles = orderedCandles.Take(orderedCandles.Count - 1).ToList();
+
+            quote.Ema9 = Math.Round(CalculateEma(orderedCandles.Select(c => c.Close).ToList(), 9), 6, MidpointRounding.AwayFromZero);
+            quote.Ema21 = Math.Round(CalculateEma(orderedCandles.Select(c => c.Close).ToList(), 21), 6, MidpointRounding.AwayFromZero);
+            quote.PreviousCandleEma9 = Math.Round(CalculateEma(previousCandles.Select(c => c.Close).ToList(), 9), 6, MidpointRounding.AwayFromZero);
+            quote.PreviousCandleEma21 = Math.Round(CalculateEma(previousCandles.Select(c => c.Close).ToList(), 21), 6, MidpointRounding.AwayFromZero);
+            quote.ChoppinessIndex = Math.Round(CalculateChoppinessIndex(orderedCandles, 14), 6, MidpointRounding.AwayFromZero);
+
+            _logger.LogDebug(
+                "Updated quote indicators for {Symbol} ({Token}) using {Count} {Interval} candles: EMA9={Ema9}, EMA21={Ema21}, PreviousEMA9={PreviousEma9}, PreviousEMA21={PreviousEma21}, Choppiness={Choppiness}",
+                quote.TradingSymbol,
+                quote.SymbolToken,
+                orderedCandles.Count,
+                interval,
+                quote.Ema9,
+                quote.Ema21,
+                quote.PreviousCandleEma9,
+                quote.PreviousCandleEma21,
+                quote.ChoppinessIndex);
+        }
+
+        private static decimal CalculateEma(IReadOnlyList<decimal> closingPrices, int period)
+        {
+            if (closingPrices == null || closingPrices.Count < period)
+                return 0m;
+
+            // Standard EMA: SMA of the first period as the seed, then alpha = 2 / (period + 1).
+            decimal ema = closingPrices.Take(period).Average();
+            decimal alpha = 2m / (period + 1m);
+
+            for (var i = period; i < closingPrices.Count; i++)
+                ema = (closingPrices[i] * alpha) + (ema * (1m - alpha));
+
+            return ema;
+        }
+
+        private static decimal CalculateChoppinessIndex(IReadOnlyList<Candle> candles, int period)
+        {
+            if (candles == null || candles.Count <= period)
+                return 0m;
+
+            var window = candles.TakeLast(period).ToList();
+            var startIndex = candles.Count - period;
+            decimal sumTrueRange = 0m;
+
+            for (var i = startIndex; i < candles.Count; i++)
+            {
+                var current = candles[i];
+                var previousClose = candles[i - 1].Close;
+                var trueRange = Math.Max(
+                    current.High - current.Low,
+                    Math.Max(
+                        Math.Abs(current.High - previousClose),
+                        Math.Abs(current.Low - previousClose)));
+
+                sumTrueRange += trueRange;
+            }
+
+            var highestHigh = window.Max(c => c.High);
+            var lowestLow = window.Min(c => c.Low);
+            var range = highestHigh - lowestLow;
+
+            if (range <= 0m || sumTrueRange <= 0m)
+                return 0m;
+
+            var ratio = (double)(sumTrueRange / range);
+            var index = 100d * Math.Log10(ratio) / Math.Log10(period);
+
+            if (double.IsNaN(index) || double.IsInfinity(index))
+                return 0m;
+
+            return (decimal)index;
         }
 
         public async Task<List<Candle>> DownloadCandleAsync(
@@ -457,6 +564,34 @@ namespace CodeName399.Kite.API
 
                 return [];
             }
+        }
+
+        public void PlaceBuyOrders(HashSet<MarketQuoteData> quotes)
+        {
+            foreach (var quote in quotes)
+            {
+                if (ValidateBuyConditions(quote))
+                {
+                    // Place buy order
+                }
+            }
+        }
+
+        private bool ValidateBuyConditions(MarketQuoteData quote)
+        {
+            if (quote == null)
+                return false;
+            if (quote.Ema9 <= 0 || quote.Ema21 <= 0 || quote.PreviousCandleEma9 <= 0 || quote.PreviousCandleEma21 <= 0)
+                return false;
+            if (quote.ChoppinessIndex > 61.8m)
+                return false;
+            if (quote.Ltp <= quote.Ema9 || quote.Ltp <= quote.Ema21)
+                return false;
+            if (quote.Ema9 <= quote.Ema21)
+                return false;
+            if (quote.PreviousCandleEma9 >= quote.PreviousCandleEma21)
+                return false;
+            return true;
         }
     }
 }
