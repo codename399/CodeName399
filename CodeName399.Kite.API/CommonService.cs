@@ -778,11 +778,11 @@
             {
                 var quantity = low + (high - low) / 2;
                 var margin = await _angel.GetRequiredMarginAsync(
-                    quote.SymbolToken, quantity, quote.AveragePrice,
+                    quote.SymbolToken, quantity, quote.Ltp,
                     quote.Exchange, "INTRADAY", "BUY");
                 _logger.LogInformation(
                     "INTRADAY MARGIN CHECK Symbol={Symbol} Token={Token} Exchange={Exchange} ProductType=INTRADAY OrderType=MARKET Quantity={Quantity} ReferencePrice={Price:F4} BrokerRequiredMargin={Margin:F2} AvailableFunds={Funds:F2}",
-                    quote.TradingSymbol, quote.SymbolToken, quote.Exchange, quantity, quote.AveragePrice, margin, availableBalance);
+                    quote.TradingSymbol, quote.SymbolToken, quote.Exchange, quantity, quote.Ltp, margin, availableBalance);
 
                 if (margin > 0m && margin <= availableBalance)
                 {
