@@ -17,7 +17,7 @@ namespace CodeName399.Kite.API.Services
 
         private readonly IAngelOneService _angel;
         private readonly IInstrumentService _instrumentService;
-        private readonly ITradeOrderRepository _repository;
+        private readonly ITradeOrderFileRepository _repository;
         private readonly ILogger<TradeManager> _logger;
         private readonly IBrokerageCalculatorService _brokerage;
         private readonly TradeCloseHistoryStore? _closeHistory;
@@ -34,7 +34,7 @@ namespace CodeName399.Kite.API.Services
         public TradeManager(
             IAngelOneService angel,
             IInstrumentService instrumentService,
-            ITradeOrderRepository repository,
+            ITradeOrderFileRepository repository,
             TradingSettingsProvider tradingSettingsProvider,
             WatchListService watchList,
             IBrokerageCalculatorService brokerage,

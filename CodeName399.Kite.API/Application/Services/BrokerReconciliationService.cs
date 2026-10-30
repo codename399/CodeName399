@@ -13,7 +13,7 @@ public class BrokerReconciliationService
     private readonly ILogger<BrokerReconciliationService> _logger;
     private readonly TradingSettingsProvider _tradingSettingsProvider;
     private readonly SymbolLockService _symbolLocks;
-    private readonly ITradeOrderRepository _repository;
+    private readonly ITradeOrderFileRepository _repository;
     private readonly IInstrumentService _instrumentService;
 
     public BrokerReconciliationService(
@@ -22,7 +22,7 @@ public class BrokerReconciliationService
         TradeManager tradeManager,
         WatchListService watchList,
         SymbolLockService symbolLocks,
-        ITradeOrderRepository repository,
+        ITradeOrderFileRepository repository,
         IInstrumentService instrumentService,
         ILogger<BrokerReconciliationService> logger
     )
@@ -252,19 +252,19 @@ public class BrokerReconciliationService
             );
 
             var watch = _watchList.Get(brokerPosition.SymbolToken);
-            var instrument = await _instrumentService.GetByTokenAndExchangeAsync(brokerPosition.SymbolToken, brokerPosition.Exchange);
-            if (instrument == null || instrument.InstrumentType != InstrumentType.Equity || brokerPosition.NetQty <= 0)
-            {
-                _logger.LogWarning("Ignoring unsupported or short broker position {Symbol}. Only long equity positions are reconciled.", brokerPosition.TradingSymbol);
-                continue;
-            }
+            var instrument = await _instrumentService.LoadInstruments();
+            //if (instrument == null || instrument.InstrumentType != InstrumentType.Equity || brokerPosition.NetQty <= 0)
+            //{
+            //    _logger.LogWarning("Ignoring unsupported or short broker position {Symbol}. Only long equity positions are reconciled.", brokerPosition.TradingSymbol);
+            //    continue;
+            //}
 
             var trade = new TradeOrder
             {
                 Symbol = brokerPosition.TradingSymbol.Trim().ToUpperInvariant(),
 
                 SymbolToken = brokerPosition.SymbolToken,
-                Exchange = string.IsNullOrWhiteSpace(brokerPosition.Exchange) ? (instrument?.exch_seg ?? "NSE") : brokerPosition.Exchange,
+                //Exchange = string.IsNullOrWhiteSpace(brokerPosition.Exchange) ? (instrument?.exch_seg ?? "NSE") : brokerPosition.Exchange,
                 ProductType = string.IsNullOrWhiteSpace(brokerPosition.ProductType) ? "INTRADAY" : brokerPosition.ProductType,
                 InstrumentType = InstrumentType.Equity,
                 Direction = TradeDirection.Long,

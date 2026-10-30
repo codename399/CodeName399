@@ -11,7 +11,7 @@ namespace CodeName399.Kite.API.Repository;
 /// MongoDB is deliberately not used for TradeOrder persistence.
 /// Each active trade has exactly one JSON file. Closing a trade deletes it.
 /// </summary>
-public sealed class TradeOrderFileRepository : ITradeOrderRepository
+public sealed class TradeOrderFileRepository : ITradeOrderFileRepository
 {
     private readonly string _rootPath;
     private readonly ILogger<TradeOrderFileRepository> _logger;

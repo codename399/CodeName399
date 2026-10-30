@@ -4,8 +4,8 @@ namespace CodeName399.Kite.API.Services;
 
 public sealed class PaperPortfolioService
 {
-    private readonly ITradeOrderRepository _repository; private readonly TradingSettingsProvider _settings; private readonly MarketClock _clock; private readonly LiveMarketCache _cache;
-    public PaperPortfolioService(ITradeOrderRepository repository, TradingSettingsProvider settings, MarketClock clock, LiveMarketCache cache) { _repository = repository; _settings = settings; _clock = clock; _cache = cache; }
+    private readonly ITradeOrderFileRepository _repository; private readonly TradingSettingsProvider _settings; private readonly MarketClock _clock; private readonly LiveMarketCache _cache;
+    public PaperPortfolioService(ITradeOrderFileRepository repository, TradingSettingsProvider settings, MarketClock clock, LiveMarketCache cache) { _repository = repository; _settings = settings; _clock = clock; _cache = cache; }
     /// <summary>
     /// Returns the configured paper-trading balance without applying simulated
     /// realized/unrealized P&amp;L or open-trade reservations. Paper trading uses

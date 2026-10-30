@@ -6,7 +6,7 @@ using MongoDB.Driver;
 
 namespace CodeName399.Kite.API.Repository
 {
-    public class TradeOrderRepository : GlobalRepository<TradeOrder>, ITradeOrderRepository
+    public class TradeOrderRepository : GlobalRepository<TradeOrder>, ITradeOrderFileRepository
     {
         private readonly IMongoCollection<TradeOrder> _collection;
 

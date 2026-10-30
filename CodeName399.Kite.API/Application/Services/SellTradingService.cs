@@ -22,7 +22,7 @@ namespace CodeName399.Kite.API.Services
             TradingSettingsProvider tradingSettingsProvider,
             TradingStateService state,
             TradeManager tradeManager,
-            ITradeOrderRepository tradeHistoryRepository,
+            ITradeOrderFileRepository tradeHistoryRepository,
             IBrokerageCalculatorService brokerage,
             OrderStatusCache orderCache,
             IAngelOrderWebSocket orderWebSocket,

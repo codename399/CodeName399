@@ -11,7 +11,7 @@ namespace CodeName399.Kite.API.Services
         protected readonly TradingSettingsProvider _tradingSettingsProvider;
         protected readonly TradingStateService _state;
         protected readonly TradeManager _tradeManager;
-        protected readonly ITradeOrderRepository _tradeHistoryRepository;
+        protected readonly ITradeOrderFileRepository _tradeHistoryRepository;
         protected readonly IBrokerageCalculatorService _brokerage;
         protected readonly OrderStatusCache _orderCache;
         protected readonly IAngelOrderWebSocket _orderWebSocket;
@@ -26,7 +26,7 @@ namespace CodeName399.Kite.API.Services
             TradingSettingsProvider tradingSettingsProvider,
             TradingStateService state,
             TradeManager tradeManager,
-            ITradeOrderRepository tradeHistoryRepository,
+            ITradeOrderFileRepository tradeHistoryRepository,
             IBrokerageCalculatorService brokerage,
             OrderStatusCache orderCache,
             IAngelOrderWebSocket orderWebSocket,

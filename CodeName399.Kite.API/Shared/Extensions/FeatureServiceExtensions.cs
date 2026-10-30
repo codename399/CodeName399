@@ -1,3 +1,4 @@
+using CodeName399.Kite.API;
 using CodeName399.Kite.API.BackgroundServices;
 using CodeName399.Kite.API.Constants;
 using CodeName399.Kite.API.Helpers;
@@ -84,6 +85,7 @@ namespace CodeName399.Extensions
             services.AddSingleton<PaperPortfolioService>();
             services.AddSingleton<CasEligibilityService>();
             services.AddSingleton<CasTradingRulesService>();
+            services.AddSingleton<CommonService>();
         }
 
         public static void AddScopedServiceDependencies(this IServiceCollection services)
@@ -123,11 +125,12 @@ namespace CodeName399.Extensions
             services.AddHostedService<TradingSchedulerBackgroundService>();
             services.AddHostedService<TradingTickBackgroundService>();
             services.AddHostedService<ExitRecoveryBackgroundService>();
+            services.AddHostedService<InitialBackgroundService>();
         }
 
         public static void AddRepositoryDependencies(this IServiceCollection services)
         {
-            services.AddSingleton<ITradeOrderRepository, TradeOrderFileRepository>();
+            services.AddSingleton<ITradeOrderFileRepository, TradeOrderFileRepository>();
             services.AddSingleton<TradeCloseHistoryStore>();
             services.AddSingleton<
                 ITradingConfigurationRepository,

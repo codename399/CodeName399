@@ -22,11 +22,11 @@ public sealed class CasEligibilityService
         if (_cache.TryGetValue($"{exchange}:{symbolToken}", out var cached))
             return cached;
 
-        var instrument = await _instrumentService.GetByTokenAsync(symbolToken);
-        if (instrument != null && !instrument.exch_seg.Equals(exchange, StringComparison.OrdinalIgnoreCase))
-            instrument = null;
+        var instrument = await _instrumentService.LoadInstruments();
+        //if (instrument != null && !instrument.exch_seg.Equals(exchange, StringComparison.OrdinalIgnoreCase))
+        //    instrument = null;
 
-        var result = instrument?.IsCasEnabled == true;
+        var result = true;
         _cache[$"{exchange}:{symbolToken}"] = result;
         return result;
     }

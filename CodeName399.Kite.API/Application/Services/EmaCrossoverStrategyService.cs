@@ -338,10 +338,27 @@ public sealed class EmaCrossoverStrategyService
                 state.EntryPullbackLow,
                 state.EntryRecoverySwingHigh,
                 state.EntrySignalPrice);
+            // Do not consume the signal here. Order processing can fail later
+            // (brokerage API throttling, funds, depth, or risk validation). Keep
+            // it pending so the next buy cycle can retry the same completed-candle
+            // crossover. Acknowledge only after a paper trade is persisted or the
+            // broker accepts the live order.
+            return true;
+        }
+    }
+
+    public void AcknowledgeEntrySignal(string symbolToken)
+    {
+        if (string.IsNullOrWhiteSpace(symbolToken) || !_states.TryGetValue(symbolToken, out var state))
+            return;
+
+        lock (state.Sync)
+        {
             state.EntrySignalPending = false;
             state.EntryRecoveryConfirmed = false;
             state.PullbackObserved = false;
-            return true;
+            _logger.LogInformation("EMA ENTRY SIGNAL ACKNOWLEDGED Token={Token} CandleCloseIST={CandleCloseIST}",
+                symbolToken, state.EntrySignalTime.ToString("yyyy-MM-dd HH:mm:ss"));
         }
     }
 

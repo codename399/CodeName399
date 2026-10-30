@@ -109,8 +109,9 @@ public class RequestHelper
 
             return content;
         }
-        catch (AngelApiException)
+        catch (AngelApiException ex)
         {
+            _logger.LogError(ex, "HTTP {Method} {Url} failed.", request.Method, request.RequestUri);
             throw;
         }
         catch (Exception ex)

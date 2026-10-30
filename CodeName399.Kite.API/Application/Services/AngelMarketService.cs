@@ -56,7 +56,7 @@ public sealed class AngelMarketService : IAngelMarketService
         var quotes = await GetEquityQuotesAsync(all, login.JwtToken, openTrades);
 
         var openInstruments = (await Task.WhenAll(openTrades.Select(t =>
-            _instrumentService.GetByTokenAndExchangeAsync(t.SymbolToken, t.Exchange))))
+            _instrumentService.LoadInstruments())))
             .Where(x => x != null)
             .Cast<Instrument>()
             .ToList();

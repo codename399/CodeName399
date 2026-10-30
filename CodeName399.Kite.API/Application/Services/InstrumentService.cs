@@ -28,52 +28,37 @@ public sealed class InstrumentService : IInstrumentService
 
     private async Task<List<Instrument>> DownloadEquityInstrumentsAsync()
     {
-        const int maxAttempts = 4;
-        Exception? lastException = null;
-
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        try
         {
-            try
-            {
-                _logger.LogInformation("Downloading equity instrument master. Attempt={Attempt}/{MaxAttempts}", attempt, maxAttempts);
-                using var response = await _httpClient.GetAsync(
-                    AngelApiUrlConstant.instrumentUrl,
-                    HttpCompletionOption.ResponseHeadersRead);
-                response.EnsureSuccessStatusCode();
+            using var response = await _httpClient.GetAsync(
+                AngelApiUrlConstant.instrumentUrl,
+                HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
 
-                await using var stream = await response.Content.ReadAsStreamAsync();
-                var instruments = await JsonSerializer.DeserializeAsync<List<Instrument>>(stream) ?? [];
+            await using var stream = await response.Content.ReadAsStreamAsync();
+            var instruments = await JsonSerializer.DeserializeAsync<List<Instrument>>(stream) ?? [];
 
-                var equity = instruments
-                    .Where(x => !string.IsNullOrWhiteSpace(x.token))
-                    .Where(x => x.exch_seg is "NSE" or "BSE")
-                    .Where(x => x.symbol.EndsWith("-EQ", StringComparison.OrdinalIgnoreCase))
-                    .Select(x =>
-                    {
-                        x.InstrumentType = InstrumentType.Equity;
-                        return x;
-                    })
-                    .ToList();
+            var equity = instruments
+                .Where(x => !string.IsNullOrWhiteSpace(x.token))
+                .Where(x => x.exch_seg is "NSE" or "BSE")
+                .Where(x => x.symbol.EndsWith("-EQ", StringComparison.OrdinalIgnoreCase))
+                .Select(x =>
+                {
+                    x.InstrumentType = InstrumentType.Equity;
+                    return x;
+                })
+                .ToList();
 
-                if (equity.Count == 0)
-                    throw new InvalidOperationException("Angel One instrument master contained no equity instruments.");
+            if (equity.Count == 0)
+                throw new InvalidOperationException("Angel One instrument master contained no equity instruments.");
 
-                _logger.LogInformation("Equity instrument master loaded. Total={Total}, Equity={Equity}", instruments.Count, equity.Count);
-                return equity;
-            }
-            catch (Exception ex) when (attempt < maxAttempts)
-            {
-                lastException = ex;
-                await Task.Delay(TimeSpan.FromSeconds(Math.Min(30, attempt * 3)));
-            }
-            catch (Exception ex)
-            {
-                lastException = ex;
-                break;
-            }
+            _logger.LogInformation("Equity instrument master loaded. Total={Total}, Equity={Equity}", instruments.Count, equity.Count);
+            return equity;
         }
-
-        throw new InvalidOperationException("Unable to load the equity instrument master.", lastException);
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Unable to load the equity instrument master.", ex);
+        }
     }
 
     public async Task<List<Instrument>> LoadInstruments()
@@ -127,30 +112,5 @@ public sealed class InstrumentService : IInstrumentService
         {
             _loadSemaphore.Release();
         }
-    }
-
-    public async Task<Instrument?> GetBySymbolAsync(string symbol)
-    {
-        if (string.IsNullOrWhiteSpace(symbol)) return null;
-        if (_symbolCache.TryGetValue(symbol.Trim(), out var cached)) return cached;
-        await LoadInstruments();
-        return _symbolCache.TryGetValue(symbol.Trim(), out cached) ? cached : null;
-    }
-
-    public async Task<Instrument?> GetByTokenAsync(string token)
-    {
-        if (string.IsNullOrWhiteSpace(token)) return null;
-        if (_tokenCache.TryGetValue(token.Trim(), out var cached)) return cached;
-        await LoadInstruments();
-        return _tokenCache.TryGetValue(token.Trim(), out cached) ? cached : null;
-    }
-
-    public async Task<Instrument?> GetByTokenAndExchangeAsync(string token, string exchange)
-    {
-        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(exchange)) return null;
-        var instruments = await LoadInstruments();
-        return instruments.FirstOrDefault(x =>
-            string.Equals(x.token, token.Trim(), StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(x.exch_seg, exchange.Trim(), StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -153,8 +153,8 @@ public class HistoricalCacheBackgroundService : BackgroundService
                     // of the current discovery result.
                     _cache.AddPending(token);
 
-                    var instrument = await instrumentService.GetByTokenAsync(token);
-                    var exchange = instrument?.exch_seg ?? "NSE";
+                    var instrument = await instrumentService.LoadInstruments();
+                    var exchange = "NSE";
 
                     CachedHistoricalData? existing = null;
 

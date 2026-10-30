@@ -7,7 +7,7 @@ namespace CodeName399.Kite.API.Services;
 public sealed class IntradayRiskGuard
 {
     private readonly TradeManager _tradeManager;
-    private readonly ITradeOrderRepository _repository;
+    private readonly ITradeOrderFileRepository _repository;
     private readonly TradingSettingsProvider _settings;
     private readonly MarketClock _clock;
     private readonly TradingStateService _state;
@@ -16,7 +16,7 @@ public sealed class IntradayRiskGuard
 
     public IntradayRiskGuard(
         TradeManager tradeManager,
-        ITradeOrderRepository repository,
+        ITradeOrderFileRepository repository,
         TradingSettingsProvider settings,
         MarketClock clock,
         TradingStateService state)

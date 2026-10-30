@@ -28,7 +28,7 @@ namespace CodeName399.Kite.API.Services
             TradingSettingsProvider tradingSettingsProvider,
             TradingStateService state,
             TradeManager tradeManager,
-            ITradeOrderRepository tradeHistoryRepository,
+            ITradeOrderFileRepository tradeHistoryRepository,
             IBrokerageCalculatorService brokerage,
             OrderStatusCache orderCache,
             IAngelOrderWebSocket orderWebSocket,
@@ -153,10 +153,10 @@ namespace CodeName399.Kite.API.Services
             try
             {
                 if (_tradeManager.IsOpen(stock.Symbol)) { _logger.LogInformation("ORDER BLOCKED Symbol={Symbol} Gate=ExistingOpenTrade", stock.Symbol); stock.Suggestion = "Close the existing position before buying again."; _tradeManager.ReleaseSymbol(stock.Symbol); return remainingBalance; }
-                if (stock.ChangePercent <= 0m || stock.CurrentPrice <= 0m)
+                if (stock.CurrentPrice <= 0m)
                 {
-                    _logger.LogInformation("ORDER BLOCKED Symbol={Symbol} Gate=PositiveChangeOrPrice ChangePercent={ChangePercent:F3} Price={Price:F4}", stock.Symbol, stock.ChangePercent, stock.CurrentPrice);
-                    stock.Suggestion = "Waiting for a positive daily change.";
+                    _logger.LogInformation("ORDER BLOCKED Symbol={Symbol} Gate=CurrentPrice Price={Price:F4}", stock.Symbol, stock.CurrentPrice);
+                    stock.Suggestion = "Waiting for a valid market price.";
                     _tradeManager.ReleaseSymbol(stock.Symbol);
                     return remainingBalance;
                 }
@@ -301,48 +301,77 @@ namespace CodeName399.Kite.API.Services
             if (increment <= 0m)
                 throw new InvalidOperationException("Lowest absolute candle-body price change over configured one-minute candles must be greater than zero.");
 
-            async Task<bool> CoversCharges(int quantity)
+            // The broker charge-estimate endpoint is rate-limited. Estimate the
+            // fixed and variable components from only two quantities per side,
+            // then solve locally instead of making an API request on every search
+            // iteration. Add a 15% safety buffer to avoid underestimating charges.
+            const int sampleQuantity = 1000;
+            var buyOne = await _brokerage.CalculateAsync(stock.Symbol, stock.SymbolToken, price, 1,
+                BrokerageTransactionType.Buy, stock.Exchange, "INTRADAY");
+            var sellOne = await _brokerage.CalculateAsync(stock.Symbol, stock.SymbolToken, price + increment, 1,
+                BrokerageTransactionType.Sell, stock.Exchange, "INTRADAY");
+            var buySample = await _brokerage.CalculateAsync(stock.Symbol, stock.SymbolToken, price, sampleQuantity,
+                BrokerageTransactionType.Buy, stock.Exchange, "INTRADAY");
+            var sellSample = await _brokerage.CalculateAsync(stock.Symbol, stock.SymbolToken, price + increment, sampleQuantity,
+                BrokerageTransactionType.Sell, stock.Exchange, "INTRADAY");
+
+            static (decimal Fixed, decimal PerUnit) Fit(decimal one, decimal sample, int sampleQty)
             {
-                var buy = await _brokerage.CalculateAsync(stock.Symbol, stock.SymbolToken, price, quantity,
-                    BrokerageTransactionType.Buy, stock.Exchange, "INTRADAY");
-                var sell = await _brokerage.CalculateAsync(stock.Symbol, stock.SymbolToken, price + increment, quantity,
-                    BrokerageTransactionType.Sell, stock.Exchange, "INTRADAY");
-                var buyPrice = price * quantity + buy.TotalCharges;
-                var sellPrice = (price + increment) * quantity + sell.TotalCharges;
-                var totalCharges = buy.TotalCharges + sell.TotalCharges;
-                var covered = sellPrice - buyPrice > totalCharges;
-                _logger.LogDebug(
-                    "CHARGE COVER TEST Symbol={Symbol} Quantity={Quantity} Price={Price:F4} PriceIncrement={Increment:F4} BuyCharges={BuyCharges:F2} SellCharges={SellCharges:F2} BuyTotal={BuyTotal:F2} SellTotal={SellTotal:F2} Difference={Difference:F2} RequiredDifference>{Required:F2} Pass={Pass}",
-                    stock.Symbol, quantity, price, increment, buy.TotalCharges, sell.TotalCharges,
-                    buyPrice, sellPrice, sellPrice - buyPrice, totalCharges, covered);
-                return covered;
+                var perUnit = Math.Max(0m, (sample - one) / (sampleQty - 1));
+                var fixedPart = Math.Max(0m, one - perUnit);
+                return (fixedPart, perUnit);
             }
 
-            // Exponential search followed by binary search avoids a brokerage API call
-            // for every possible quantity while still finding the first passing quantity.
-            var upper = 1;
-            while (upper < 1_000_000 && !await CoversCharges(upper))
-                upper = Math.Min(1_000_000, upper * 2);
-            if (!await CoversCharges(upper))
-                return 0;
-            var lower = Math.Max(1, upper / 2 + 1);
-            while (lower < upper)
+            var buyModel = Fit(buyOne.TotalCharges, buySample.TotalCharges, sampleQuantity);
+            var sellModel = Fit(sellOne.TotalCharges, sellSample.TotalCharges, sampleQuantity);
+            decimal EstimatedRoundTripCharges(int quantity) =>
+                (buyModel.Fixed + buyModel.PerUnit * quantity +
+                 sellModel.Fixed + sellModel.PerUnit * quantity) * 1.15m;
+
+            // The intended rule is gross price movement must exceed the
+            // complete round-trip charges. Do not compare a net difference
+            // (which already subtracts buy charges) against charges a second time.
+            var low = 1;
+            var high = 1;
+            while (high < 1_000_000 && increment * high <= EstimatedRoundTripCharges(high))
+                high = Math.Min(1_000_000, high * 2);
+
+            if (increment * high <= EstimatedRoundTripCharges(high))
             {
-                var middle = lower + (upper - lower) / 2;
-                if (await CoversCharges(middle)) upper = middle;
-                else lower = middle + 1;
+                _logger.LogWarning("CHARGE COVER MODEL Symbol={Symbol} Reason=NoQuantityFound Increment={Increment:F6} MaxQuantity={MaxQuantity} EstimatedCharges={Charges:F2}",
+                    stock.Symbol, increment, high, EstimatedRoundTripCharges(high));
+                return 0;
             }
-            return lower;
+
+            while (low < high)
+            {
+                var middle = low + (high - low) / 2;
+                if (increment * middle > EstimatedRoundTripCharges(middle))
+                    high = middle;
+                else
+                    low = middle + 1;
+            }
+
+            _logger.LogInformation(
+                "CHARGE COVER MODEL Symbol={Symbol} Quantity={Quantity} Increment={Increment:F6} EstimatedRoundTripCharges={Charges:F2} SafetyBufferPercent=15 BuyFixed={BuyFixed:F4} BuyPerUnit={BuyPerUnit:F6} SellFixed={SellFixed:F4} SellPerUnit={SellPerUnit:F6} BrokerEstimateCalls=4",
+                stock.Symbol, low, increment, EstimatedRoundTripCharges(low),
+                buyModel.Fixed, buyModel.PerUnit, sellModel.Fixed, sellModel.PerUnit);
+            return low;
         }
 
         private int GetAvailableAtCurrentPrice(Gainer stock)
         {
-            // For a BUY at the current LTP, only ask-side depth at or below that
-            // price is counted as immediately available at the requested price.
+            // For a market BUY, count valid ask-side depth; asks are often above LTP.
             var depth = stock.Quote?.Depth?.Sell;
             if (depth == null || depth.Count == 0)
-                return 0; // fail closed: quote does not prove executable quantity at this price
-            var quantity = depth.Where(x => x.Price > 0m && x.Price <= stock.CurrentPrice)
+                return 0; // fail closed when the broker provides no ask-side depth.
+
+            // LTP is the last traded price, not the best ask. For a market BUY,
+            // valid asks are commonly ABOVE LTP; excluding those levels made the
+            // eligible quantity zero and blocked otherwise valid crossover entries.
+            // Count available ask-side quantity here; the submitted market order is
+            // still subject to broker execution and actual fill price.
+            var quantity = depth.Where(x => x.Price > 0m && x.Quantity > 0)
                 .Sum(x => Math.Max(0L, x.Quantity));
             return (int)Math.Min(int.MaxValue, quantity);
         }
@@ -587,7 +616,7 @@ namespace CodeName399.Kite.API.Services
             }
 
             var depthLevels = stock.Quote?.Depth?.Sell?
-                .Where(x => x.Price > 0m && x.Price <= stock.CurrentPrice && x.Quantity > 0)
+                .Where(x => x.Price > 0m && x.Quantity > 0)
                 .OrderBy(x => x.Price)
                 .ToList() ?? new();
             var executableAskPrice = depthLevels.Count > 0 ? depthLevels.Max(x => (decimal)x.Price) : 0m;
@@ -603,8 +632,8 @@ namespace CodeName399.Kite.API.Services
             var quantityEmailDetails =
                 $"<hr/><h3>Charge-Cover Quantity & Market Availability</h3>" +
                 $"<p><b>Lowest price-change method</b><br/>Lookback: {config.ChargeCoverAveragePriceChangeCandles} completed 1-minute candles<br/>Lowest absolute candle-body change (|Close − Open|): ₹{lowestPriceChange:F6}<br/>Lowest change as percentage of entry reference price: {lowestChangePercent:F4}%<br/>Price-change increment used in charge-cover calculation: ₹{lowestPriceChange:F6}</p>" +
-                $"<p><b>Charge-cover calculation</b><br/>Buy total = (entry price × quantity) + buy charges<br/>Sell total = ((entry price + ₹{lowestPriceChange:F6}) × quantity) + sell charges<br/>Minimum quantity required for estimated price difference to exceed total buy + sell charges: {minimumQuantity:N0} shares<br/>Condition: Sell total − Buy total &gt; buy charges + sell charges.<br/>For final requested quantity ({quantity:N0}): estimated buy charges ₹{estimatedBuyCharges.TotalCharges:F2}; estimated sell charges ₹{estimatedSellCharges.TotalCharges:F2}; estimated round-trip charges ₹{estimatedRoundTripCharges:F2}; estimated buy total ₹{estimatedBuyTotal:F2}; estimated sell total ₹{estimatedSellTotal:F2}; estimated difference ₹{estimatedDifference:F2}; charge-cover condition {(estimatedDifference > estimatedRoundTripCharges ? "PASSED" : "NOT PASSED")}.</p>" +
-                $"<p><b>Market depth at entry reference price</b><br/>Side checked: ASK / sell-side depth for a BUY<br/>Entry reference price (LTP): ₹{stock.CurrentPrice:F4}<br/>Highest eligible ask price at or below reference price: {(executableAskPrice > 0m ? $"₹{executableAskPrice:F4}" : "Unavailable")}<br/>Available quantity at eligible ask levels: {availableAtPrice:N0} shares</p>" +
+                $"<p><b>Charge-cover calculation</b><br/>Buy total = (entry price × quantity) + buy charges<br/>Sell total = ((entry price + ₹{lowestPriceChange:F6}) × quantity) + sell charges<br/>Minimum quantity required for estimated price difference to exceed total buy + sell charges: {minimumQuantity:N0} shares<br/>Condition: Sell total − Buy total &gt; buy charges + sell charges.<br/>For final requested quantity ({quantity:N0}): estimated buy charges ₹{estimatedBuyCharges.TotalCharges:F2}; estimated sell charges ₹{estimatedSellCharges.TotalCharges:F2}; estimated round-trip charges ₹{estimatedRoundTripCharges:F2}; estimated buy total ₹{estimatedBuyTotal:F2}; estimated sell total ₹{estimatedSellTotal:F2}; estimated difference ₹{estimatedDifference:F2}; charge-cover condition {(lowestPriceChange * quantity > estimatedRoundTripCharges ? "PASSED" : "NOT PASSED")}.</p>" +
+                $"<p><b>Market depth at entry reference price</b><br/>Side checked: ASK / sell-side depth for a BUY<br/>Entry reference price (LTP): ₹{stock.CurrentPrice:F4}<br/>Highest ask price included in available depth: {(executableAskPrice > 0m ? $"₹{executableAskPrice:F4}" : "Unavailable")}<br/>Available quantity at eligible ask levels: {availableAtPrice:N0} shares</p>" +
                 $"<p><b>Final quantity and intraday margin</b><br/>Final requested quantity: {quantity:N0} shares (must not be below minimum charge-cover quantity)<br/>Quantity is the maximum affordable quantity within eligible market depth and available funds.<br/>Estimated broker INTRADAY margin: ₹{requiredMargin:F2}<br/>Available funds before order: ₹{remainingBalance:F2}<br/>Quantity selection: max affordable quantity, bounded by available eligible depth; minimum required quantity is never silently reduced.</p>";
 
             var validation = await _tradeValidation.ValidateAsync(stock, quantity);
@@ -753,6 +782,7 @@ namespace CodeName399.Kite.API.Services
             _logger.LogInformation("PAPER ORDER CREATE Symbol={Symbol} Quantity={Quantity} Price={Price:F4} StopLoss={StopLoss:F4} RequiredMargin={Margin:F2}", paperTrade.Symbol, quantity, paperTrade.EntryPrice, paperTrade.StopLoss, requiredMargin);
             _tradeManager.GetOrAdd(paperTrade);
             await _tradeManager.SaveAsync(paperTrade);
+            _emaStrategy.AcknowledgeEntrySignal(stock.SymbolToken);
             _logger.LogInformation("PAPER ORDER CREATED Symbol={Symbol} TradeStatus={Status}", paperTrade.Symbol, paperTrade.Status);
 
             _watchList.MarkOwned(
@@ -899,6 +929,7 @@ namespace CodeName399.Kite.API.Services
                 _logger.LogError(
                     "Broker accepted entry for {Symbol} but returned no order id. Keeping pending trade for reconciliation.",
                     tradeOrder.Symbol);
+                _emaStrategy.AcknowledgeEntrySignal(stock.SymbolToken);
                 stock.Suggestion = "Order accepted; awaiting broker reconciliation.";
                 return remainingBalance - requiredMargin;
             }
@@ -911,6 +942,7 @@ namespace CodeName399.Kite.API.Services
                     t.UniqueOrderId = buy.Data.UniqueOrderId;
                 });
 
+            _emaStrategy.AcknowledgeEntrySignal(stock.SymbolToken);
             stock.Suggestion = $"{tradeOrder.EntryTransactionType} order submitted.";
             _logger.LogInformation("BROKER ORDER SUBMITTED Symbol={Symbol} OrderId={OrderId} UniqueOrderId={UniqueOrderId} Quantity={Quantity} Status={Status}", tradeOrder.Symbol, buy.Data.OrderId, buy.Data.UniqueOrderId, quantity, tradeOrder.Status);
             _cachedBalance = Math.Max(0, _cachedBalance - requiredMargin);

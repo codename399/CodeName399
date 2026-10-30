@@ -1,6 +1,6 @@
 ﻿using CodeName399.Kite.API.Models;
 
-public interface ITradeOrderRepository
+public interface ITradeOrderFileRepository
 {
     Task SaveAsync(TradeOrder trade);
     Task<TradeOrder?> GetAsync(string symbol);
