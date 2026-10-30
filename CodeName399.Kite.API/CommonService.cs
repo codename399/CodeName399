@@ -8,6 +8,7 @@
     using CodeName399.Kite.API.Models.Enum;
     using CodeName399.Kite.API.Models.Indicator;
     using CodeName399.Kite.API.Services;
+    using CodeName399.Kite.API.Services.Brokerage;
     using CodeName399.Kite.API.Services.Interface;
     using Microsoft.Extensions.Options;
 
@@ -16,8 +17,6 @@
         private readonly ILogger<CommonService> _logger;
 
         private readonly AngelOneConfiguration _options;
-
-        private readonly IInstrumentService _instrumentService;
 
         private readonly IAngelOneService _angel;
 
@@ -29,9 +28,9 @@
 
         private readonly OrderStatusCache _orderStatusCache;
 
-        private readonly IServiceScopeFactory _scopeFactory;
-
         private readonly RawMarketDataArchiveService _rawMarketData;
+
+        protected readonly IBrokerageCalculatorService _brokerage;
 
         private static readonly TimeZoneInfo IndianTimeZone =
     TimeZoneInfo.FindSystemTimeZoneById(
@@ -41,29 +40,29 @@
 
         private readonly SemaphoreSlim _quoteSemaphore = new(2, 2);
 
+        private int chargeCoverAveragePriceChangeCandles = 5;
+
         public CommonService(
             ILogger<CommonService> logger,
             IOptions<AngelOneConfiguration> options,
-        IInstrumentService instrumentService,
         IAngelOneService angel,
         TradingSettingsProvider settings,
         RequestHelper requestHelper,
         ITradeOrderFileRepository tradeOrderFileRepository,
         OrderStatusCache orderStatusCache,
-        IServiceScopeFactory scopeFactory,
-        RawMarketDataArchiveService rawMarketData
+        RawMarketDataArchiveService rawMarketData,
+        IBrokerageCalculatorService brokerage
         )
         {
             _logger = logger;
             _options = options.Value;
-            _instrumentService = instrumentService;
             _angel = angel;
             _settings = settings;
             _requestHelper = requestHelper;
             _tradeOrderFileRepository = tradeOrderFileRepository;
             _orderStatusCache = orderStatusCache;
-            _scopeFactory = scopeFactory;
             _rawMarketData = rawMarketData;
+            _brokerage = brokerage;
         }
 
         public DateTime GetIndianTime()
@@ -227,7 +226,7 @@
         /// Downloads candles for the supplied quotes by calling DownloadCandleAsync
         /// for at most three instrument tokens concurrently per batch.
         /// </summary>
-        public async Task DownloadCandlesInBatchesAsync(
+        public async Task<Dictionary<string, List<Candle>>> DownloadCandlesInBatchesAsync(
             List<MarketQuoteData> quotes,
             List<Instrument> instruments,
             string jwtToken,
@@ -240,7 +239,7 @@
             var candlesByToken = new Dictionary<string, List<Candle>>(StringComparer.OrdinalIgnoreCase);
 
             if (quotes == null || quotes.Count == 0 || instruments == null || instruments.Count == 0)
-                return;
+                return candlesByToken;
 
             if (string.IsNullOrWhiteSpace(jwtToken))
                 throw new ArgumentException("JWT token is required to download historical candles.", nameof(jwtToken));
@@ -318,6 +317,8 @@
                 requestedTokens.Count,
                 interval,
                 batchSize);
+
+            return candlesByToken;
         }
 
         private void UpdateQuoteIndicators(MarketQuoteData quote, List<Candle> candles, string interval)
@@ -566,13 +567,17 @@
             }
         }
 
-        public void PlaceBuyOrders(HashSet<MarketQuoteData> quotes)
+        public async Task PlaceBuyOrders(HashSet<MarketQuoteData> quotes, Dictionary<string, List<Candle>> candles, string jwtToken)
         {
             foreach (var quote in quotes)
             {
                 if (ValidateBuyConditions(quote))
                 {
-                    // Place buy order
+                    var quantity = await GetQuantites(quote, jwtToken, candles.TryGetValue(quote.SymbolToken, out var quoteCandles) ? quoteCandles : new List<Candle>());
+                    if (quantity > 0)
+                    {
+                        // Place buy order
+                    }
                 }
             }
         }
@@ -592,6 +597,206 @@
             if (quote.PreviousCandleEma9 >= quote.PreviousCandleEma21)
                 return false;
             return true;
+        }
+
+        private async Task<int> GetQuantites(MarketQuoteData quote, string jwtToken, List<Candle> candles)
+        {
+            decimal lowestPriceChange;
+            try
+            {
+                lowestPriceChange = await GetLowestPriceChangeAsync(quote, jwtToken, candles);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "ORDER BLOCKED Symbol={Symbol} Gate=LowestPriceChange Reason=OneMinuteCandleFetchFailed", quote.TradingSymbol);
+                lowestPriceChange = 0m;
+            }
+
+            if (lowestPriceChange <= 0m)
+            {
+                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=ChargeCoverQuantity Price={Price:F4} LowestPriceChange={LowestPriceChange:F6} Reason=NoUsableCandleChange", quote.TradingSymbol, quote.Ltp, lowestPriceChange);
+
+                return 0;
+            }
+
+            var minimumQuantity = await FindMinimumChargeCoverQuantityAsync(quote, quote.Ltp, lowestPriceChange);
+            if (minimumQuantity <= 0)
+            {
+                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=ChargeCoverQuantity Price={Price:F4} LowestPriceChange={LowestPriceChange:F6} Reason=NoQuantityFound", quote.TradingSymbol, quote.Ltp, lowestPriceChange);
+
+                return 0;
+            }
+
+            var availableAtPrice = GetAvailableAtCurrentPrice(quote);
+            _logger.LogInformation("ORDER DIAGNOSTIC ChargeCoverAndDepth Symbol={Symbol} MinimumChargeCoverQuantity={MinimumQuantity} AvailableAskQuantityAtCurrentPrice={AvailableQuantity} CurrentPrice={Price:F4} LowestPriceChange={LowestPriceChange:F6} PriceChangeLookbackCandles={CandleCount}", quote.TradingSymbol, minimumQuantity, availableAtPrice, quote.Ltp, lowestPriceChange, chargeCoverAveragePriceChangeCandles);
+            if (availableAtPrice < minimumQuantity)
+            {
+                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=MarketDepth MinimumRequiredQuantity={MinimumQuantity} AvailableAtCurrentPrice={AvailableQuantity} Price={Price:F4}", quote.TradingSymbol, minimumQuantity, availableAtPrice, quote.Ltp);
+
+                return 0;
+            }
+
+            var affordable = await GetAffordableQuantity(quote, minimumQuantity, availableAtPrice, await _angel.GetAvailableBalanceAsync());
+            var quantity = affordable.Quantity;
+            var requiredMargin = affordable.Margin;
+            if (quantity < minimumQuantity)
+            {
+                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=AffordableQuantity MinimumRequiredQuantity={MinimumQuantity} AvailableAtPrice={AvailableAtPrice} AvailableBalance={Balance:F2} MarginReturned={Margin:F2}", quote.TradingSymbol, minimumQuantity, availableAtPrice, await _angel.GetAvailableBalanceAsync(), requiredMargin);
+
+                return 0;
+            }
+
+            return quantity;
+        }
+
+        private async Task<decimal> GetLowestPriceChangeAsync(MarketQuoteData quote, string jwtToken, List<Candle> candles)
+        {
+            var candleCount = Math.Clamp(chargeCoverAveragePriceChangeCandles, 2, 100);
+            var completed = (candles ?? new List<Candle>())
+                .Where(c => c.Close > 0m)
+                .OrderBy(c => c.Timestamp)
+                .ToList();
+
+            // Exclude the currently forming candle. Historical data is timestamped in market time.
+            var now = DateTime.Now;
+            if (completed.Count > 0)
+            {
+                var latest = completed[^1];
+                if (latest.Timestamp > now || now - latest.Timestamp < TimeSpan.FromSeconds(55))
+                    completed.RemoveAt(completed.Count - 1);
+            }
+
+            if (completed.Count < candleCount)
+            {
+                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=LowestPriceChange Reason=InsufficientCompletedOneMinuteCandles Required={Required} Available={Available}", quote.TradingSymbol, candleCount, completed.Count);
+                return 0m;
+            }
+
+            var recent = completed.TakeLast(candleCount).ToList();
+            var changes = recent.Select(c => Math.Abs(c.Close - c.Open)).Where(x => x > 0).ToList();
+            var lowestChange = changes.Min();
+            _logger.LogInformation("CHARGE COVER LOWEST PRICE CHANGE Symbol={Symbol} CandleCount={CandleCount} LowestAbsoluteCandleBodyChange={LowestChange:F6} LastClose={LastClose:F4} FirstOpen={FirstOpen:F4}", quote.TradingSymbol, candleCount, lowestChange, recent[^1].Close, recent[0].Open);
+            return lowestChange;
+        }
+
+        private async Task<int> FindMinimumChargeCoverQuantityAsync(MarketQuoteData quote, decimal price, decimal increment)
+        {
+            if (increment <= 0m)
+                throw new InvalidOperationException("Lowest absolute candle-body price change over configured one-minute candles must be greater than zero.");
+
+            // The broker charge-estimate endpoint is rate-limited. Estimate the
+            // fixed and variable components from only two quantities per side,
+            // then solve locally instead of making an API request on every search
+            // iteration. Add a 15% safety buffer to avoid underestimating charges.
+            const int sampleQuantity = 1000;
+            var buyOne = await _brokerage.CalculateAsync(quote.TradingSymbol, quote.SymbolToken, price, 1,
+                BrokerageTransactionType.Buy, quote.Exchange, "INTRADAY");
+            var sellOne = await _brokerage.CalculateAsync(quote.TradingSymbol, quote.SymbolToken, price + increment, 1,
+                BrokerageTransactionType.Sell, quote.Exchange, "INTRADAY");
+            var buySample = await _brokerage.CalculateAsync(quote.TradingSymbol, quote.SymbolToken, price, sampleQuantity,
+                BrokerageTransactionType.Buy, quote.Exchange, "INTRADAY");
+            var sellSample = await _brokerage.CalculateAsync(quote.TradingSymbol, quote.SymbolToken, price + increment, sampleQuantity,
+                BrokerageTransactionType.Sell, quote.Exchange, "INTRADAY");
+
+            static (decimal Fixed, decimal PerUnit) Fit(decimal one, decimal sample, int sampleQty)
+            {
+                var perUnit = Math.Max(0m, (sample - one) / (sampleQty - 1));
+                var fixedPart = Math.Max(0m, one - perUnit);
+                return (fixedPart, perUnit);
+            }
+
+            var buyModel = Fit(buyOne.TotalCharges, buySample.TotalCharges, sampleQuantity);
+            var sellModel = Fit(sellOne.TotalCharges, sellSample.TotalCharges, sampleQuantity);
+            decimal EstimatedRoundTripCharges(int quantity) =>
+                (buyModel.Fixed + buyModel.PerUnit * quantity +
+                 sellModel.Fixed + sellModel.PerUnit * quantity) * 1.15m;
+
+            // The intended rule is gross price movement must exceed the
+            // complete round-trip charges. Do not compare a net difference
+            // (which already subtracts buy charges) against charges a second time.
+            var low = 1;
+            var high = 1;
+            while (high < 1_000_000 && increment * high <= EstimatedRoundTripCharges(high))
+                high = Math.Min(1_000_000, high * 2);
+
+            if (increment * high <= EstimatedRoundTripCharges(high))
+            {
+                _logger.LogWarning("CHARGE COVER MODEL Symbol={Symbol} Reason=NoQuantityFound Increment={Increment:F6} MaxQuantity={MaxQuantity} EstimatedCharges={Charges:F2}",
+                    quote.TradingSymbol, increment, high, EstimatedRoundTripCharges(high));
+                return 0;
+            }
+
+            while (low < high)
+            {
+                var middle = low + (high - low) / 2;
+                if (increment * middle > EstimatedRoundTripCharges(middle))
+                    high = middle;
+                else
+                    low = middle + 1;
+            }
+
+            _logger.LogInformation(
+                "CHARGE COVER MODEL Symbol={Symbol} Quantity={Quantity} Increment={Increment:F6} EstimatedRoundTripCharges={Charges:F2} SafetyBufferPercent=15 BuyFixed={BuyFixed:F4} BuyPerUnit={BuyPerUnit:F6} SellFixed={SellFixed:F4} SellPerUnit={SellPerUnit:F6} BrokerEstimateCalls=4",
+                quote.TradingSymbol, low, increment, EstimatedRoundTripCharges(low),
+                buyModel.Fixed, buyModel.PerUnit, sellModel.Fixed, sellModel.PerUnit);
+            return low;
+        }
+
+        private int GetAvailableAtCurrentPrice(MarketQuoteData quote)
+        {
+            // For a market BUY, count valid ask-side depth; asks are often above LTP.
+            var depth = quote?.Depth?.Sell;
+            if (depth == null || depth.Count == 0)
+                return 0; // fail closed when the broker provides no ask-side depth.
+
+            // LTP is the last traded price, not the best ask. For a market BUY,
+            // valid asks are commonly ABOVE LTP; excluding those levels made the
+            // eligible quantity zero and blocked otherwise valid crossover entries.
+            // Count available ask-side quantity here; the submitted market order is
+            // still subject to broker execution and actual fill price.
+            var quantity = depth.Where(x => x.Price > 0m && x.Quantity > 0)
+                .Sum(x => Math.Max(0L, x.Quantity));
+            return (int)Math.Min(int.MaxValue, quantity);
+        }
+
+        private async Task<(int Quantity, decimal Margin)> GetAffordableQuantity(
+            MarketQuoteData quote,
+            int minimumQuantity,
+            int maximumAvailableQuantity,
+            decimal availableBalance)
+        {
+            if (minimumQuantity <= 0 || maximumAvailableQuantity < minimumQuantity)
+                return (0, 0m);
+
+            // Binary-search the largest quantity that the broker's INTRADAY margin
+            // calculator says can be funded. Do not silently reduce below charge-cover quantity.
+            var low = minimumQuantity;
+            var high = maximumAvailableQuantity;
+            var bestQuantity = 0;
+            var bestMargin = 0m;
+            while (low <= high)
+            {
+                var quantity = low + (high - low) / 2;
+                var margin = await _angel.GetRequiredMarginAsync(
+                    quote.SymbolToken, quantity, quote.AveragePrice,
+                    quote.Exchange, "INTRADAY", "BUY");
+                _logger.LogInformation(
+                    "INTRADAY MARGIN CHECK Symbol={Symbol} Token={Token} Exchange={Exchange} ProductType=INTRADAY OrderType=MARKET Quantity={Quantity} ReferencePrice={Price:F4} BrokerRequiredMargin={Margin:F2} AvailableFunds={Funds:F2}",
+                    quote.TradingSymbol, quote.SymbolToken, quote.Exchange, quantity, quote.AveragePrice, margin, availableBalance);
+
+                if (margin > 0m && margin <= availableBalance)
+                {
+                    bestQuantity = quantity;
+                    bestMargin = margin;
+                    low = quantity + 1;
+                }
+                else
+                {
+                    high = quantity - 1;
+                }
+            }
+
+            return (bestQuantity, bestMargin);
         }
     }
 }

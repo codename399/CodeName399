@@ -35,6 +35,13 @@ namespace CodeName399.Kite.API.Models
 
         public decimal PercentChange { get; set; }
 
+        // Indicators calculated from completed one-minute historical candles.
+        public decimal Ema9 { get; set; }
+        public decimal Ema21 { get; set; }
+        public decimal PreviousCandleEma9 { get; set; }
+        public decimal PreviousCandleEma21 { get; set; }
+        public decimal ChoppinessIndex { get; set; }
+
         public long TradeVolume { get; set; }
         public CodeName399.Kite.API.Models.Enum.InstrumentType InstrumentType { get; set; }
 

@@ -13,13 +13,13 @@ Implement the following plan (API Only):
 11. put sideways detection behind feature flags
 12. use below formula for calculatiing quantity
 
-buyprice = (price * quantity) + buycharges
-sellprice = ((price + 0.01(make 0.01 configurable)) * quantity) + sell charges
+buyprice = (marginalprice * quantity) + buycharges
+sellprice = ((marginalprice + lowest price change in last 5 1 minute candles) * quantity) + sell charges
 
 find quantity where sellprice - buyprice > buy charges + sell charges
 
-then check if that much quantity is available to buy in market at current price
-if quantity is available buy maximum quantity that be bought at that price using available funds
+then check if that much quantity is available to buy in market at current marginalprice
+if quantity is available set quantity as maximum quantity that can be bought at that price using available funds
 Note: quantity bought should never be less than the calculated quantity
 Note: use marginal price for intraday trading, check this carefully because our marginal price is not matching with platform marginal price
 

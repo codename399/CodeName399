@@ -67,7 +67,7 @@ namespace CodeName399.Kite.API
                         9, 15, 0,
                         DateTimeKind.Unspecified);
 
-                    await _commonService.DownloadCandlesInBatchesAsync(
+                   var candles = await _commonService.DownloadCandlesInBatchesAsync(
                         quotes,
                         instruments,
                         login.JwtToken,
@@ -76,6 +76,8 @@ namespace CodeName399.Kite.API
                         candleCloseTime,
                         candleBatchSize,
                         batchDelay);
+
+                    await _commonService.PlaceBuyOrders(quotes.ToHashSet(),candles,login.JwtToken);
                 }
                 catch (OperationCanceledException)
                     when (stoppingToken.IsCancellationRequested)

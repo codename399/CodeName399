@@ -6,7 +6,7 @@ public interface IAngelOneService
 {
     Task<AngelOneLoginData> GetLoginDataAsync();
 
-    Task<decimal> GetAvailableBalanceAsync(bool forceLive = false);
+    Task<decimal> GetAvailableBalanceAsync();
 
     Task<List<Position>> GetPositionsAsync(bool forceRefresh = false);
     bool LastPositionRefreshSucceeded { get; }

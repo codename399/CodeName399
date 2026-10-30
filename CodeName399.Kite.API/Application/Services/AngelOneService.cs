@@ -246,11 +246,11 @@ public partial class AngelOneService : IAngelOneService
         return request;
     }
 
-    public async Task<decimal> GetAvailableBalanceAsync(bool forceLive = false)
+    public async Task<decimal> GetAvailableBalanceAsync()
     {
         var settings = _tradingSettingsProvider.Current;
 
-        if (settings.PaperTrading && !forceLive)
+        if (settings.PaperTrading)
             return await _paperPortfolio.GetAvailableBalanceAsync();
 
         await _rateLimiter.WaitAsync("rms");
