@@ -1,5 +1,4 @@
 using CodeName399.Kite.API.Models.Enum;
-using CodeName399.Kite.API.Models.Indicator;
 using DatabaseRepository.Model;
 using MongoDB.Bson.Serialization.Attributes;
 
@@ -25,5 +24,6 @@ namespace CodeName399.Kite.API.Models
         public decimal EstimatedCharges { get; set; }
         public decimal BreakEvenPrice { get; set; }
         public bool TrailingActivated { get; set; }
+        public string ExecutionMode { get; set; } = TradeExecutionMode.Paper.ToString();
     }
 }

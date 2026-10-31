@@ -1,7 +1,6 @@
 using CodeName399.Kite.API.Models;
 using CodeName399.Kite.API.Models.Configuration;
 using CodeName399.Kite.API.Models.Enum;
-using CodeName399.Kite.API.Models.Indicator;
 using DatabaseRepository.Common.Utilities;
 using DatabaseRepository.Model;
 using Serilog;
@@ -191,47 +190,6 @@ namespace CodeName399.Kite.API.Helpers
             }
         }
 
-        private static TradeIndicatorSnapshot ResolveEntryEmailIndicators(TradeOrder trade)
-        {
-            var candidates = new[] { trade.EntryIndicators, trade.ExitIndicators };
-            foreach (var candidate in candidates)
-            {
-                if (candidate != null && !IsEmptyIndicatorSnapshot(candidate))
-                    return candidate;
-            }
-            return new TradeIndicatorSnapshot();
-        }
-
-        private static TradeIndicatorSnapshot ResolveExitEmailIndicators(TradeOrder trade)
-        {
-            var candidates = new[] { trade.ExitIndicators, trade.EntryIndicators };
-            foreach (var candidate in candidates)
-            {
-                if (candidate != null && !IsEmptyIndicatorSnapshot(candidate))
-                    return candidate;
-            }
-            return new TradeIndicatorSnapshot();
-        }
-
-        private static bool IsEmptyIndicatorSnapshot(TradeIndicatorSnapshot snapshot)
-            => snapshot.ATR <= 0m && snapshot.RecoveryScore <= 0m && snapshot.BreakoutStrength <= 0m && snapshot.PriceChangePercent == 0m;
-
-
-        private static void HRow(StringBuilder sb, string field, object? value)
-        {
-            sb.Append("<tr><th>").Append(H(field)).Append("</th><td>").Append(H(FormatValue(value))).AppendLine("</td></tr>");
-        }
-
-        private static void HIRow(StringBuilder sb, string field, object? value, string purpose)
-        {
-            sb.Append("<tr><th>").Append(H(field)).Append("</th><td class='num'>").Append(H(FormatValue(value))).Append("</td><td>").Append(H(purpose)).AppendLine("</td></tr>");
-        }
-
-        private static void TD(StringBuilder sb, object? value)
-        {
-            sb.Append("<td>").Append(H(FormatValue(value))).Append("</td>");
-        }
-
         private static string FormatValue(object? value)
         {
             if (value == null) return string.Empty;
@@ -248,751 +206,159 @@ namespace CodeName399.Kite.API.Helpers
 
         private static string H(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
 
-        private static decimal CalculateRiskReward(TradeOrder trade)
+        public static string BuildBuyOrderEmail(TradeOrder trade, bool autoTrading = false)
         {
-            if (trade.Quantity <= 0 || trade.EntryPrice <= 0m || trade.StopLoss <= 0m)
-                return 0m;
+            ArgumentNullException.ThrowIfNull(trade);
 
-            // Use the actual stored gross reward estimate when available. The
-            // current strategy uses a 1:2 risk/reward estimate for reporting;
-            // this does not introduce a fixed-target exit.
-            var riskPerShare = trade.Direction == TradeDirection.Short
-                ? trade.StopLoss - trade.EntryPrice
-                : trade.EntryPrice - trade.StopLoss;
-            if (riskPerShare <= 0m)
-                return 0m;
+            var isPaper = string.Equals(
+                trade.ExecutionMode,
+                TradeExecutionMode.Paper.ToString(),
+                StringComparison.OrdinalIgnoreCase);
+            var color = isPaper ? "#0d6efd" : "#198754";
+            var title = isPaper ? "PAPER BUY ORDER EXECUTED" : "BUY ORDER EXECUTED";
+            var rows = new StringBuilder();
 
-            var totalRisk = riskPerShare * trade.Quantity;
-            var grossReward = trade.EstimatedGrossProfit > 0m
-                ? trade.EstimatedGrossProfit
-                : totalRisk * 2m;
+            // Reflect over TradeOrder so every persisted/public TradeOrder field is included,
+            // including inherited audit properties, without maintaining a fragile field list.
+            foreach (var property in typeof(TradeOrder).GetProperties(
+                         System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
+                     .OrderBy(p => p.MetadataToken))
+            {
+                if (!property.CanRead || property.GetIndexParameters().Length != 0)
+                    continue;
 
-            return totalRisk > 0m
-                ? Math.Round(grossReward / totalRisk, 2, MidpointRounding.AwayFromZero)
-                : 0m;
-        }
+                object? value;
+                try
+                {
+                    value = property.GetValue(trade);
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "Unable to read TradeOrder property for buy email. Property={Property}", property.Name);
+                    value = "<unavailable>";
+                }
 
-        private static void CsvRow(StringBuilder sb, string field, object? value)
-        {
-            sb.Append(CsvValue(field)).Append(',').Append(CsvValue(value?.ToString() ?? string.Empty)).AppendLine();
-        }
-
-        private static string CsvValue(string? value) => $"\"{(value ?? string.Empty).Replace("\"", "\"\"")}\"";
-
-        private static string DecimalValue(decimal value) => value.ToString("0.##########", CultureInfo.InvariantCulture);
-
-        public static string BuildBuyOrderEmail(TradeOrder trade, bool paperTrading = false)
-        {
-            var i = ResolveEntryEmailIndicators(trade);
-
-            decimal investment = trade.EntryPrice * trade.Quantity;
-            decimal risk =
-                trade.Direction == TradeDirection.Short
-                    ? trade.StopLoss - trade.EntryPrice
-                    : trade.EntryPrice - trade.StopLoss;
-            decimal rr = CalculateRiskReward(trade);
-
-            string color = paperTrading ? "#0d6efd" : "#198754";
-            string action = trade.Direction == TradeDirection.Short ? "SHORT" : "BUY";
-            string title = paperTrading
-                ? $"📝 PAPER {action} EXECUTED"
-                : $"✅ {action} ORDER EXECUTED";
+                rows.Append("<tr><th>")
+                    .Append(H(property.Name))
+                    .Append("</th><td>")
+                    .Append(H(FormatValue(value)))
+                    .AppendLine("</td></tr>");
+            }
 
             return $$"""
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-body{
-    font-family:'Segoe UI';
-    background:#eef2f7;
-}
-table{
-    border-collapse:collapse;
-    width:100%;
-}
-td,th{
-    border:1px solid #ddd;
-    padding:8px;
-}
-.header{
-    background:{{color}};
-    color:white;
-    padding:20px;
-}
+body { font-family: Arial, Helvetica, sans-serif; background:#eef2f7; color:#1f2937; margin:0; padding:20px; }
+.container { max-width:760px; margin:0 auto; background:#fff; border-radius:8px; overflow:hidden; }
+.header { background:{{color}}; color:#fff; padding:20px 24px; }
+.header h2 { margin:0 0 6px; }
+.header p { margin:0; opacity:.95; }
+table { border-collapse:collapse; width:100%; }
+th, td { border:1px solid #e5e7eb; padding:10px 12px; text-align:left; vertical-align:top; overflow-wrap:anywhere; }
+th { width:38%; background:#f8fafc; font-weight:600; }
+.content { padding:20px 24px 24px; }
 </style>
 </head>
-
 <body>
-
-<div class="header">
-
-<h2>{{title}}</h2>
-
-<b>{{trade.Symbol}}</b>
-
-<br/>
-
-Instrument: {{trade.InstrumentType}} | Direction: {{trade.Direction}} | Entry: {{trade.EntryTransactionType}} | Exchange: {{trade.Exchange}} | Product: {{trade.ProductType}}
-
-<br/>
-
-
+<div class="container">
+  <div class="header">
+    <h2>{{title}}</h2>
+    <p>{{H(trade.Symbol)}} · {{H(trade.Exchange)}} · {{H(trade.ExecutionMode)}}</p>
+  </div>
+  <div class="content">
+    <h3>Trade Order Details</h3>
+    <table>
+      <thead><tr><th>Field</th><th>Value</th></tr></thead>
+      <tbody>
+        {{rows}}
+      </tbody>
+    </table>
+  </div>
 </div>
-
-<h3>Execution Details</h3>
-
-<table>
-<tr><th>Field</th><th>Value</th></tr>
-<tr><td>Quantity</td><td>{{trade.Quantity}}</td></tr>
-<tr><td>Entry Price (Market Fill)</td><td>₹{{trade.EntryPrice:N2}}</td></tr>
-<tr><td>Stop Loss</td><td>₹{{trade.StopLoss:N2}}</td></tr>
-<tr><td>Investment</td><td>₹{{investment:N2}}</td></tr>
-<tr><td>Risk Reward</td><td>{{rr:F2}} : 1</td></tr>
-<tr><td>Estimated Target Net Profit (after charges, 1:2 risk/reward estimate)</td><td>₹{{trade.EstimatedNetProfit:N2}}</td></tr>
-<tr><td>Estimated Charges</td><td>₹{{trade.EstimatedCharges:N2}}</td></tr>
-<tr><td>Mode</td><td>{{(paperTrading ? "Paper Trading" : "Live Trading")}}</td></tr>
-</table>
-
-<h3>Eligibility</h3>
-
-<pre>
-
-{{trade.EligibilityReason}}
-
-</pre>
-
 </body>
-
 </html>
 """;
         }
 
-        public static string BuildSellOrderEmail(TradeOrder trade, bool paperTrade = false)
+        public static string BuildSellOrderEmail(TradeOrder trade, bool autoTrading = false)
         {
-            decimal investment = trade.EntryPrice * trade.Quantity;
-            decimal grossProfit =
-                (
-                    trade.Direction == TradeDirection.Short
-                        ? trade.EntryPrice - trade.ExitPrice
-                        : trade.ExitPrice - trade.EntryPrice
-                ) * trade.Quantity;
-            decimal netProfit = trade.RealizedNetProfit;
+            ArgumentNullException.ThrowIfNull(trade);
 
-            decimal returnPercent = investment > 0 ? (netProfit / investment) * 100m : 0m;
+            var isPaper = string.Equals(
+                trade.ExecutionMode,
+                TradeExecutionMode.Paper.ToString(),
+                StringComparison.OrdinalIgnoreCase);
+            var color = isPaper ? "#0d6efd" : "#198754";
+            var title = isPaper
+                ? "PAPER LONG CLOSED"
+                : "LONG CLOSED";
+            var rows = new StringBuilder();
 
-            decimal grossReturn = investment > 0 ? (grossProfit / investment) * 100m : 0m;
+            // Include every readable public TradeOrder property, including inherited audit fields.
+            foreach (var property in typeof(TradeOrder).GetProperties(
+                         System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
+                     .OrderBy(p => p.MetadataToken))
+            {
+                if (!property.CanRead || property.GetIndexParameters().Length != 0)
+                    continue;
 
-            decimal rr =
-                trade.Direction == TradeDirection.Short
-                    ? (
-                        trade.StopLoss > trade.EntryPrice
-                            ? (trade.EntryPrice - trade.ExitPrice)
-                                / (trade.StopLoss - trade.EntryPrice)
-                            : 0m
-                    )
-                    : (
-                        trade.EntryPrice > trade.StopLoss
-                            ? (trade.ExitPrice - trade.EntryPrice)
-                                / (trade.EntryPrice - trade.StopLoss)
-                            : 0m
-                    );
+                object? value;
+                try
+                {
+                    value = property.GetValue(trade);
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "Unable to read TradeOrder property for sell email. Property={Property}", property.Name);
+                    value = "<unavailable>";
+                }
 
-            string pnlColor = netProfit >= 0 ? "#198754" : "#dc3545";
+                rows.Append("<tr><th>")
+                    .Append(H(property.Name))
+                    .Append("</th><td>")
+                    .Append(H(FormatValue(value)))
+                    .AppendLine("</td></tr>");
+            }
 
-            string title = paperTrade
-                ? (
-                    trade.Direction == TradeDirection.Short
-                        ? "📝 PAPER SHORT CLOSED"
-                        : "📝 PAPER LONG CLOSED"
-                )
-                : (trade.Direction == TradeDirection.Short ? "💰 SHORT CLOSED" : "💰 LONG CLOSED");
-
-            var sb = new StringBuilder();
-
-            sb.AppendLine(
-                $$"""
+            return $$"""
 <!DOCTYPE html>
-
 <html>
-
 <head>
-
-<meta charset="utf-8"/>
-
-<meta name="viewport"
-content="width=device-width, initial-scale=1"/>
-
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-
-body{
-    margin:0;
-    padding:15px;
-    background:#eef2f7;
-    font-family:Segoe UI,Arial,sans-serif;
-}
-
-.container{
-    width:100%;
-    max-width:700px;
-    margin:0 auto;
-    background:#ffffff;
-    border:1px solid #dddddd;
-}
-
-.header{
-    background:{{pnlColor}};
-    color:#ffffff;
-    padding:20px;
-}
-
-.title{
-    font-size:26px;
-    font-weight:bold;
-}
-
-.subtitle{
-    margin-top:8px;
-    font-size:13px;
-}
-
-.section{
-    padding:18px;
-}
-
-.section-title{
-    font-size:18px;
-    font-weight:bold;
-    color:#222;
-    margin-bottom:10px;
-    border-bottom:2px solid #eeeeee;
-    padding-bottom:6px;
-}
-
-table{
-    width:100%;
-    border-collapse:collapse;
-    table-layout:fixed;
-}
-
-th{
-    background:#f7f7f7;
-    border:1px solid #dddddd;
-    padding:8px;
-    text-align:left;
-}
-
-td{
-    border:1px solid #dddddd;
-    padding:8px;
-    word-break:break-word;
-    overflow-wrap:anywhere;
-    vertical-align:top;
-}
-
-.metric{
-    background:#fafafa;
-    font-weight:bold;
-    width:40%;
-}
-
-.green{color:#198754;}
-.red{color:#dc3545;}
-.blue{color:#0d6efd;}
-
+body { font-family: Arial, Helvetica, sans-serif; background:#eef2f7; color:#1f2937; margin:0; padding:20px; }
+.container { max-width:760px; margin:0 auto; background:#fff; border-radius:8px; overflow:hidden; }
+.header { background:{{color}}; color:#fff; padding:20px 24px; }
+.header h2 { margin:0 0 6px; }
+.header p { margin:0; opacity:.95; }
+table { border-collapse:collapse; width:100%; }
+th, td { border:1px solid #e5e7eb; padding:10px 12px; text-align:left; vertical-align:top; overflow-wrap:anywhere; }
+th { width:38%; background:#f8fafc; font-weight:600; }
+.content { padding:20px 24px 24px; }
 </style>
-
 </head>
-
 <body>
-
 <div class="container">
-
-<div class="header">
-
-<div class="title">
-
-{{title}}
-
+  <div class="header">
+    <h2>{{title}}</h2>
+    <p>{{H(trade.Symbol)}} · {{H(trade.Exchange)}} · {{H(trade.ExecutionMode)}}</p>
+  </div>
+  <div class="content">
+    <h3>Trade Order Details</h3>
+    <table>
+      <thead><tr><th>Field</th><th>Value</th></tr></thead>
+      <tbody>
+        {{rows}}
+      </tbody>
+    </table>
+  </div>
 </div>
-
-<div class="subtitle">
-
-<b>{{trade.Symbol}}</b>
-
-<br/>
-
-Instrument: {{trade.InstrumentType}} | Direction: {{trade.Direction}} | Entry: {{trade.EntryTransactionType}} | Exchange: {{trade.Exchange}} | Product: {{trade.ProductType}}
-
-<br/>
-
-
-<br/>
-
-{{(paperTrade ? "Paper Trading" : "Live Trading")}}
-
-<br/>
-
-{{DateTime.UtcNow:dd-MMM-yyyy hh:mm:ss tt}}
-
-</div>
-
-</div>
-
-<div class="section">
-
-<div class="section-title">
-
-Trade Performance
-
-</div>
-
-<table role="presentation">
-
-<tr>
-<td class="metric">Net Profit</td>
-<td style="color:{{pnlColor}};font-weight:bold;">
-₹{{netProfit:N2}}
-</td>
-</tr>
-
-<tr>
-<td class="metric">Return</td>
-<td style="color:{{pnlColor}};">
-{{returnPercent:N2}}%
-</td>
-</tr>
-
-<tr>
-<td class="metric">Gross Profit</td>
-<td>
-₹{{grossProfit:N2}}
-</td>
-</tr>
-
-<tr>
-<td class="metric">Charges</td>
-<td>
-₹{{trade.EstimatedCharges:N2}}
-</td>
-</tr>
-
-</table>
-
-<br/>
-
-<div class="section-title">
-
-Trade Details
-
-</div>
-
-<table role="presentation">
-
-<tr>
-<td class="metric">Symbol</td>
-<td>{{trade.Symbol}}</td>
-</tr>
-
-<tr>
-<td class="metric">Quantity</td>
-<td>{{trade.Quantity}}</td>
-</tr>
-
-<tr>
-<td class="metric">Entry Price</td>
-<td>₹{{trade.EntryPrice:N2}}</td>
-</tr>
-
-<tr>
-<td class="metric">Exit Price</td>
-<td>₹{{trade.ExitPrice:N2}}</td>
-</tr>
-
-<tr>
-<td class="metric">Investment</td>
-<td>₹{{investment:N2}}</td>
-</tr>
-
-<tr>
-<td class="metric">Gross Return</td>
-<td>{{grossReturn:N2}}%</td>
-</tr>
-
-<tr>
-<td class="metric">Risk Reward</td>
-<td>{{rr:F2}} : 1</td>
-</tr>
-
-<tr>
-<td class="metric">Exit Reason</td>
-<td>{{trade.ExitReason}}</td>
-</tr>
-
-<tr>
-<td class="metric">Order Id</td>
-<td>{{trade.ExitOrderId}}</td>
-</tr>
-
-<tr>
-<td class="metric">Mode</td>
-<td>{{(paperTrade ? "Paper Trading" : "Live Trading")}}</td>
-</tr>
-
-<tr>
-<td class="metric">Buy Time</td>
-<td>{{trade.EntryTime:dd-MMM-yyyy HH:mm:ss}}</td>
-</tr>
-
-<tr>
-<td class="metric">Sell Time</td>
-<td>{{trade.ExitTime:dd-MMM-yyyy HH:mm:ss}}</td>
-</tr>
-
-</table>
-"""
-            );
-
-            TimeSpan holdingTime = (trade.ExitTime ?? DateTime.UtcNow) - trade.EntryTime;
-
-            string holdingTimeText = holdingTime.ToString(@"hh\:mm\:ss");
-
-            sb.AppendLine(
-                $"""
-
-<br/>
-
-<div class="section-title">
-
-Trade Lifecycle
-
-</div>
-
-<table role="presentation">
-
-<tr>
-<td class="metric">Highest Price</td>
-<td>₹{trade.HighestPrice:N2}</td>
-</tr>
-
-<tr>
-<td class="metric">Holding Time</td>
-<td>{holdingTimeText}</td>
-</tr>
-
-<tr>
-<td class="metric">Break Even Price</td>
-<td>₹{trade.BreakEvenPrice:N2}</td>
-</tr>
-
-<tr>
-<td class="metric">Minimum Exit Price</td>
-<td>₹{trade.MinimumExitPrice:N2}</td>
-</tr>
-
-<tr>
-<td class="metric">Trailing Stop Activated</td>
-<td style="font-weight:bold;color:{(trade.TrailingActivated ? "#198754" : "#dc3545")};">
-{(trade.TrailingActivated ? "YES" : "NO")}
-</td>
-</tr>
-
-<tr>
-<td class="metric">Final Stop Loss</td>
-<td>₹{trade.StopLoss:N2}</td>
-</tr>
-
-</table>
-
-<br/>
-
-"""
-            );
-
-            decimal maxProfit = (trade.HighestPrice - trade.EntryPrice) * trade.Quantity;
-
-            decimal capturedPercent = maxProfit > 0 ? (grossProfit / maxProfit) * 100m : 100m;
-
-            decimal drawBack =
-                trade.HighestPrice > 0
-                    ? ((trade.HighestPrice - trade.ExitPrice) / trade.HighestPrice) * 100m
-                    : 0m;
-
-            sb.AppendLine(
-                $"""
-
-<br/>
-
-<div class="section-title">
-
-Trade Performance Analysis
-
-</div>
-
-<table role="presentation">
-
-<tr>
-<th style="width:40%;">Metric</th>
-<th>Value</th>
-</tr>
-
-<tr>
-<td>Gross Profit</td>
-<td style="color:{(grossProfit >= 0 ? "#198754" : "#dc3545")};font-weight:bold;">
-₹{grossProfit:N2}
-</td>
-</tr>
-
-<tr>
-<td>Net Profit</td>
-<td style="color:{pnlColor};font-weight:bold;">
-₹{netProfit:N2}
-</td>
-</tr>
-
-<tr>
-<td>Return</td>
-<td style="color:{pnlColor};">
-{returnPercent:N2}%
-</td>
-</tr>
-
-<tr>
-<td>Maximum Profit Available</td>
-<td>
-₹{maxProfit:N2}
-</td>
-</tr>
-
-<tr>
-<td>Highest Price Reached</td>
-<td>
-₹{trade.HighestPrice:N2}
-</td>
-</tr>
-
-<tr>
-<td>Profit Captured</td>
-<td>
-{capturedPercent:N2}%
-</td>
-</tr>
-
-<tr>
-<td>Profit Giveback Before Exit</td>
-<td>
-{drawBack:N2}%
-</td>
-</tr>
-
-<tr>
-<td>Exit Quality</td>
-<td>
-{(capturedPercent >= 90 ? "Excellent Exit"
-            : capturedPercent >= 75 ? "Very Good Exit"
-            : capturedPercent >= 60 ? "Good Exit"
-            : "Exited Early")}
-</td>
-</tr>
-
-<tr>
-<td>Profit Giveback Assessment</td>
-<td>
-{(drawBack <= 0.5m ? "Minimal"
-            : drawBack <= 2m ? "Healthy"
-            : "Large Giveback")}
-</td>
-</tr>
-
-<tr>
-<td>Exit Reason</td>
-<td>
-<b>{trade.ExitReason}</b>
-</td>
-</tr>
-
-</table>
-
-<br/>
-
-<div class="section-title">
-
-Trade Summary
-
-</div>
-
-<table role="presentation">
-
-<tr>
-<td class="metric">Investment</td>
-<td>₹{investment:N2}</td>
-</tr>
-
-<tr>
-<td class="metric">Gross Profit</td>
-<td>₹{grossProfit:N2}</td>
-</tr>
-
-<tr>
-<td class="metric">Charges</td>
-<td>₹{trade.EstimatedCharges:N2}</td>
-</tr>
-
-<tr>
-<td class="metric">Net Profit</td>
-<td style="font-size:18px;font-weight:bold;color:{pnlColor};">
-₹{netProfit:N2}
-</td>
-</tr>
-
-<tr>
-<td class="metric">Return</td>
-<td style="font-weight:bold;color:{pnlColor};">
-{returnPercent:N2}%
-</td>
-</tr>
-
-</table>
-
-<br/>
-
-
-<div style="
-background:#1f2937;
-color:#ffffff;
-padding:18px;
-text-align:center;
-font-size:13px;">
-
-<div style="
-font-size:18px;
-font-weight:bold;
-margin-bottom:8px;">
-
-CodeName399 Trading Bot
-
-</div>
-
-<div>
-
-Automated Trade Closing Report
-
-</div>
-
-<br/>
-
-Generated on
-
-<b>
-
-{DateTime.UtcNow:dddd, dd MMMM yyyy HH:mm:ss}
-
-</b>
-
-</div>
-
-</div>
-
 </body>
-
-</html>
-
-"""
-            );
-
-            return sb.ToString();
-        }
-
-        public static string BuildBrokerReconciliationEmail(
-            TradeOrder trade,
-            bool recoveredPosition
-        )
-        {
-            var title = recoveredPosition
-                ? "⚠️ BROKER POSITION RECOVERED"
-                : "⚠️ POSITION CLOSED DURING RECONCILIATION";
-
-            var color = recoveredPosition ? "#0d6efd" : "#dc3545";
-
-            var message = recoveredPosition
-                ? "A position existed at the broker but was missing from the database. The bot has recreated it and will continue managing Stop Loss."
-                : "The position no longer existed at the broker. The bot has marked the trade as closed during reconciliation.";
-
-            return $"""
-<html>
-
-<body style="font-family:Arial;background:#f5f5f5;padding:20px;">
-
-<div style="max-width:750px;background:white;border-radius:8px;padding:20px;border:1px solid #ddd;">
-
-<h2 style="color:{color};">
-{title}
-</h2>
-
-<table cellpadding="8" cellspacing="0" border="1"
-style="border-collapse:collapse;width:100%;">
-
-<tr>
-    <td><b>Symbol</b></td>
-    <td>{trade.Symbol}</td>
-</tr>
-
-<tr>
-    <td><b>Quantity</b></td>
-    <td>{trade.Quantity}</td>
-</tr>
-
-<tr>
-    <td><b>Entry Price</b></td>
-    <td>₹{trade.EntryPrice:N2}</td>
-</tr>
-
-<tr>
-    <td><b>Highest Price</b></td>
-    <td>₹{trade.HighestPrice:N2}</td>
-</tr>
-
-<tr>
-    <td><b>Stop Loss</b></td>
-    <td>₹{trade.StopLoss:N2}</td>
-</tr>
-
-
-<tr>
-    <td><b>Buy Order Id</b></td>
-    <td>{trade.BuyOrderId}</td>
-</tr>
-
-<tr>
-    <td><b>Break Even</b></td>
-    <td>₹{trade.BreakEvenPrice:N2}</td>
-</tr>
-
-<tr>
-    <td><b>Minimum Exit</b></td>
-    <td>₹{trade.MinimumExitPrice:N2}</td>
-</tr>
-
-<tr>
-    <td><b>Time</b></td>
-    <td>{DateTime.UtcNow:dd-MMM-yyyy hh:mm:ss tt}</td>
-</tr>
-
-</table>
-
-<br/>
-
-<div style="background:#eef4ff;padding:12px;border-left:5px solid {color};">
-
-{message}
-
-</div>
-
-</div>
-
-</body>
-
 </html>
 """;
         }

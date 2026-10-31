@@ -584,12 +584,19 @@ namespace CodeName399.Kite.API
 
                     if (quantity > 0)
                     {
-                        var tradeOrder = MarketQuoteData.ToTradeOrder(quote);
-                        tradeOrder.Quantity = quantity;
-                        tradeOrder.TotalInvestment = margin;
-                        tradeOrder.EntryPrice = ltp;
+                        quote.Quantity = quantity;
+                        quote.TotalInvestment = margin;
+                        quote.Ltp = ltp;
+
+                        var tradeOrder = MarketQuoteData.ToTradeOrder(quote, _settings.Current.EnableAutoTrading);
 
                         await _tradeOrderFileRepository.SaveAsync(tradeOrder);
+
+                        EmailHelper.SendEmail(
+                    EmailHelper.BuildBuyOrderEmail(tradeOrder),
+                    _settings.Current,
+                    $"{tradeOrder.ExecutionMode} EXECUTED {tradeOrder.Symbol}",
+                    true);
                     }
                 });
 
@@ -614,7 +621,7 @@ namespace CodeName399.Kite.API
             return true;
         }
 
-        private async Task<(int Quantity, decimal Margin,decimal Ltp)> GetQuantitesAndMargin(MarketQuoteData quote, string jwtToken, List<Candle> candles)
+        private async Task<(int Quantity, decimal Margin, decimal Ltp)> GetQuantitesAndMargin(MarketQuoteData quote, string jwtToken, List<Candle> candles)
         {
             var ltp = await _angel.GetLtpDataAsync(quote.Exchange, quote.TradingSymbol, quote.SymbolToken);
             if (!ltp.HasValue || ltp.Value <= 0m)

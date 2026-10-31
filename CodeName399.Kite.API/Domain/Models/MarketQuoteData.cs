@@ -1,3 +1,4 @@
+using CodeName399.Kite.API.Models.Enum;
 using System.Text.Json.Serialization;
 
 namespace CodeName399.Kite.API.Models
@@ -36,8 +37,9 @@ namespace CodeName399.Kite.API.Models
         public decimal LowestPriceChange { get; set; }
         public decimal EstimatedCharges { get; set; }
         public decimal StopLoss { get; set; }
+        public decimal TotalInvestment { get; set; }
 
-        public static TradeOrder ToTradeOrder(this MarketQuoteData quote)
+        public static TradeOrder ToTradeOrder(MarketQuoteData quote,bool isAutoTrading)
         {
             return new TradeOrder
             {
@@ -56,7 +58,9 @@ namespace CodeName399.Kite.API.Models
                 ExitTime = null, // Set the exit time as needed
                 EstimatedCharges = quote.EstimatedCharges,
                 BreakEvenPrice = 0, // Set the break-even price as needed
-                TrailingActivated = false // Set trailing activation as needed
+                TrailingActivated = false, // Set trailing activation as needed
+                TotalInvestment = quote.TotalInvestment,
+                ExecutionMode = isAutoTrading ? TradeExecutionMode.Live.ToString() : TradeExecutionMode.Paper.ToString()
             };
         }
     }
