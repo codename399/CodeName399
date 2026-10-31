@@ -65,12 +65,35 @@ export class TradingComponent implements OnInit, OnDestroy {
     this.#angel.getDashboardSummary().subscribe({ error: () => {} });
     this.loadCandles();
 
-    // Use the same live SignalR market feed as the Angel One dashboard.
-    // Subscribe to the selected instrument so its ticks reach this chart even
-    // when it is not present on the currently displayed gainer page.
-    this.#marketSubscriptions.push(this.#market.gainers$.subscribe(rows => {
+    // The backend manages broker subscriptions for open positions.
+    // This chart listens to the same published quote/tick stream as the dashboard.
+    this.#marketSubscriptions.push(this.#market.quotes$.subscribe(rows => {
       const found = (rows ?? []).find(row => String(row?.symbolToken ?? '') === this.symbolToken());
-      if (found) this.stockDetails.set(found);
+      if (found) {
+        const quantity = Number(found.quantity ?? 0);
+        const investedAmount = Number(found.totalInvestment ?? 0);
+        const currentPrice = Number(found.ltp ?? 0);
+        const currentValue = quantity * currentPrice;
+        this.stockDetails.set({
+          ...(this.stockDetails() ?? {}),
+          symbol: String(found.tradingSymbol ?? this.symbol()),
+          symbolToken: String(found.symbolToken ?? this.symbolToken()),
+          exchange: String(found.exchange ?? this.exchange()),
+          currentPrice,
+          previousClose: Number(found.previousClose ?? 0),
+          changePercent: Number(found.percentChange ?? 0),
+          stopLoss: Number(found.stopLoss ?? 0),
+          isOwned: quantity > 0,
+          isSubscribed: quantity > 0,
+          quantity,
+          investedAmount,
+          averagePrice: quantity > 0 ? investedAmount / quantity : 0,
+          currentValue,
+          profitLoss: currentValue - investedAmount,
+          profitLossPercentage: investedAmount > 0 ? ((currentValue - investedAmount) / investedAmount) * 100 : 0,
+          quote: found,
+        } as Gainer);
+      }
     }));
     this.#marketSubscriptions.push(this.#market.ticks$.subscribe(tick => {
       if (String(tick?.symbolToken ?? '') !== this.symbolToken()) return;
@@ -83,9 +106,6 @@ export class TradingComponent implements OnInit, OnDestroy {
       if (stock) this.stockDetails.set({ ...stock, currentPrice: price, tickDayVolume: volume });
     }));
     void this.#market.startConnection();
-    this.#angel.subscribeStock(this.symbolToken(), this.exchange()).subscribe({
-      error: (error: any) => console.error('Unable to subscribe selected stock to live market ticks.', error)
-    });
   }
 
   ngOnDestroy(): void {
@@ -127,7 +147,6 @@ export class TradingComponent implements OnInit, OnDestroy {
   }
 
   isMarketOpenForOrders(): boolean {
-    if (this.#angel.configuration()?.ignoreMarketHours) return true;
     const now = new Date();
     const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).formatToParts(now);
     const get = (type: string) => parts.find(p => p.type === type)?.value ?? '';

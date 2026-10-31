@@ -1,19 +1,20 @@
-using CodeName399.Kite.API.Models;
+using CodeName399.Kite.API.Application.Services;
 using Microsoft.AspNetCore.SignalR;
 
-namespace CodeName399.Kite.API.SignalRHubs
+namespace CodeName399.Kite.API.SignalRHubs;
+
+public class MarketHub : Hub
 {
-    public class MarketHub : Hub
+    private readonly MarketQuotePublisher _quotes;
+
+    public MarketHub(MarketQuotePublisher quotes)
     {
-        public MarketHub()
-        {
-        }
+        _quotes = quotes;
+    }
 
-        public override async Task OnConnectedAsync()
-        {
-            await base.OnConnectedAsync();
-
-            await Clients.Caller.SendAsync("GainersUpdated", new List<MarketQuoteData>());
-        }
+    public override async Task OnConnectedAsync()
+    {
+        await base.OnConnectedAsync();
+        await Clients.Caller.SendAsync("QuotesUpdated", _quotes.GetSnapshot());
     }
 }

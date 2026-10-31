@@ -43,12 +43,12 @@
 
           <div
             class="summary-stripe-item tooltip-trigger"
-            title="Ignore market hours"
+            title="Automatic square-off"
             tabindex="0"
           >
             <span>🕒</span>
             <strong>{{
-              configuration()?.ignoreMarketHours ? "Ignored" : "Market Hours"
+              configuration()?.autoSquareOff ? "Enabled" : "Disabled"
             }}</strong>
           </div>
 
@@ -82,11 +82,11 @@
 
           <div
             class="summary-stripe-item tooltip-trigger"
-            title="Paper trading"
+            title="Automatic square-off"
             tabindex="0"
           >
             <span>📝</span>
-            <strong>{{ configuration()?.paperTrading ? "On" : "Off" }}</strong>
+            <strong>{{ configuration()?.autoSquareOff ? "On" : "Off" }}</strong>
           </div>
         </div>
 
@@ -159,7 +159,7 @@
 
     <main class="page-main" [class.sidebar-open]="showSettings()">
       <div class="page-top">
-        <div class="search-box" *ngIf="filteredGainers().length > 0">
+        <div class="search-box" *ngIf="filteredQuotes().length > 0">
           <input
             type="text"
             placeholder="Search symbol"
@@ -170,14 +170,14 @@
       </div>
 
       <section class="table-shell">
-        <div class="subscription-loading" *ngIf="isWaitingForSubscriptions(); else subscribedStockTable">
-          <div class="subscription-loading-text">Waiting for market data subscriptions...</div>
-          <div class="subscription-loading-hint">Stocks will appear here after their live market-data subscription is active.</div>
+        <div class="subscription-loading" *ngIf="isWaitingForQuotes(); else subscribedStockTable">
+          <div class="subscription-loading-text">Waiting for published market quotes...</div>
+          <div class="subscription-loading-hint">The market scan publishes candidate quotes; bought stocks receive continuous live tick updates.</div>
         </div>
 
         <ng-template #subscribedStockTable>
           <div class="table-header">
-            <div>{{ filteredGainers().length }} symbols found</div>
+            <div>{{ filteredQuotes().length }} symbols found</div>
             <div>Top candidates based on current scan</div>
           </div>
           <div class="table-scroll">
@@ -194,30 +194,29 @@
                     >ℹ️</span
                   >
                 </th>
-                <th *ngIf="visibleColumnSet().has('stopLoss')">SL</th>
                 <th *ngIf="visibleColumnSet().has('token')">Token</th>
                 <th *ngIf="visibleColumnSet().has('exchange')">Exchange</th>
                 <th *ngIf="visibleColumnSet().has('prevClose')">Prev Close</th>
-                <th *ngIf="visibleColumnSet().has('recovery')">Recovery</th>
-                <th *ngIf="visibleColumnSet().has('priceChange')">Price Change %</th>
-                <th *ngIf="visibleColumnSet().has('breakout')">Breakout</th>
-                <th *ngIf="visibleColumnSet().has('signal')">Signal</th>
-                <th *ngIf="visibleColumnSet().has('risk')">Risk</th>
-                <th *ngIf="visibleColumnSet().has('atr')">ATR</th>
-                <th *ngIf="visibleColumnSet().has('reason')">Reason</th>
-                <th *ngIf="visibleColumnSet().has('suggestion')">Suggestion</th>
-                <th *ngIf="visibleColumnSet().has('upperCircuitLimit')">
-                  Upper Circuit Limit
-                </th>
-                <th *ngIf="visibleColumnSet().has('lowerCircuitLimit')">
-                  Lower Circuit Limit
-                </th>
+                <th *ngIf="visibleColumnSet().has('ltp')">LTP</th>
+                <th *ngIf="visibleColumnSet().has('priceChange')">Change %</th>
+                <th *ngIf="visibleColumnSet().has('bid')">Bid</th>
+                <th *ngIf="visibleColumnSet().has('ask')">Ask</th>
+                <th *ngIf="visibleColumnSet().has('open')">Open</th>
+                <th *ngIf="visibleColumnSet().has('high')">High</th>
+                <th *ngIf="visibleColumnSet().has('low')">Low</th>
+                <th *ngIf="visibleColumnSet().has('volume')">Volume</th>
+                <th *ngIf="visibleColumnSet().has('quantity')">Qty</th>
+                <th *ngIf="visibleColumnSet().has('averagePrice')">Avg Price</th>
+                <th *ngIf="visibleColumnSet().has('investedAmount')">Invested</th>
+                <th *ngIf="visibleColumnSet().has('currentValue')">Current Value</th>
+                <th *ngIf="visibleColumnSet().has('profitLoss')">P/L</th>
+                <th *ngIf="visibleColumnSet().has('stopLoss')">SL</th>
               </tr>
             </thead>
 
             <tbody>
               <tr
-                *ngFor="let stock of filteredGainers(); trackBy: trackByStock"
+                *ngFor="let stock of filteredQuotes(); trackBy: trackByStock"
                 [class.owned-row]="stock.isOwned"
                 [ngClass]="{
                   'signal-row-buy': stock.signal === 'BUY',
@@ -283,74 +282,31 @@
                   </div>
                 </td>
 
-                <td *ngIf="visibleColumnSet().has('stopLoss')">
-                  ₹{{ stock.stopLoss | number: "1.2-2" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('token')">
-                  {{ stock.symbolToken || "-" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('exchange')">
-                  {{ stock.exchange || stock.quote.exchange || "-" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('prevClose')">
-                  ₹{{ stock.previousClose | number: "1.2-2" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('recovery')">
-                  {{ stock.recoveryScore | number: "1.1-1" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('priceChange')">
+                <td *ngIf="visibleColumnSet().has('token')">{{ stock.symbolToken || "-" }}</td>
+                <td *ngIf="visibleColumnSet().has('exchange')">{{ stock.exchange || stock.quote.exchange || "-" }}</td>
+                <td *ngIf="visibleColumnSet().has('prevClose')">₹{{ stock.previousClose | number: "1.2-2" }}</td>
+                <td *ngIf="visibleColumnSet().has('ltp')">₹{{ stock.currentPrice | number: "1.2-2" }}</td>
+                <td *ngIf="visibleColumnSet().has('priceChange')"
+                    [class.positive]="stock.changePercent >= 0"
+                    [class.negative]="stock.changePercent < 0">
                   {{ stock.changePercent | number: "1.2-2" }}%
                 </td>
-
-                <td *ngIf="visibleColumnSet().has('breakout')">
-                  {{ stock.breakoutStrength | number: "1.1-1" }}
+                <td *ngIf="visibleColumnSet().has('bid')">₹{{ stock.bid | number: "1.2-2" }}</td>
+                <td *ngIf="visibleColumnSet().has('ask')">₹{{ stock.ask | number: "1.2-2" }}</td>
+                <td *ngIf="visibleColumnSet().has('open')">₹{{ stock.quote.open | number: "1.2-2" }}</td>
+                <td *ngIf="visibleColumnSet().has('high')">₹{{ stock.quote.high | number: "1.2-2" }}</td>
+                <td *ngIf="visibleColumnSet().has('low')">₹{{ stock.quote.low | number: "1.2-2" }}</td>
+                <td *ngIf="visibleColumnSet().has('volume')">{{ stock.tickDayVolume | number }}</td>
+                <td *ngIf="visibleColumnSet().has('quantity')">{{ stock.quantity | number }}</td>
+                <td *ngIf="visibleColumnSet().has('averagePrice')">₹{{ stock.averagePrice | number: "1.2-2" }}</td>
+                <td *ngIf="visibleColumnSet().has('investedAmount')">₹{{ stock.investedAmount | number: "1.2-2" }}</td>
+                <td *ngIf="visibleColumnSet().has('currentValue')">₹{{ stock.currentValue | number: "1.2-2" }}</td>
+                <td *ngIf="visibleColumnSet().has('profitLoss')"
+                    [class.positive]="stock.profitLoss >= 0"
+                    [class.negative]="stock.profitLoss < 0">
+                  ₹{{ stock.profitLoss | number: "1.2-2" }}
                 </td>
-
-                <td *ngIf="visibleColumnSet().has('signal')">
-                  <div
-                    class="signal-pill"
-                    [ngClass]="{
-                      buy: stock.signal === 'BUY',
-                      sell: stock.signal === 'SELL',
-                      hold: stock.signal === 'HOLD',
-                      setup: stock.signal === 'SETUP',
-                    }"
-                  >
-                    <span class="signal-dot"></span>
-                    <span class="signal-label">
-                      {{ stock.signal }}
-                    </span>
-                  </div>
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('risk')">
-                  {{ stock.risk }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('atr')">
-                  ₹{{ stock.atr | number: "1.2-2" }}
-                </td>
-
-                <td class="reason" *ngIf="visibleColumnSet().has('reason')">
-                  {{ stock.reason }}
-                </td>
-
-                <td class="reason" *ngIf="visibleColumnSet().has('suggestion')">
-                  {{ stock.suggestion }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('upperCircuitLimit')">
-                  ₹{{ stock.upperCircuitLimit | number: "1.2-2" }}
-                </td>
-
-                <td *ngIf="visibleColumnSet().has('lowerCircuitLimit')">
-                  ₹{{ stock.lowerCircuitLimit | number: "1.2-2" }}
-                </td>
+                <td *ngIf="visibleColumnSet().has('stopLoss')">₹{{ stock.stopLoss | number: "1.2-2" }}</td>
               </tr>
             </tbody>
             </table>

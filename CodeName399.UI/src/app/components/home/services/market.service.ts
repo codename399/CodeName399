@@ -12,133 +12,94 @@ export class MarketService {
   private hub?: signalR.HubConnection;
   private isStarting = false;
 
-  // Keep the latest watchlist snapshot so a component that subscribes after
-  // the SignalR connection is already established still receives the current data.
-  private gainersSubject = new BehaviorSubject<any[]>([]);
-  gainers$ = this.gainersSubject.asObservable();
+  private readonly quotesSubject = new BehaviorSubject<any[]>([]);
+  readonly quotes$ = this.quotesSubject.asObservable();
 
-  // Every broker tick is emitted individually. The gainers$ stream remains
-  // frame-coalesced for efficient grid rendering, while ticks$ never drops
-  // intermediate ticks so UI consumers can process/replay the full feed.
   private readonly tickSubject = new Subject<any>();
   readonly ticks$ = this.tickSubject.asObservable();
 
-  // Tick bursts can contain hundreds/thousands of messages per second.
-  // Coalesce them into one UI update per animation frame instead of running
-  // Angular change detection and sorting once for every broker tick.
   private readonly pendingTicks = new Map<string, any>();
   private readonly stockIndex = new Map<string, number>();
   private tickFlushScheduled = false;
 
   async startConnection(): Promise<void> {
-    if (this.hub?.state === signalR.HubConnectionState.Connected) {
-      return;
-    }
-
-    if (this.isStarting) {
+    if (this.hub?.state === signalR.HubConnectionState.Connected || this.isStarting) {
       return;
     }
 
     this.isStarting = true;
-
     try {
       if (!this.hub) {
         this.hub = new signalR.HubConnectionBuilder()
-          .withUrl(
-            this.#apiConstants.getUrl(
-              this.#apiConstants.marketHub,
-              false,
-            ),
-          )
+          .withUrl(this.#apiConstants.getUrl(this.#apiConstants.marketHub, false))
           .withAutomaticReconnect()
           .build();
 
-        this.hub.on('GainersUpdated', (data: any[]) => {
+        this.hub.on('QuotesUpdated', (data: any[]) => {
           this.pendingTicks.clear();
-          this.rebuildStockIndex(data);
-          this.gainersSubject.next(data ?? []);
+          const quotes = data ?? [];
+          this.rebuildStockIndex(quotes);
+          this.quotesSubject.next(quotes);
         });
 
-        this.hub.on('StockTickUpdated', (stock: any) => {
-          const token = String(stock?.symbolToken ?? '');
+        this.hub.on('StockTickUpdated', (quote: any) => {
+          const token = String(quote?.symbolToken ?? '');
           if (!token) return;
-
-          // Never coalesce the event stream itself: emit every received tick
-          // before applying the separate visual-grid coalescing strategy.
-          this.tickSubject.next(stock);
-
-          // Keep only the newest tick for each stock until the next paint.
-          this.pendingTicks.set(token, stock);
+          this.tickSubject.next(quote);
+          this.pendingTicks.set(token, quote);
           this.scheduleTickFlush();
         });
       }
 
       await this.hub.start();
-      console.log('SignalR Connected');
-    } catch (err) {
-      console.error(err);
+      console.log('Market SignalR connected');
+    } catch (error) {
+      console.error('Market SignalR connection failed', error);
     } finally {
       this.isStarting = false;
     }
   }
 
   async stopConnection(): Promise<void> {
-    if (this.hub) {
-      await this.hub.stop();
-    }
+    if (this.hub) await this.hub.stop();
   }
 
-  private rebuildStockIndex(data: any[]): void {
+  private rebuildStockIndex(quotes: any[]): void {
     this.stockIndex.clear();
-    for (let index = 0; index < (data?.length ?? 0); index++) {
-      const token = String(data[index]?.symbolToken ?? '');
-      if (token) {
-        this.stockIndex.set(token, index);
-      }
-    }
+    quotes.forEach((quote, index) => {
+      const token = String(quote?.symbolToken ?? '');
+      if (token) this.stockIndex.set(token, index);
+    });
   }
 
   private scheduleTickFlush(): void {
     if (this.tickFlushScheduled) return;
     this.tickFlushScheduled = true;
-
     const flush = () => {
       this.tickFlushScheduled = false;
       this.flushPendingTicks();
     };
-
-    if (typeof requestAnimationFrame === 'function') {
-      requestAnimationFrame(flush);
-    } else {
-      setTimeout(flush, 16);
-    }
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(flush);
+    else setTimeout(flush, 16);
   }
 
   private flushPendingTicks(): void {
-    if (this.pendingTicks.size === 0) return;
-
-    const current = this.gainersSubject.value;
-    if (current.length === 0) {
+    if (!this.pendingTicks.size) return;
+    const current = this.quotesSubject.value;
+    if (!current.length) {
       this.pendingTicks.clear();
       return;
     }
 
     const next = [...current];
     let changed = false;
-
-    for (const [token, stock] of this.pendingTicks) {
+    for (const [token, quote] of this.pendingTicks) {
       const index = this.stockIndex.get(token);
       if (index === undefined) continue;
-
-      const previous = next[index];
-      next[index] = { ...previous, ...stock };
+      next[index] = { ...next[index], ...quote };
       changed = true;
     }
-
     this.pendingTicks.clear();
-
-    if (changed) {
-      this.gainersSubject.next(next);
-    }
+    if (changed) this.quotesSubject.next(next);
   }
 }

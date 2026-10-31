@@ -12,6 +12,7 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
         private readonly IAngelOneService _angel;
         private readonly TradingSettingsProvider _settings;
         private readonly IMarketHoursService _marketHours;
+        private readonly MarketQuotePublisher _quotePublisher;
 
         public InitialBackgroundService(
             ILogger<InitialBackgroundService> logger,
@@ -19,7 +20,8 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
             IInstrumentService instrumentService,
             IAngelOneService angel,
             TradingSettingsProvider settings,
-            IMarketHoursService marketHours)
+            IMarketHoursService marketHours,
+            MarketQuotePublisher quotePublisher)
         {
             _logger = logger;
             _commonService = commonService;
@@ -27,6 +29,7 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
             _angel = angel;
             _settings = settings;
             _marketHours = marketHours;
+            _quotePublisher = quotePublisher;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -65,6 +68,8 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
                         await _commonService.GetQuotesAsync(instruments, login.JwtToken),
                         ownedStocks,
                         _settings.Current.MaxCandidates);
+
+                    await _quotePublisher.PublishSnapshotAsync(quotes);
 
                     var fromDate = new DateTime(candleCloseTime.Year, candleCloseTime.Month, candleCloseTime.Day, 9, 15, 0, DateTimeKind.Unspecified);
                     var candles = await _commonService.DownloadCandlesInBatchesAsync(

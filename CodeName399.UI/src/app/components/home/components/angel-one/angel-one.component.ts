@@ -48,7 +48,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   // Dashboard State
   // ======================================================
 
-  gainers = signal<Gainer[]>([]);
+  quotes = signal<Gainer[]>([]);
 
   availableCash = signal(0);
 
@@ -119,20 +119,23 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly columnDefinitions = [
     { key: 'star', label: '⭐', defaultVisible: true },
     { key: 'symbol', label: 'Symbol', defaultVisible: true },
-    { key: 'exchange', label: 'Exchange', defaultVisible: false },
     { key: 'token', label: 'Token', defaultVisible: false },
+    { key: 'exchange', label: 'Exchange', defaultVisible: false },
     { key: 'prevClose', label: 'Prev Close', defaultVisible: true },
-    { key: 'recovery', label: 'Recovery', defaultVisible: true },
-    { key: 'priceChange', label: 'Price Change %', defaultVisible: true },
-    { key: 'breakout', label: 'Breakout', defaultVisible: true },
-    { key: 'signal', label: 'Signal', defaultVisible: true },
-    { key: 'risk', label: 'Risk', defaultVisible: true },
-    { key: 'atr', label: 'ATR', defaultVisible: true },
+    { key: 'ltp', label: 'LTP', defaultVisible: true },
+    { key: 'priceChange', label: 'Change %', defaultVisible: true },
+    { key: 'bid', label: 'Bid', defaultVisible: false },
+    { key: 'ask', label: 'Ask', defaultVisible: false },
+    { key: 'open', label: 'Open', defaultVisible: false },
+    { key: 'high', label: 'High', defaultVisible: false },
+    { key: 'low', label: 'Low', defaultVisible: false },
+    { key: 'volume', label: 'Volume', defaultVisible: false },
+    { key: 'quantity', label: 'Qty', defaultVisible: true },
+    { key: 'averagePrice', label: 'Avg Price', defaultVisible: true },
+    { key: 'investedAmount', label: 'Invested', defaultVisible: true },
+    { key: 'currentValue', label: 'Current Value', defaultVisible: true },
+    { key: 'profitLoss', label: 'P/L', defaultVisible: true },
     { key: 'stopLoss', label: 'SL', defaultVisible: true },
-    { key: 'reason', label: 'Reason', defaultVisible: true },
-    { key: 'suggestion', label: 'Suggestion', defaultVisible: true },
-    { key: 'upperCircuitLimit', label: 'Upper Circuit Limit', defaultVisible: false },
-    { key: 'lowerCircuitLimit', label: 'Lower Circuit Limit', defaultVisible: false },
   ];
 
   visibleColumns = signal<string[]>([]);
@@ -146,24 +149,20 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   // Computed
   // ======================================================
 
-  subscribedGainers = computed(() =>
-    this.gainers().filter((stock) => stock.isSubscribed === true),
-  );
+  publishedQuotes = computed(() => this.quotes());
 
-  isWaitingForSubscriptions = computed(
-    () => this.subscribedGainers().length === 0,
-  );
+  isWaitingForQuotes = computed(() => this.quotes().length === 0);
 
-  filteredGainers = computed(() => {
+  filteredQuotes = computed(() => {
     const search = this.searchText().trim().toLowerCase();
 
-    const filtered = this.subscribedGainers().filter((stock) =>
+    const filtered = this.publishedQuotes().filter((stock) =>
       stock.symbol.toLowerCase().includes(search),
     );
 
     return filtered.sort((left, right) => {
-      const leftBucket = this.getGainerSortBucket(left);
-      const rightBucket = this.getGainerSortBucket(right);
+      const leftBucket = this.getQuoteSortBucket(left);
+      const rightBucket = this.getQuoteSortBucket(right);
 
       if (leftBucket !== rightBucket) {
         return leftBucket - rightBucket;
@@ -186,10 +185,6 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   );
 
   activeInstrumentType = computed(() => 'Equity' as const);
-
-  riskPercentage = computed(
-    () => this.configuration()?.riskPercentage ?? 0,
-  );
 
   // ======================================================
   // Lifecycle
@@ -253,7 +248,7 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.loadConfiguration();
 
-    this.subscribeToGainers();
+    this.subscribeToQuotes();
   }
 
   // ======================================================
@@ -392,7 +387,10 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
         this.columnDefinitions.some((column) => column.key === columnKey),
     );
 
-    const nextColumns = configuredColumns?.length
+    const isLegacyColumnSet = configuredColumns?.length === 3
+      && ['star', 'symbol', 'stopLoss'].every((key) => configuredColumns.includes(key));
+
+    const nextColumns = configuredColumns?.length && !isLegacyColumnSet
       ? configuredColumns
       : this.getDefaultVisibleColumnKeys();
 
@@ -428,21 +426,60 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   // SignalR
   // ======================================================
 
-  private async subscribeToGainers(): Promise<void> {
-    // Subscribe BEFORE starting SignalR. MarketHub sends the current watchlist
-    // from OnConnectedAsync; subscribing afterwards can miss that one-shot
-    // snapshot and leave the dashboard empty until the next market update.
+  private async subscribeToQuotes(): Promise<void> {
+    // Subscribe to the quote stream before connecting. MarketHub sends the
+    // latest published quote snapshot as soon as this client connects.
     this.subscription?.unsubscribe();
-    this.subscription = this.#market.gainers$.subscribe((data: Gainer[]) => {
-      // SignalR can deliver a stale SELL after the authoritative snapshot.
-      // The UI must never present SELL for an unowned equity, even if an old
-      // event arrives after the corrected API snapshot. Owned equities retain
-      // SELL because they may legitimately need an exit.
-      const normalized = data.map((stock) => this.normalizeGainerForDisplay(stock));
-      this.gainers.set(normalized);
+    this.subscription = this.#market.quotes$.subscribe((quotes: any[]) => {
+      this.quotes.set(quotes.map((quote) => this.toQuoteRow(quote)));
     });
 
     await this.#market.startConnection();
+  }
+
+  private toQuoteRow(quote: any): Gainer {
+    const quantity = Number(quote.quantity ?? 0);
+    const ltp = Number(quote.ltp ?? 0);
+    const investedAmount = Number(quote.totalInvestment ?? 0);
+    const averagePrice = quantity > 0 && investedAmount > 0
+      ? investedAmount / quantity
+      : 0;
+    const currentValue = quantity * ltp;
+    const isOwned = quantity > 0;
+
+    return {
+      symbol: String(quote.tradingSymbol ?? ''),
+      symbolToken: String(quote.symbolToken ?? ''),
+      exchange: String(quote.exchange ?? 'NSE'),
+      productType: String(quote.productType ?? 'INTRADAY'),
+      currentPrice: ltp,
+      previousClose: Number(quote.previousClose ?? 0),
+      changePercent: Number(quote.percentChange ?? 0),
+      atr: 0,
+      recoveryScore: 0,
+      breakoutStrength: 0,
+      signal: isOwned ? 'SELL' : 'HOLD',
+      risk: '',
+      reason: '',
+      suggestion: '',
+      isSubscribed: isOwned,
+      stopLoss: Number(quote.stopLoss ?? 0),
+      bid: Number(quote.bid ?? 0),
+      ask: Number(quote.ask ?? 0),
+      tickDayVolume: Number(quote.dayVolume ?? 0),
+      isOwned,
+      quantity,
+      averagePrice,
+      investedAmount,
+      currentValue,
+      profitLoss: currentValue - investedAmount,
+      profitLossPercentage: investedAmount > 0
+        ? ((currentValue - investedAmount) / investedAmount) * 100
+        : 0,
+      upperCircuitLimit: 0,
+      lowerCircuitLimit: 0,
+      quote,
+    };
   }
 
   // ======================================================
@@ -483,45 +520,6 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
     const marketOpen = this.getTodayOpen();
     const marketClose = this.getTodayClose();
 
-    if (config.ignoreMarketHours) {
-      if (this.isWeekend(now)) {
-        this.marketStatus.set('OPEN (Ignored)');
-        this.marketTimer.set(
-          `Market opens in ${this.formatTime(
-            this.getNextMarketOpen(now).getTime() - now.getTime(),
-          )}`,
-        );
-        return;
-      }
-
-      if (now < marketOpen) {
-        this.marketStatus.set('OPEN (Ignored)');
-        this.marketTimer.set(
-          `Market opens in ${this.formatTime(
-            marketOpen.getTime() - now.getTime(),
-          )}`,
-        );
-        return;
-      }
-
-      if (now >= marketOpen && now < marketClose) {
-        this.marketStatus.set('OPEN');
-        this.marketTimer.set(
-          `Market closes in ${this.formatTime(
-            marketClose.getTime() - now.getTime(),
-          )}`,
-        );
-        return;
-      }
-
-      this.marketStatus.set('OPEN (Ignored)');
-      this.marketTimer.set(
-        `Market opens in ${this.formatTime(
-          this.getNextMarketOpen(now).getTime() - now.getTime(),
-        )}`,
-      );
-      return;
-    }
 
     if (this.isWeekend(now)) {
       this.marketStatus.set('CLOSED');
@@ -568,15 +566,8 @@ export class AngelOneComponent implements OnInit, AfterViewInit, OnDestroy {
   // Helpers
   // ======================================================
 
-  private normalizeGainerForDisplay(stock: Gainer): Gainer {
-    const signal = String(stock.signal ?? '').trim().toUpperCase();
-    if (!stock.isOwned && signal === 'SELL') {
-      return { ...stock, signal: 'HOLD' };
-    }
-    return stock;
-  }
 
-  private getGainerSortBucket(stock: Gainer): number {
+  private getQuoteSortBucket(stock: Gainer): number {
     if (stock.isOwned) {
       return 0;
     }

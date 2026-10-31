@@ -68,6 +68,7 @@ namespace CodeName399.Extensions
             services.AddSingleton<MarketClock>();
             services.AddSingleton<PaperPortfolioService>();
             services.AddSingleton<CommonService>();
+            services.AddSingleton<MarketQuotePublisher>();
         }
 
         public static void AddScopedServiceDependencies(this IServiceCollection services)
@@ -87,6 +88,7 @@ namespace CodeName399.Extensions
         {
             services.AddSignalR();
             services.AddHostedService<RawMarketDataArchiveHostedService>();
+            services.AddHostedService<MarketQuotePublisher>(sp => sp.GetRequiredService<MarketQuotePublisher>());
             services.AddHostedService<AngelWebSocketBackgroundService>();
             services.AddHostedService<OrderWebSocketBackgroundService>();
             services.AddHostedService<InitialBackgroundService>();

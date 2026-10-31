@@ -9,6 +9,7 @@ namespace CodeName399.Kite.API.Application.Services
     using CodeName399.Kite.API.Repository;
     using CodeName399.Kite.API.Services;
     using CodeName399.Kite.API.Services.Brokerage;
+    using CodeName399.Kite.API.WebSocket.Interface;
     using Microsoft.Extensions.Options;
 
     public class CommonService
@@ -31,6 +32,10 @@ namespace CodeName399.Kite.API.Application.Services
 
         private readonly TradeCloseHistoryStore _tradeCloseStore;
 
+        private readonly IAngelWebSocketClient _webSocket;
+
+        private readonly MarketQuotePublisher _quotePublisher;
+
         protected readonly IBrokerageCalculatorService _brokerage;
 
         private static readonly TimeZoneInfo IndianTimeZone =
@@ -41,7 +46,6 @@ namespace CodeName399.Kite.API.Application.Services
 
         private readonly SemaphoreSlim _quoteSemaphore = new(2, 2);
 
-        private int chargeCoverAveragePriceChangeCandles = 5;
 
         public CommonService(
             ILogger<CommonService> logger,
@@ -53,7 +57,9 @@ namespace CodeName399.Kite.API.Application.Services
         OrderStatusCache orderStatusCache,
         RawMarketDataArchiveService rawMarketData,
         IBrokerageCalculatorService brokerage,
-        TradeCloseHistoryStore tradeCloseStore
+        TradeCloseHistoryStore tradeCloseStore,
+        IAngelWebSocketClient webSocket,
+        MarketQuotePublisher quotePublisher
         )
         {
             _logger = logger;
@@ -66,6 +72,8 @@ namespace CodeName399.Kite.API.Application.Services
             _rawMarketData = rawMarketData;
             _brokerage = brokerage;
             _tradeCloseStore = tradeCloseStore;
+            _webSocket = webSocket;
+            _quotePublisher = quotePublisher;
         }
 
         public DateTime GetIndianTime()
@@ -748,6 +756,9 @@ namespace CodeName399.Kite.API.Application.Services
                             await _tradeOrderFileRepository.SaveAsync(tradeOrder);
                         }
 
+                        await _webSocket.SubscribeAsync([tradeOrder.SymbolToken], tradeOrder.Exchange);
+                        await _quotePublisher.SetOwnedAsync(tradeOrder.SymbolToken, tradeOrder.Quantity, tradeOrder.TotalInvestment, tradeOrder.StopLoss);
+
                         EmailHelper.SendEmail(
                     EmailHelper.BuildBuyOrderEmail(tradeOrder),
                     _settings.Current,
@@ -815,7 +826,7 @@ namespace CodeName399.Kite.API.Application.Services
             }
 
             var availableAtPrice = GetAvailableAtCurrentPrice(quote);
-            _logger.LogInformation("ORDER DIAGNOSTIC ChargeCoverAndDepth Symbol={Symbol} MinimumChargeCoverQuantity={MinimumQuantity} AvailableAskQuantityAtCurrentPrice={AvailableQuantity} CurrentPrice={Price:F4} LowestPriceChange={LowestPriceChange:F6} PriceChangeLookbackCandles={CandleCount}", quote.TradingSymbol, minimumQuantity, availableAtPrice, currentLtp, lowestPriceChange, chargeCoverAveragePriceChangeCandles);
+            _logger.LogInformation("ORDER DIAGNOSTIC ChargeCoverAndDepth Symbol={Symbol} MinimumChargeCoverQuantity={MinimumQuantity} AvailableAskQuantityAtCurrentPrice={AvailableQuantity} CurrentPrice={Price:F4} LowestPriceChange={LowestPriceChange:F6} PriceChangeLookbackCandles={CandleCount}", quote.TradingSymbol, minimumQuantity, availableAtPrice, currentLtp, lowestPriceChange, _settings.Current.ChargeCoverLowestPriceChangeCandles);
             if (availableAtPrice < minimumQuantity)
             {
                 _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=MarketDepth MinimumRequiredQuantity={MinimumQuantity} AvailableAtCurrentPrice={AvailableQuantity} Price={Price:F4}", quote.TradingSymbol, minimumQuantity, availableAtPrice, currentLtp);
@@ -838,7 +849,7 @@ namespace CodeName399.Kite.API.Application.Services
 
         private async Task<decimal> GetLowestPriceChangeAsync(MarketQuoteData quote, string jwtToken, List<Candle> candles)
         {
-            var candleCount = Math.Clamp(chargeCoverAveragePriceChangeCandles, 2, 100);
+            var candleCount = Math.Clamp(_settings.Current.ChargeCoverLowestPriceChangeCandles, 2, 100);
             var completed = (candles ?? new List<Candle>())
                 .Where(c => c.Close > 0m)
                 .OrderBy(c => c.Timestamp)
@@ -1061,6 +1072,8 @@ namespace CodeName399.Kite.API.Application.Services
                         return;
                     }
 
+                    await _webSocket.UnsubscribeAsync([trade.SymbolToken], trade.Exchange);
+                    await _quotePublisher.SetOwnedAsync(trade.SymbolToken, 0);
                     await _tradeOrderFileRepository.DeleteAsync(trade.Symbol);
                     _logger.LogInformation("SELL ORDER SUBMITTED Symbol={Symbol} Outcome={Outcome} OrderId={OrderId}", trade.Symbol, outcome, response.Data.OrderId);
                     return;
@@ -1072,6 +1085,8 @@ namespace CodeName399.Kite.API.Application.Services
                 trade.NetProfit = trade.GrossProfit - trade.EstimatedCharges;
 
                 await _tradeCloseStore.AppendAsync(trade);
+                await _webSocket.UnsubscribeAsync([trade.SymbolToken], trade.Exchange);
+                await _quotePublisher.SetOwnedAsync(trade.SymbolToken, 0);
                 await _tradeOrderFileRepository.DeleteAsync(
                     string.IsNullOrWhiteSpace(trade.Id) ? trade.Symbol : trade.Id);
 

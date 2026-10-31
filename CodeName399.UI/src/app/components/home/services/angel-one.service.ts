@@ -9,7 +9,6 @@ import { API_CONSTANTS } from '../../../../injectors/common-injector';
 
 import { DashboardSummary } from '../models/dashboard-summary';
 
-import { Gainer } from '../models/gainer';
 import { TradingConfiguration } from '../models/trading-settings';
 
 @Injectable({
@@ -23,8 +22,6 @@ export class AngelOneService {
   // ======================================================
   // Signals
   // ======================================================
-
-  gainers = signal<Gainer[]>([]);
 
   availableCash = signal(0);
 
@@ -107,11 +104,6 @@ export class AngelOneService {
     return of([]);
   }
 
-  /** The selected instrument uses the shared MarketService SignalR feed. */
-  subscribeStock(_symbolToken: string, _exchange = 'NSE'): Observable<void> {
-    return of(void 0);
-  }
-
   buyStock(_symbolToken: string, _quantity: number, _mode: 'minimum' | 'maximum', _exchange = 'NSE'): Observable<never> {
     return throwError(() => new Error('Manual buy is unavailable: the API has no manual-order endpoint.'));
   }
@@ -126,15 +118,5 @@ export class AngelOneService {
 
   get isAutoTradingEnabled(): boolean {
     return this.configuration()?.enableAutoTrading ?? false;
-  }
-
-  get selectedInstrumentType(): string { return 'Equity'; }
-
-  get activeInstrumentSettings() {
-    return this.configuration()?.equity;
-  }
-
-  get riskPercentage(): number {
-    return this.configuration()?.riskPercentage ?? 0;
   }
 }
