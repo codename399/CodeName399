@@ -126,6 +126,7 @@ namespace CodeName399.Extensions
             services.AddHostedService<TradingTickBackgroundService>();
             services.AddHostedService<ExitRecoveryBackgroundService>();
             services.AddHostedService<InitialBackgroundService>();
+            services.AddHostedService<ExitBackgroundService>();
         }
 
         public static void AddRepositoryDependencies(this IServiceCollection services)

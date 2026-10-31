@@ -15,6 +15,8 @@ public static class TradingConfigurationValidator
 
         if (!configuration.IgnoreMarketHours && configuration.MarketOpenTime >= configuration.MarketCloseTime)
             throw new InvalidOperationException("MarketOpenTime must be earlier than MarketCloseTime.");
+        if (configuration.IntradayCutoffTime <= configuration.MarketOpenTime)
+            throw new InvalidOperationException("The intraday cutoff (30 minutes before market close) must be after MarketOpenTime.");
 
         var raw = configuration.RawMarketData ?? new RawMarketDataSettings();
         if (string.IsNullOrWhiteSpace(raw.StoragePath)) throw new InvalidOperationException("RawMarketData.StoragePath is required.");

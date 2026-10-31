@@ -813,13 +813,8 @@ public partial class AngelOneService : IAngelOneService
 
     private TimeSpan ResolveEntryCutoff(PlaceOrderRequest request)
     {
-        var settings = _tradingSettingsProvider.Current;
-        var product = request.ProductType ?? string.Empty;
-        var squareOff =
-            product.Equals("BO", StringComparison.OrdinalIgnoreCase) || product.Equals("ROBO", StringComparison.OrdinalIgnoreCase)
-                ? settings.RoboAutoSquareOffTime
-                : settings.EquityMisAutoSquareOffTime;
-        return new[] { settings.IntradayEntryCutoffTime, squareOff }.Min();
+        // All intraday buy orders stop 30 minutes before the configured market close.
+        return _tradingSettingsProvider.Current.IntradayCutoffTime;
     }
 
 

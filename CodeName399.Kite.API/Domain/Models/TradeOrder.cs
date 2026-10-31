@@ -25,5 +25,8 @@ namespace CodeName399.Kite.API.Models
         public decimal BreakEvenPrice { get; set; }
         public bool TrailingActivated { get; set; }
         public string ExecutionMode { get; set; } = TradeExecutionMode.Paper.ToString();
+        public decimal LowestPriceChange { get; set; }
+        public decimal GrossProfit { get; set; }
+        public decimal NetProfit { get; set; }
     }
 }

@@ -60,7 +60,8 @@ namespace CodeName399.Kite.API.Models
                 BreakEvenPrice = 0, // Set the break-even price as needed
                 TrailingActivated = false, // Set trailing activation as needed
                 TotalInvestment = quote.TotalInvestment,
-                ExecutionMode = isAutoTrading ? TradeExecutionMode.Live.ToString() : TradeExecutionMode.Paper.ToString()
+                ExecutionMode = isAutoTrading ? TradeExecutionMode.Live.ToString() : TradeExecutionMode.Paper.ToString(),
+                LowestPriceChange = quote.LowestPriceChange
             };
         }
     }

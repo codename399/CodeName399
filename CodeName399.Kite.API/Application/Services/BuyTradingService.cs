@@ -90,9 +90,9 @@ namespace CodeName399.Kite.API.Services
             }
 
             // All entries obey the broker session and intraday cutoff.
-            if (!settings.IgnoreMarketHours && !_marketClock.IsNewIntradayEntryWindowOpen)
+            if (!_marketClock.IsNewIntradayEntryWindowOpen)
             {
-                _logger.LogInformation("ORDER BLOCKED Gate=MarketHours Reason=New-entry window closed. MarketTime={MarketTime} MarketOpen={MarketOpen} MarketClose={MarketClose} EntryCutoff={EntryCutoff}", _marketClock.Now, settings.MarketOpenTime, settings.MarketCloseTime, settings.IntradayEntryCutoffTime);
+                _logger.LogInformation("ORDER BLOCKED Gate=MarketHours Reason=New-entry window closed. MarketTime={MarketTime} MarketOpen={MarketOpen} MarketClose={MarketClose} EntryCutoff={EntryCutoff}", _marketClock.Now, settings.MarketOpenTime, settings.MarketCloseTime, _marketClock.GetEntryCutoffTime(settings));
                 return;
             }
 

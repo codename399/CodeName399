@@ -238,7 +238,9 @@ namespace CodeName399.Kite.API.Helpers
                     value = "<unavailable>";
                 }
 
-                rows.Append("<tr><th>")
+                rows.Append("<tr style=\\"background:")
+                    .Append(tableOutcomeColor)
+                    .Append(";\\"><th>")
                     .Append(H(property.Name))
                     .Append("</th><td>")
                     .Append(H(FormatValue(value)))
@@ -259,7 +261,8 @@ body { font-family: Arial, Helvetica, sans-serif; background:#eef2f7; color:#1f2
 .header p { margin:0; opacity:.95; }
 table { border-collapse:collapse; width:100%; }
 th, td { border:1px solid #e5e7eb; padding:10px 12px; text-align:left; vertical-align:top; overflow-wrap:anywhere; }
-th { width:38%; background:#f8fafc; font-weight:600; }
+th { width:38%; background:transparent; font-weight:600; }
+thead th { background:#0d6efd; color:#fff; }
 .content { padding:20px 24px 24px; }
 </style>
 </head>
@@ -292,10 +295,13 @@ th { width:38%; background:#f8fafc; font-weight:600; }
                 trade.ExecutionMode,
                 TradeExecutionMode.Paper.ToString(),
                 StringComparison.OrdinalIgnoreCase);
-            var color = isPaper ? "#0d6efd" : "#198754";
-            var title = isPaper
-                ? "PAPER LONG CLOSED"
-                : "LONG CLOSED";
+            var color = "#0d6efd";
+            var tableOutcomeColor = trade.NetProfit > 0m
+                ? "#d1e7dd" // Net profitable after charges.
+                : trade.GrossProfit > 0m
+                    ? "#fff3cd" // Gross profit, but charges consumed the profit.
+                    : "#f8d7da"; // Gross loss.
+            var title = isPaper ? "PAPER LONG CLOSED" : "LONG CLOSED";
             var rows = new StringBuilder();
 
             // Include every readable public TradeOrder property, including inherited audit fields.
@@ -317,7 +323,9 @@ th { width:38%; background:#f8fafc; font-weight:600; }
                     value = "<unavailable>";
                 }
 
-                rows.Append("<tr><th>")
+                rows.Append("<tr style=\\"background:")
+                    .Append(tableOutcomeColor)
+                    .Append(";\\"><th>")
                     .Append(H(property.Name))
                     .Append("</th><td>")
                     .Append(H(FormatValue(value)))
@@ -338,7 +346,8 @@ body { font-family: Arial, Helvetica, sans-serif; background:#eef2f7; color:#1f2
 .header p { margin:0; opacity:.95; }
 table { border-collapse:collapse; width:100%; }
 th, td { border:1px solid #e5e7eb; padding:10px 12px; text-align:left; vertical-align:top; overflow-wrap:anywhere; }
-th { width:38%; background:#f8fafc; font-weight:600; }
+th { width:38%; background:transparent; font-weight:600; }
+thead th { background:#0d6efd; color:#fff; }
 .content { padding:20px 24px 24px; }
 </style>
 </head>

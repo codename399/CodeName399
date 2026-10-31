@@ -19,14 +19,14 @@ public sealed class MarketClock
     public DateTime Today => Now.Date;
     public DateTime MarketOpen => Today.Add(_settings.Current.MarketOpenTime);
     public DateTime MarketClose => Today.Add(_settings.Current.MarketCloseTime);
-    public DateTime AutoSquareOffTime => Today.Add(GetAutoSquareOffTime(_settings.Current));
+    public DateTime AutoSquareOffTime => MarketClose.AddMinutes(-5);
 
     public bool IsTradingDay => Now.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday)
-        && !_settings.Current.TradingHolidays.Contains(DateOnly.FromDateTime(Now));
+        && !(_settings.Current.TradingHolidays ?? []).Contains(DateOnly.FromDateTime(Now));
 
-    public bool IsMarketOpen => _settings.Current.IgnoreMarketHours ||
-        (IsTradingDay && Now.TimeOfDay >= _settings.Current.MarketOpenTime &&
-         Now.TimeOfDay <= _settings.Current.MarketCloseTime);
+    public bool IsMarketOpen => IsTradingDay &&
+        Now.TimeOfDay >= _settings.Current.MarketOpenTime &&
+         Now.TimeOfDay <= _settings.Current.MarketCloseTime;
 
     /// <summary>
     /// Returns whether live raw market-data recording is allowed by the actual
@@ -39,37 +39,26 @@ public sealed class MarketClock
         var now = localNow ?? Now;
         var date = DateOnly.FromDateTime(now);
         var isTradingDay = now.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday)
-            && !_settings.Current.TradingHolidays.Contains(date);
+            && !(_settings.Current.TradingHolidays ?? []).Contains(date);
 
         return isTradingDay
             && now.TimeOfDay >= _settings.Current.MarketOpenTime
             && now.TimeOfDay <= _settings.Current.MarketCloseTime;
     }
 
-    public bool IsNewIntradayEntryWindowOpen => _settings.Current.IgnoreMarketHours ||
-        (IsTradingDay && Now.TimeOfDay >= _settings.Current.MarketOpenTime &&
-         Now.TimeOfDay < GetEntryCutoffTime(_settings.Current));
-
-    public bool IsWithinCasWindow => IsTradingDay
-        && Now.TimeOfDay >= _settings.Current.CasTransitionStart
-        && Now.TimeOfDay < _settings.Current.CasPostCloseEnd;
+    public bool IsNewIntradayEntryWindowOpen => IsTradingDay
+        && Now.TimeOfDay < GetEntryCutoffTime(_settings.Current)
+        && (Now.TimeOfDay >= _settings.Current.MarketOpenTime);
 
     public DateTime Combine(DateOnly date, TimeSpan time) => date.ToDateTime(TimeOnly.FromTimeSpan(time));
 
     public TimeSpan GetSessionClose() => _settings.Current.MarketCloseTime;
 
     public TimeSpan GetEntryCutoffTime(TradingConfiguration settings, string? productType = null)
-        => new[] { settings.IntradayEntryCutoffTime, GetAutoSquareOffTime(settings, productType) }.Min();
+        => settings.IntradayCutoffTime;
 
     public TimeSpan GetAutoSquareOffTime(TradingConfiguration settings, string? productType = null)
-    {
-        var product = string.IsNullOrWhiteSpace(productType) ? settings.Equity.ProductType : productType;
-        if (product.Equals("BO", StringComparison.OrdinalIgnoreCase) ||
-            product.Equals("ROBO", StringComparison.OrdinalIgnoreCase))
-            return settings.RoboAutoSquareOffTime;
-
-        return settings.EquityMisAutoSquareOffTime;
-    }
+        => settings.MarketCloseTime - TimeSpan.FromMinutes(5);
 
     private TimeZoneInfo ResolveConfiguredTimeZone()
     {

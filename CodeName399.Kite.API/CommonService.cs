@@ -5,12 +5,13 @@ namespace CodeName399.Kite.API
     using CodeName399.Kite.API.Helpers;
     using CodeName399.Kite.API.Helpers.Calculators;
     using CodeName399.Kite.API.Models;
-    using CodeName399.Kite.API.Models.Enum;
     using CodeName399.Kite.API.Models.Indicator;
+    using CodeName399.Kite.API.Models.Enum;
+    using CodeName399.Kite.API.Repository;
     using CodeName399.Kite.API.Services;
     using CodeName399.Kite.API.Services.Brokerage;
-    using CodeName399.Kite.API.Services.Interface;
     using Microsoft.Extensions.Options;
+    using CodeName399.Kite.API.Models.WebSocketOrder;
 
     public class CommonService
     {
@@ -29,6 +30,8 @@ namespace CodeName399.Kite.API
         private readonly OrderStatusCache _orderStatusCache;
 
         private readonly RawMarketDataArchiveService _rawMarketData;
+
+        private readonly TradeCloseHistoryStore _tradeCloseStore;
 
         protected readonly IBrokerageCalculatorService _brokerage;
 
@@ -51,7 +54,8 @@ namespace CodeName399.Kite.API
         ITradeOrderFileRepository tradeOrderFileRepository,
         OrderStatusCache orderStatusCache,
         RawMarketDataArchiveService rawMarketData,
-        IBrokerageCalculatorService brokerage
+        IBrokerageCalculatorService brokerage,
+        TradeCloseHistoryStore tradeCloseStore
         )
         {
             _logger = logger;
@@ -63,6 +67,7 @@ namespace CodeName399.Kite.API
             _orderStatusCache = orderStatusCache;
             _rawMarketData = rawMarketData;
             _brokerage = brokerage;
+            _tradeCloseStore = tradeCloseStore;
         }
 
         public DateTime GetIndianTime()
@@ -90,31 +95,25 @@ namespace CodeName399.Kite.API
         }
 
         /// <summary>
-        /// Returns symbols that currently have an open position according to either
-        /// the file-backed trade repository or completed/partially-filled order updates
-        /// received by the order websocket.
+        /// Returns owned positions keyed by normalized trading symbol. Persisted
+        /// TradeOrder records are authoritative; websocket fills recover missing positions.
         /// </summary>
-        public async Task<HashSet<string>> GetOwnedStocksAsync()
+        public async Task<Dictionary<string, TradeOrder>> GetOwnedStocksAsync()
         {
-            var ownedSymbols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            // The trade repository is the primary source for trades managed by this application.
-            var openTrades = await _tradeOrderFileRepository.GetOpenTradesAsync();
-            foreach (var trade in openTrades)
+            var owned = new Dictionary<string, TradeOrder>(StringComparer.OrdinalIgnoreCase);
+            foreach (var trade in await _tradeOrderFileRepository.GetOpenTradesAsync())
             {
                 if (!string.IsNullOrWhiteSpace(trade.Symbol))
-                    ownedSymbols.Add(trade.Symbol.Trim().ToUpperInvariant());
+                    owned[trade.Symbol.Trim().ToUpperInvariant()] = trade;
             }
 
-            // Include positions visible only in order-websocket updates. Calculate net filled
-            // quantity per symbol so a completed sell can offset a completed buy.
-            var netQuantities = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var netBySymbol = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var latestBuyBySymbol = new Dictionary<string, OrderStatusMessage>(StringComparer.OrdinalIgnoreCase);
             foreach (var order in _orderStatusCache.GetAll())
             {
                 if (string.IsNullOrWhiteSpace(order.Symbol) || order.FilledQuantity <= 0)
                     continue;
-
-                var status = order.Status.Trim();
+                var status = order.Status?.Trim() ?? string.Empty;
                 if (!status.Equals("COMPLETE", StringComparison.OrdinalIgnoreCase)
                     && !status.Equals("PARTIALLY_FILLED", StringComparison.OrdinalIgnoreCase)
                     && !status.Equals("PARTIALLY FILLED", StringComparison.OrdinalIgnoreCase))
@@ -122,17 +121,34 @@ namespace CodeName399.Kite.API
 
                 var symbol = order.Symbol.Trim().ToUpperInvariant();
                 var sign = order.TransactionType.Equals("BUY", StringComparison.OrdinalIgnoreCase) ? 1
-                    : order.TransactionType.Equals("SELL", StringComparison.OrdinalIgnoreCase) ? -1
-                    : 0;
+                    : order.TransactionType.Equals("SELL", StringComparison.OrdinalIgnoreCase) ? -1 : 0;
+                if (sign == 0) continue;
 
-                if (sign != 0)
-                    netQuantities[symbol] = netQuantities.GetValueOrDefault(symbol) + sign * order.FilledQuantity;
+                netBySymbol[symbol] = netBySymbol.GetValueOrDefault(symbol) + sign * order.FilledQuantity;
+                if (sign > 0 && (!latestBuyBySymbol.TryGetValue(symbol, out var previous)
+                    || order.UpdatedTime >= previous.UpdatedTime))
+                    latestBuyBySymbol[symbol] = order;
             }
 
-            foreach (var position in netQuantities.Where(x => x.Value > 0))
-                ownedSymbols.Add(position.Key);
+            foreach (var position in netBySymbol.Where(x => x.Value > 0))
+            {
+                if (owned.ContainsKey(position.Key) || !latestBuyBySymbol.TryGetValue(position.Key, out var buy))
+                    continue;
 
-            return ownedSymbols;
+                owned[position.Key] = new TradeOrder
+                {
+                    Symbol = position.Key,
+                    SymbolToken = buy.SymbolToken,
+                    Exchange = string.IsNullOrWhiteSpace(buy.Exchange) ? "NSE" : buy.Exchange,
+                    OrderType = string.IsNullOrWhiteSpace(buy.OrderType) ? "MARKET" : buy.OrderType,
+                    Quantity = position.Value,
+                    EntryPrice = buy.AveragePrice,
+                    EntryTime = buy.UpdatedTime,
+                    ExecutionMode = "Live"
+                };
+            }
+
+            return owned;
         }
 
         public long GetActivityVolume(MarketQuoteData quote) =>
@@ -206,10 +222,10 @@ namespace CodeName399.Kite.API
             }
         }
 
-        public List<MarketQuoteData> GetTopQuotes(List<MarketQuoteData> quotes, HashSet<string> ownedStocks, int count)
+        public List<MarketQuoteData> GetTopQuotes(List<MarketQuoteData> quotes, Dictionary<string, TradeOrder> ownedStocks, int count)
         {
             return quotes
-                .Where(x => !ownedStocks.Contains(x.SymbolToken))
+                .Where(x => !ownedStocks.ContainsKey(x.TradingSymbol) && !ownedStocks.Values.Any(t => string.Equals(t.SymbolToken, x.SymbolToken, StringComparison.OrdinalIgnoreCase)))
                 .Where(x => x.Ltp > 0m && x.Close > 0m && x.Ltp > x.Close)
             .Where(x => GetActivityVolume(x) > 0L)
             .OrderByDescending(GetActivityVolume)
@@ -315,6 +331,92 @@ namespace CodeName399.Kite.API
                 requestedTokens.Count,
                 interval,
                 batchSize);
+
+            return candlesByToken;
+        }
+
+        /// <summary>
+        /// Downloads candles for owned trading symbols. Symbols are resolved against the
+        /// instrument master, then downloaded in batches using the same limits as quote downloads.
+        /// </summary>
+        public async Task<Dictionary<string, List<Candle>>> DownloadCandlesInBatchesAsync(
+            HashSet<string> ownedQuotes,
+            List<Instrument> instruments,
+            string jwtToken,
+            string interval,
+            DateTime fromDate,
+            DateTime toDate,
+            int batchSize = 2,
+            int batchDelay = 1)
+        {
+            var candlesByToken = new Dictionary<string, List<Candle>>(StringComparer.OrdinalIgnoreCase);
+
+            if (ownedQuotes == null || ownedQuotes.Count == 0 || instruments == null || instruments.Count == 0)
+                return candlesByToken;
+
+            if (string.IsNullOrWhiteSpace(jwtToken))
+                throw new ArgumentException("JWT token is required to download historical candles.", nameof(jwtToken));
+
+            batchSize = Math.Max(1, Math.Min(batchSize, 3));
+
+            var instrumentsBySymbol = instruments
+                .Where(x => !string.IsNullOrWhiteSpace(x.symbol) && !string.IsNullOrWhiteSpace(x.token))
+                .GroupBy(x => x.symbol.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+            var requestedInstruments = ownedQuotes
+                .Where(symbol => !string.IsNullOrWhiteSpace(symbol))
+                .Select(symbol => symbol.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(symbol => instrumentsBySymbol.TryGetValue(symbol, out var instrument) ? instrument : null)
+                .Where(instrument => instrument != null)
+                .GroupBy(instrument => instrument!.token.Trim(), StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First()!)
+                .ToList();
+
+            var unresolvedSymbols = ownedQuotes
+                .Where(symbol => !string.IsNullOrWhiteSpace(symbol) && !instrumentsBySymbol.ContainsKey(symbol.Trim()))
+                .ToList();
+
+            foreach (var symbol in unresolvedSymbols)
+                _logger.LogWarning("Could not resolve owned symbol {Symbol} in instrument master; candle download skipped.", symbol);
+
+            for (var offset = 0; offset < requestedInstruments.Count; offset += batchSize)
+            {
+                var batch = requestedInstruments.Skip(offset).Take(batchSize).ToList();
+                var tasks = batch.Select(async instrument =>
+                {
+                    var token = instrument.token.Trim();
+                    var exchange = string.IsNullOrWhiteSpace(instrument.exch_seg)
+                        ? "NSE"
+                        : instrument.exch_seg.Trim().ToUpperInvariant();
+
+                    try
+                    {
+                        var candles = await DownloadCandleAsync(
+                            token, jwtToken, interval, fromDate, toDate, exchange);
+                        return (Token: token, Candles: candles ?? new List<Candle>());
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(
+                            ex,
+                            "Failed to download {Interval} candles for owned symbol {Symbol} (token {Token})",
+                            interval, instrument.symbol, token);
+                        return (Token: token, Candles: new List<Candle>());
+                    }
+                });
+
+                foreach (var result in await Task.WhenAll(tasks))
+                    candlesByToken[result.Token] = result.Candles;
+
+                if (offset + batchSize < requestedInstruments.Count && batchDelay > 0)
+                    await Task.Delay(TimeSpan.FromSeconds(batchDelay));
+            }
+
+            _logger.LogInformation(
+                "Downloaded {LoadedCount} of {RequestedCount} owned stocks with {Interval} candles in batches of {BatchSize}",
+                candlesByToken.Count(x => x.Value.Count > 0), requestedInstruments.Count, interval, batchSize);
 
             return candlesByToken;
         }
@@ -567,9 +669,7 @@ namespace CodeName399.Kite.API
 
         public async Task PlaceBuyOrders(HashSet<MarketQuoteData> quotes, Dictionary<string, List<Candle>> candles, string jwtToken)
         {
-            const int batchSize = 5;
-
-            foreach (var batch in quotes.Chunk(batchSize))
+            foreach (var batch in quotes.Chunk(_settings.Current.BuyBatchSize))
             {
                 var batchTasks = batch.Select(async quote =>
                 {
@@ -590,7 +690,59 @@ namespace CodeName399.Kite.API
 
                         var tradeOrder = MarketQuoteData.ToTradeOrder(quote, _settings.Current.EnableAutoTrading);
 
-                        await _tradeOrderFileRepository.SaveAsync(tradeOrder);
+                        if (_settings.Current.EnableAutoTrading)
+                        {
+                            // Persist the intended position before the broker side effect.
+                            // If the request times out, retaining this record prevents a duplicate buy
+                            // while broker/order-websocket reconciliation determines whether it filled.
+                            await _tradeOrderFileRepository.SaveAsync(tradeOrder);
+
+                            var orderTag = $"CN399-BUY-{Guid.NewGuid():N}"[..19];
+                            PlaceOrderResponse buyResponse;
+                            try
+                            {
+                                buyResponse = await _angel.PlaceOrderAsync(
+                                    new PlaceOrderRequest
+                                    {
+                                        TradingSymbol = tradeOrder.Symbol,
+                                        SymbolToken = tradeOrder.SymbolToken,
+                                        Exchange = tradeOrder.Exchange,
+                                        TransactionType = "BUY",
+                                        Quantity = tradeOrder.Quantity,
+                                        OrderType = "MARKET",
+                                        ProductType = "INTRADAY",
+                                        Duration = "DAY",
+                                        Variety = "NORMAL",
+                                        OrderTag = orderTag
+                                    },
+                                    forceLive: true);
+                            }
+                            catch (Exception orderException)
+                            {
+                                _logger.LogError(orderException,
+                                    "LIVE BUY ORDER RESULT UNKNOWN Symbol={Symbol} Quantity={Quantity}; persisted trade retained for reconciliation.",
+                                    tradeOrder.Symbol, tradeOrder.Quantity);
+                                return;
+                            }
+
+                            if (buyResponse?.Status != true)
+                            {
+                                await _tradeOrderFileRepository.DeleteAsync(tradeOrder.Symbol);
+                                _logger.LogError(
+                                    "LIVE BUY ORDER REJECTED Symbol={Symbol} Quantity={Quantity} Message={Message}",
+                                    tradeOrder.Symbol, tradeOrder.Quantity, buyResponse?.Message);
+                                return;
+                            }
+
+                            _logger.LogInformation(
+                                "LIVE BUY ORDER SUBMITTED Symbol={Symbol} Quantity={Quantity} OrderId={OrderId} UniqueOrderId={UniqueOrderId}",
+                                tradeOrder.Symbol, tradeOrder.Quantity,
+                                buyResponse.Data?.OrderId, buyResponse.Data?.UniqueOrderId);
+                        }
+                        else
+                        {
+                            await _tradeOrderFileRepository.SaveAsync(tradeOrder);
+                        }
 
                         EmailHelper.SendEmail(
                     EmailHelper.BuildBuyOrderEmail(tradeOrder),
@@ -832,6 +984,105 @@ namespace CodeName399.Kite.API
             }
 
             return (bestQuantity, bestMargin);
+        }
+
+        public bool ValidateSell(TradeOrder trade, Candle currentCandle, out string outcome)
+        {
+            outcome = string.Empty;
+            if (trade == null || currentCandle == null || trade.EntryPrice <= 0m
+                || currentCandle.Close <= 0m || trade.LowestPriceChange <= 0m)
+                return false;
+
+            var difference = currentCandle.Close - trade.EntryPrice;
+            if (Math.Abs(difference) <= trade.LowestPriceChange)
+                return false;
+
+            outcome = difference > 0m ? "PROFIT" : "LOSS";
+            return true;
+        }
+
+        /// <summary>Evaluates and processes all owned positions concurrently.</summary>
+        public async Task PlaceSellOrder(
+            Dictionary<string, TradeOrder> ownedStocks,
+            Dictionary<string, List<Candle>> candles)
+        {
+            if (ownedStocks == null || ownedStocks.Count == 0 || candles == null || candles.Count == 0)
+                return;
+
+            await Task.WhenAll(ownedStocks.Values
+                .Where(x => x != null && !string.IsNullOrWhiteSpace(x.SymbolToken))
+                .Select(x => ProcessSellAsync(x, candles)));
+        }
+
+        private async Task ProcessSellAsync(
+            TradeOrder trade,
+            Dictionary<string, List<Candle>> candles)
+        {
+            try
+            {
+                if (!candles.TryGetValue(trade.SymbolToken, out var stockCandles)
+                    || stockCandles == null || stockCandles.Count == 0)
+                    return;
+
+                var candle = stockCandles.OrderBy(x => x.Timestamp).Last();
+                if (!ValidateSell(trade, candle, out var outcome))
+                    return;
+
+                var exitPrice = candle.Close;
+                
+                if (_settings.Current.EnableAutoTrading)
+                {
+                    var response = await _angel.PlaceOrderAsync(new PlaceOrderRequest
+                    {
+                        TradingSymbol = trade.Symbol,
+                        SymbolToken = trade.SymbolToken,
+                        Exchange = trade.Exchange,
+                        TransactionType = "SELL",
+                        ProductType = "INTRADAY",
+                        OrderType = "MARKET",
+                        Variety = "NORMAL",
+                        Duration = "DAY",
+                        Quantity = trade.Quantity,
+                        IsExitOrder = true,
+                        OrderTag = $"CN399-EXIT-{Guid.NewGuid():N}"[..19]
+                    });
+
+                    if (response?.Status != true || response.Data == null
+                        || string.IsNullOrWhiteSpace(response.Data.OrderId))
+                    {
+                        _logger.LogWarning("SELL ORDER REJECTED Symbol={Symbol} Message={Message}", trade.Symbol, response?.Message);
+                        return;
+                    }
+
+                    await _tradeOrderFileRepository.DeleteAsync(trade.Symbol);
+                    _logger.LogInformation("SELL ORDER SUBMITTED Symbol={Symbol} Outcome={Outcome} OrderId={OrderId}", trade.Symbol, outcome, response.Data.OrderId);
+                    return;
+                }
+
+                trade.ExitPrice = exitPrice;
+                trade.ExitTime = candle.Timestamp;
+                trade.GrossProfit = (exitPrice - trade.EntryPrice) * trade.Quantity;
+                trade.NetProfit = trade.GrossProfit - trade.EstimatedCharges;
+
+                await _tradeCloseStore.AppendAsync(trade);
+                await _tradeOrderFileRepository.DeleteAsync(
+                    string.IsNullOrWhiteSpace(trade.Id) ? trade.Symbol : trade.Id);
+
+                EmailHelper.SendEmail(
+                    EmailHelper.BuildSellOrderEmail(trade),
+                    _settings.Current,
+                    $"{trade.ExecutionMode} CLOSED {trade.Symbol}",
+                    true);
+
+                _logger.LogInformation(
+                    "PAPER SELL COMPLETED Symbol={Symbol} Outcome={Outcome} Entry={EntryPrice:F4} Exit={ExitPrice:F4} GrossPnL={GrossPnL:F2} NetPnL={NetPnL:F2}",
+                    trade.Symbol, outcome, trade.EntryPrice, exitPrice,
+                    trade.GrossProfit, trade.NetProfit);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to process sell for {Symbol}", trade.Symbol);
+            }
         }
     }
 }

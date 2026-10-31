@@ -10,7 +10,6 @@ public class TradingSchedulerBackgroundService : BackgroundService
     private readonly TradingSettingsProvider _settingsProvider;
     private readonly MarketClock _clock;
     private readonly ILogger<TradingSchedulerBackgroundService> _logger;
-    private DateTime _lastSummaryDate = DateTime.MinValue;
     private DateTime _lastMarketCloseFinalizationDate = DateTime.MinValue;
 
     public TradingSchedulerBackgroundService(
@@ -36,21 +35,11 @@ public class TradingSchedulerBackgroundService : BackgroundService
                 var settings = _settingsProvider.Current;
                 var now = _clock.Now;
                 var marketOpen = now.Date.Add(settings.MarketOpenTime);
-                var summaryTime = now.Date.Add(_clock.GetSessionClose()).AddMinutes(5);
-
                 if (now >= marketOpen && _state.LastResetDate != now.Date)
                     _state.Reset();
 
-                // Run the square-off coordinator every minute after the earliest
-                // broker cutoff. It evaluates each open trade using the trade's
-                // persisted instrument type, so changing the global instrument
-
-                var earliestSquareOff = now.Date.Add(settings.RoboAutoSquareOffTime);
-                if (settings.AutoSquareOff && now >= earliestSquareOff && now <= summaryTime)
-                {
-                    using var scope = _serviceProvider.CreateScope();
-                    await scope.ServiceProvider.GetRequiredService<SquareOffService>().Execute();
-                }
+                // ExitBackgroundService performs the configured five-minute-before-close
+                // square-off. This scheduler retains only a market-close recovery barrier.
 
                 var marketClose = now.Date.Add(_clock.GetSessionClose());
 
@@ -64,24 +53,6 @@ public class TradingSchedulerBackgroundService : BackgroundService
                     _lastMarketCloseFinalizationDate = now.Date;
                 }
 
-                if (_clock.IsTradingDay && now >= summaryTime && _lastSummaryDate != now.Date)
-                {
-                    using var scope = _serviceProvider.CreateScope();
-                    var summaryService = scope.ServiceProvider.GetRequiredService<IDailySummaryService>();
-                    var sent = await summaryService.SendDailySummaryAsync();
-
-                    if (sent)
-                    {
-                        _lastSummaryDate = now.Date;
-                    }
-                    else
-                    {
-                        _logger.LogWarning(
-                            "Daily summary was not sent for {Date}; it will be retried on the next scheduler cycle.",
-                            now.Date
-                        );
-                    }
-                }
             }
             catch (Exception ex)
             {
