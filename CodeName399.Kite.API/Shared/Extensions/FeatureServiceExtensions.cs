@@ -1,16 +1,14 @@
-using CodeName399.Kite.API;
+using CodeName399.Kite.API.Application.BackgroundServices;
+using CodeName399.Kite.API.Application.Services;
 using CodeName399.Kite.API.BackgroundServices;
 using CodeName399.Kite.API.Constants;
 using CodeName399.Kite.API.Helpers;
-using CodeName399.Kite.API.Indicators.Calculators;
-using CodeName399.Kite.API.Indicators.Engine;
 using CodeName399.Kite.API.Models;
 using CodeName399.Kite.API.Repositories;
 using CodeName399.Kite.API.Repositories.Interface;
 using CodeName399.Kite.API.Repository;
 using CodeName399.Kite.API.Services;
 using CodeName399.Kite.API.Services.Brokerage;
-using CodeName399.Kite.API.Services.Indicator;
 using CodeName399.Kite.API.Services.Interface;
 using CodeName399.Kite.API.WebSocket.Interface;
 using CodeName399.Model;
@@ -58,51 +56,26 @@ namespace CodeName399.Extensions
         public static void AddSingletonServiceDependencies(this IServiceCollection services)
         {
             services.AddSingleton<IAngelOneService, AngelOneService>();
-            services.AddSingleton<TradingStateService>();
             services.AddSingleton<RawMarketDataArchiveService>();
             services.AddSingleton<TradingSettingsProvider>();
-            services.AddSingleton<LiveMarketCache>();
             services.AddSingleton<AngelBinaryParser>();
-            services.AddSingleton<IMarketDataProvider, MarketDataProvider>();
-            services.AddSingleton<WatchListService>();
-            services.AddSingleton<HistoricalCacheService>();
             services.AddSingleton<IAngelWebSocketClient, AngelWebSocketClient>();
             services.AddSingleton<IMarketHoursService, MarketHoursService>();
             services.AddSingleton<IBrokerageCalculatorService, BrokerageCalculatorService>();
             services.AddSingleton<OrderStatusCache>();
             services.AddSingleton<IAngelOrderWebSocket, AngelOrderWebSocket>();
-            services.AddSingleton<HistoricalDownloadQueue>();
-            services.AddSingleton<TradeManager>();
-            services.AddSingleton<SymbolLockService>();
             services.AddSingleton<RequestHelper>();
-            services.AddSingleton<AtrIndicator>();
-            services.AddSingleton<IndicatorEngine>();
-            services.AddSingleton<HistoricalRateLimiter>();
-            services.AddSingleton<SmartApiRateLimiter>();
-            services.AddSingleton<IntradayRiskGuard>();
             services.AddSingleton<MarketClock>();
-            services.AddSingleton<EmaCrossoverStrategyService>();
             services.AddSingleton<PaperPortfolioService>();
-            services.AddSingleton<CasEligibilityService>();
-            services.AddSingleton<CasTradingRulesService>();
             services.AddSingleton<CommonService>();
         }
 
         public static void AddScopedServiceDependencies(this IServiceCollection services)
         {
             services.AddSingleton<IInstrumentService, InstrumentService>();
-            services.AddScoped<IAngelMarketService, AngelMarketService>();
-            services.AddScoped<IPortfolioService, PortfolioService>();
             services.AddScoped<DashboardService>();
-            services.AddScoped<IHistoricalDataService, HistoricalDataService>();
-            services.AddScoped<MarketScannerService>();
-            services.AddScoped<IIndicatorService, IndicatorService>();
-            services.AddScoped<TradeValidationService>();
-            services.AddScoped<BuyTradingService>();
-            services.AddScoped<SellTradingService>();
             services.AddScoped<SquareOffService>();
             services.AddScoped<IDailySummaryService, DailySummaryService>();
-            services.AddScoped<BrokerReconciliationService>();
         }
 
         public static void AddTransientServiceDependencies(this IServiceCollection services)
@@ -115,16 +88,7 @@ namespace CodeName399.Extensions
             services.AddSignalR();
             services.AddHostedService<RawMarketDataArchiveHostedService>();
             services.AddHostedService<AngelWebSocketBackgroundService>();
-            services.AddHostedService<MarketDiscoveryBackgroundService>();
             services.AddHostedService<OrderWebSocketBackgroundService>();
-            services.AddHostedService<BuyTradingBackgroundService>();
-            services.AddHostedService<SellTradingBackgroundService>();
-            services.AddHostedService<BrokerReconciliationBackgroundService>();
-            services.AddHostedService<HistoricalCacheBackgroundService>();
-            services.AddHostedService<TradeInitializationHostedService>();
-            services.AddHostedService<TradingSchedulerBackgroundService>();
-            services.AddHostedService<TradingTickBackgroundService>();
-            services.AddHostedService<ExitRecoveryBackgroundService>();
             services.AddHostedService<InitialBackgroundService>();
             services.AddHostedService<ExitBackgroundService>();
         }

@@ -15,6 +15,7 @@
     <Compile Remove="Models\**" />
     <Compile Remove="Repositories\**" />
     <Compile Remove="Services\**" />
+    <Compile Remove="Shared\Json\**" />
     <Compile Remove="SignalRHubs\**" />
     <Compile Remove="WebSocket\**" />
     <Compile Remove="Host\**" />
@@ -31,12 +32,16 @@
 		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.1" />
     <Compile Remove="Domain\Models\Dto\**" />
     <Content Remove="Domain\Models\Dto\**" />
+    <Content Remove="Shared\Json\**" />
     <EmbeddedResource Remove="Domain\Models\Dto\**" />
+    <EmbeddedResource Remove="Shared\Json\**" />
     <None Remove="Domain\Models\Dto\**" />
+    <None Remove="Shared\Json\**" />
   </ItemGroup>
 
   <ItemGroup>
     <None Remove="Application\Services\BuyTradingService.cs~RF5c8616a.TMP" />
+    <None Remove="PATCH_NOTES.txt" />
   </ItemGroup>
 
 	<ItemGroup>

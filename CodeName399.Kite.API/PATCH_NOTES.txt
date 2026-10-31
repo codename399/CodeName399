@@ -1,0 +1,28 @@
+Patch notes
+==========
+
+1. EmailHelper.cs
+   - Fixed malformed C# string escaping in HTML table row generation.
+   - Buy email rows use a light-blue table-row background.
+   - Sell email rows retain the calculated outcome background (green/yellow/red).
+   - The sell table header remains blue.
+
+2. Shared/Extensions/FeatureServiceExtensions.cs
+   - Removed stale registrations for feature services/background workers that are not part of the current source flow.
+   - Retained current hosted workers and service dependencies referenced by active services.
+   - Removed unused imports for deleted indicator feature registrations.
+
+3. Domain/Models
+   - Removed model source files whose declared types had no references anywhere else in the project source:
+     ExitSettings.cs
+     InstrumentTradingSettings.cs
+     EntryExecutionAudit.cs
+     HoldingResponse.cs
+     Indicator/CachedHistoricalData.cs
+     ScannerQuotes.cs
+     TradeCandidate.cs
+     TradeExecution.cs
+     TradeResearchMetrics.cs
+     TradeValidationResult.cs
+
+Build note: .NET SDK was not available in the execution environment, so a local dotnet build could not be run.

@@ -1,4 +1,6 @@
-namespace CodeName399.Kite.API.Services;
+using CodeName399.Kite.API.Services;
+
+namespace CodeName399.Kite.API.Application.BackgroundServices;
 
 public sealed class RawMarketDataArchiveHostedService : IHostedService
 {

@@ -17,7 +17,6 @@ public class AngelWebSocketClient : IAngelWebSocketClient
     private readonly AngelOneConfiguration _options;
     private readonly TradingSettingsProvider _settings;
     private readonly AngelBinaryParser _parser;
-    private readonly LiveMarketCache _cache;
     private readonly Dictionary<int, HashSet<string>> _subscriptions = new();
     private readonly Dictionary<int, HashSet<string>> _baseSubscriptions = new();
 
@@ -28,7 +27,6 @@ public class AngelWebSocketClient : IAngelWebSocketClient
     private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
     private TimeSpan HeartbeatInterval => TimeSpan.FromSeconds(Math.Max(1, _settings.Current.WebSocketHeartbeatSeconds));
     private TimeSpan PongTimeout => TimeSpan.FromSeconds(Math.Max(2, _settings.Current.WebSocketPongTimeoutSeconds));
-    private readonly WatchListService _watchList;
     private readonly IAngelOneService _angelOneService;
     private readonly RawMarketDataArchiveService _rawMarketData;
 
@@ -72,8 +70,6 @@ public class AngelWebSocketClient : IAngelWebSocketClient
         IOptions<AngelOneConfiguration> options,
         TradingSettingsProvider settings,
         AngelBinaryParser parser,
-        LiveMarketCache cache,
-        WatchListService watchListService,
         IAngelOneService angelOneService,
         RawMarketDataArchiveService rawMarketData
     )
@@ -84,8 +80,6 @@ public class AngelWebSocketClient : IAngelWebSocketClient
         _options = options.Value;
         _settings = settings;
         _parser = parser;
-        _cache = cache;
-        _watchList = watchListService;
         _angelOneService = angelOneService;
         _rawMarketData = rawMarketData;
     }
@@ -493,14 +487,14 @@ public class AngelWebSocketClient : IAngelWebSocketClient
             return;
 
         tick.LastUpdated = DateTime.UtcNow;
-        var knownStock = _watchList.Get(tick.SymbolToken);
-        if (knownStock != null)
-            tick.TradingSymbol = knownStock.Symbol;
-        _rawMarketData.Record(tick);
+        //var knownStock = _watchList.Get(tick.SymbolToken);
+        //if (knownStock != null)
+        //    tick.TradingSymbol = knownStock.Symbol;
+        //_rawMarketData.Record(tick);
 
-        _cache.Update(tick);
+        //_cache.Update(tick);
 
-        _watchList.UpdateTick(tick);
+        //_watchList.UpdateTick(tick);
 
         TickReceived?.Invoke(this, tick);
     }

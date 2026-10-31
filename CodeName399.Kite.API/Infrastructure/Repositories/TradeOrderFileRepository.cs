@@ -1,4 +1,3 @@
-using CodeName399.Kite.API.Domain.Models;
 using CodeName399.Kite.API.Models;
 using System.Text.Json;
 
@@ -39,7 +38,7 @@ public sealed class TradeOrderFileRepository : ITradeOrderFileRepository
     private async Task WriteAsync(TradeOrder trade)
     {
         var id = EnsureTradeId(trade);
-        var record = TradeOrderRecoveryRecord.From(trade);
+        var record = trade;
         var target = FilePath(id);
         var temp = target + ".tmp";
         var json = JsonSerializer.Serialize(record, _jsonOptions);
@@ -65,9 +64,9 @@ public sealed class TradeOrderFileRepository : ITradeOrderFileRepository
             try
             {
                 var json = await File.ReadAllTextAsync(path);
-                var record = JsonSerializer.Deserialize<TradeOrderRecoveryRecord>(json, _jsonOptions);
-                if (record == null || record.Closed) continue;
-                var trade = record.ToTradeOrder();
+                var record = JsonSerializer.Deserialize<TradeOrder>(json, _jsonOptions);
+                if (record == null) continue;
+                var trade = record;
                 trade.Symbol = trade.Symbol.Trim().ToUpperInvariant();
                 result.Add(trade);
             }
@@ -116,7 +115,7 @@ public sealed class TradeOrderFileRepository : ITradeOrderFileRepository
             {
                 try
                 {
-                    var record = JsonSerializer.Deserialize<TradeOrderRecoveryRecord>(await File.ReadAllTextAsync(path), _jsonOptions);
+                    var record = JsonSerializer.Deserialize<TradeOrder>(await File.ReadAllTextAsync(path), _jsonOptions);
                     if (record != null && string.Equals(record.Symbol, symbolOrTradeId.Trim(), StringComparison.OrdinalIgnoreCase))
                     {
                         File.Delete(path);

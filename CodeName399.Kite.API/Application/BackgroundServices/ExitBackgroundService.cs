@@ -1,5 +1,6 @@
-namespace CodeName399.Kite.API
+namespace CodeName399.Kite.API.Application.BackgroundServices
 {
+    using CodeName399.Kite.API.Application.Services;
     using CodeName399.Kite.API.Services;
     using CodeName399.Kite.API.Services.Interface;
 

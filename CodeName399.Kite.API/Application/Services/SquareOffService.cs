@@ -7,28 +7,19 @@ public class SquareOffService
 {
     private readonly IAngelOneService _angel;
     private readonly TradingSettingsProvider _settings;
-    private readonly SellTradingService _sellTradingService;
-    private readonly TradeManager _tradeManager;
     private readonly MarketClock _clock;
     private readonly ILogger<SquareOffService> _logger;
-    private readonly LiveMarketCache _marketCache;
 
     public SquareOffService(
         IAngelOneService angel,
         TradingSettingsProvider settings,
-        SellTradingService sellTradingService,
-        TradeManager tradeManager,
         MarketClock clock,
-        ILogger<SquareOffService> logger,
-        LiveMarketCache marketCache)
+        ILogger<SquareOffService> logger)
     {
         _angel = angel;
         _settings = settings;
-        _sellTradingService = sellTradingService;
-        _tradeManager = tradeManager;
         _clock = clock;
         _logger = logger;
-        _marketCache = marketCache;
     }
 
     /// <summary>
@@ -261,24 +252,4 @@ public class SquareOffService
 
         _logger.LogCritical("Unable to flatten live intraday position {Symbol} ({Exchange}:{Token}) after retries.", trade.Symbol, trade.Exchange, trade.SymbolToken);
     }
-    public async Task EmergencyCloseAsync(TradeOrder trade, string reason)
-    {
-        if (trade.Closed) return;
-        trade.ExitRequired = true;
-        trade.ExitReason = reason;
-        if (trade.ExecutionMode == TradeExecutionMode.Paper)
-        {
-            var tick = _marketCache.Get(trade.SymbolToken);
-            trade.ExitPrice = trade.Direction == TradeDirection.Short
-                ? (tick?.Ask > 0 ? tick.Ask : tick?.Ltp > 0 ? tick.Ltp : trade.CurrentPrice > 0 ? trade.CurrentPrice : trade.EntryPrice)
-                : (tick?.Bid > 0 ? tick.Bid : tick?.Ltp > 0 ? tick.Ltp : trade.CurrentPrice > 0 ? trade.CurrentPrice : trade.EntryPrice);
-            trade.ExitTime = DateTime.UtcNow;
-            trade.ExitRequired = false;
-            await _tradeManager.CloseAsync(trade);
-            return;
-        }
-        var cfg = _settings.Current.Equity;
-        await ForceCloseLiveTradeAsync(trade, Math.Max(1, cfg.MaximumExitRetries));
-    }
-
 }

@@ -12,21 +12,21 @@ namespace CodeName399.Kite.API.Services
         private readonly TradingSettingsProvider _settings;
         private readonly ILogger<DailySummaryService> _logger;
         private readonly TradeCloseHistoryStore _closeHistory;
-        private readonly TradeManager _tradeManager;
+        private readonly ITradeOrderFileRepository _tradeOrderFileRepository;
 
         public DailySummaryService(
             IAngelOneService angel,
             TradingSettingsProvider settings,
             ILogger<DailySummaryService> logger,
             TradeCloseHistoryStore closeHistory,
-            TradeManager tradeManager
+            ITradeOrderFileRepository tradeOrderFileRepository
         )
         {
             _angel = angel;
             _settings = settings;
             _logger = logger;
             _closeHistory = closeHistory;
-            _tradeManager = tradeManager;
+            _tradeOrderFileRepository = tradeOrderFileRepository;
         }
 
         public async Task<DailyTradingSummary> GetDailySummaryAsync(DateOnly date)
@@ -37,7 +37,7 @@ namespace CodeName399.Kite.API.Services
 
             var closedTrades = await _closeHistory.GetAsync(startUtc, endUtc);
             var openTrades = date == DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ist))
-                ? _tradeManager.GetOpen().Where(x => x.InstrumentType == InstrumentType.Equity && !x.Closed).ToList()
+                ? await _tradeOrderFileRepository.GetOpenTradesAsync()
                 : [];
 
             var summary = BuildSummary(date, closedTrades, openTrades);
@@ -51,9 +51,9 @@ namespace CodeName399.Kite.API.Services
             foreach (var trade in trades)
             {
                 var investment = trade.EntryPrice * trade.Quantity;
-                var gross = trade.RealizedGrossProfit;
-                var charges = trade.RealizedCharges > 0 ? trade.RealizedCharges : trade.EstimatedCharges;
-                var net = trade.RealizedNetProfit != 0 || gross != 0 ? trade.RealizedNetProfit : gross - charges;
+                var gross = trade.GrossProfit;
+                var charges =  trade.EstimatedCharges;
+                var net = trade.NetProfit != 0 || gross != 0 ? trade.NetProfit : gross - charges;
                 if (net >= 0) summary.WinningTrades++; else summary.LosingTrades++;
                 summary.GrossProfit += Math.Max(0, gross);
                 summary.GrossLoss += Math.Min(0, gross);
@@ -67,8 +67,7 @@ namespace CodeName399.Kite.API.Services
 
             foreach (var trade in openTrades)
             {
-                var current = trade.CurrentPrice > 0 ? trade.CurrentPrice : trade.EntryPrice;
-                var unrealized = (current - trade.EntryPrice) * trade.Quantity;
+                var unrealized = trade.EntryPrice * trade.Quantity;
                 summary.UnrealizedPnL += unrealized;
                 summary.OpenTrades.Add(ToDailyTrade(trade, unrealized, trade.EstimatedCharges, true));
             }
@@ -90,14 +89,9 @@ namespace CodeName399.Kite.API.Services
             ExitPrice = trade.ExitPrice,
             Investment = trade.EntryPrice * trade.Quantity,
             Charges = charges,
-            GrossProfit = trade.RealizedGrossProfit,
+            GrossProfit = trade.GrossProfit,
             ProfitLoss = pnl,
             ProfitLossPercent = trade.EntryPrice * trade.Quantity == 0 ? 0 : pnl * 100m / (trade.EntryPrice * trade.Quantity),
-            ExitReason = trade.ExitReason,
-            ExitCategory = trade.ExitCategory,
-            ExitTrigger = trade.ExitTrigger,
-            EntryDecision = trade.EntryDecision,
-            EntryReason = trade.EntryReason,
             EntryTime = trade.EntryTime,
             ExitTime = trade.ExitTime ?? DateTime.MinValue,
             IsOpen = open
@@ -231,8 +225,6 @@ namespace CodeName399.Kite.API.Services
                             ProfitLoss = net,
 
                             ProfitLossPercent = investment == 0 ? 0 : net * 100 / investment,
-
-                            ExitReason = trade.ExitReason,
 
                             EntryTime = trade.EntryTime,
 

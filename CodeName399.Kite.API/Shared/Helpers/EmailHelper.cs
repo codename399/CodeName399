@@ -238,9 +238,9 @@ namespace CodeName399.Kite.API.Helpers
                     value = "<unavailable>";
                 }
 
-                rows.Append("<tr style=\\"background:")
-                    .Append(tableOutcomeColor)
-                    .Append(";\\"><th>")
+                rows.Append("<tr style=\"background:")
+                    .Append("#eff6ff")
+                    .Append(";\"><th>")
                     .Append(H(property.Name))
                     .Append("</th><td>")
                     .Append(H(FormatValue(value)))
@@ -323,9 +323,9 @@ thead th { background:#0d6efd; color:#fff; }
                     value = "<unavailable>";
                 }
 
-                rows.Append("<tr style=\\"background:")
+                rows.Append("<tr style=\"background:")
                     .Append(tableOutcomeColor)
-                    .Append(";\\"><th>")
+                    .Append(";\"><th>")
                     .Append(H(property.Name))
                     .Append("</th><td>")
                     .Append(H(FormatValue(value)))

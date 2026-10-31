@@ -1,17 +1,15 @@
-namespace CodeName399.Kite.API
+namespace CodeName399.Kite.API.Application.Services
 {
     using CodeName399.Kite.API.Constants;
     using CodeName399.Kite.API.Extensions;
     using CodeName399.Kite.API.Helpers;
-    using CodeName399.Kite.API.Helpers.Calculators;
     using CodeName399.Kite.API.Models;
     using CodeName399.Kite.API.Models.Indicator;
-    using CodeName399.Kite.API.Models.Enum;
+    using CodeName399.Kite.API.Models.WebSocketOrder;
     using CodeName399.Kite.API.Repository;
     using CodeName399.Kite.API.Services;
     using CodeName399.Kite.API.Services.Brokerage;
     using Microsoft.Extensions.Options;
-    using CodeName399.Kite.API.Models.WebSocketOrder;
 
     public class CommonService
     {
@@ -176,10 +174,16 @@ namespace CodeName399.Kite.API
             var result = new List<MarketQuoteData>();
             foreach (var group in instruments.GroupBy(x => x.exch_seg))
             {
-                foreach (var batch in IndicatorHelper.ChunkTokens(group.Select(x => x.token).ToList()))
+                foreach (var batch in ChunkTokens(group.Select(x => x.token).ToList()))
                     result.AddRange(await GetBatchAsync(batch, jwt, group.Key));
             }
             return result;
+        }
+
+        private IEnumerable<List<string>> ChunkTokens(List<string> tokens, int size = 50)
+        {
+            for (var i = 0; i < tokens.Count; i += size)
+                yield return tokens.Skip(i).Take(size).ToList();
         }
 
         private async Task<List<MarketQuoteData>> GetBatchAsync(List<string> tokens, string jwt, string exchange)
@@ -1029,7 +1033,7 @@ namespace CodeName399.Kite.API
                     return;
 
                 var exitPrice = candle.Close;
-                
+
                 if (_settings.Current.EnableAutoTrading)
                 {
                     var response = await _angel.PlaceOrderAsync(new PlaceOrderRequest

@@ -29,16 +29,11 @@ public sealed class TradeCloseHistoryStore
             Quantity = trade.Quantity,
             EntryPrice = trade.EntryPrice,
             ExitPrice = trade.ExitPrice,
-            Charges = trade.RealizedCharges > 0 ? trade.RealizedCharges : trade.EstimatedCharges,
-            GrossProfit = trade.RealizedGrossProfit,
-            ProfitLoss = trade.RealizedNetProfit,
+            Charges = trade.EstimatedCharges,
+            GrossProfit = trade.GrossProfit,
+            ProfitLoss = trade.NetProfit,
             EntryTime = trade.EntryTime,
             ExitTime = trade.ExitTime.Value,
-            ExitReason = trade.ExitReason,
-            ExitCategory = trade.ExitCategory,
-            ExitTrigger = trade.ExitTrigger,
-            EntryDecision = trade.EntryDecision,
-            EntryReason = trade.EntryReason
         };
 
         var path = Path.Combine(_rootPath, $"{record.ExitTime:yyyy-MM-dd}.jsonl");
@@ -80,11 +75,6 @@ public sealed class TradeCloseHistoryStore
         public decimal Charges { get; set; }
         public decimal GrossProfit { get; set; }
         public decimal ProfitLoss { get; set; }
-        public string ExitReason { get; set; } = "";
-        public string ExitCategory { get; set; } = "";
-        public string ExitTrigger { get; set; } = "";
-        public string EntryDecision { get; set; } = "";
-        public string EntryReason { get; set; } = "";
         public DateTime EntryTime { get; set; }
         public DateTime ExitTime { get; set; }
 
@@ -96,18 +86,10 @@ public sealed class TradeCloseHistoryStore
             EntryPrice = EntryPrice,
             ExitPrice = ExitPrice,
             EstimatedCharges = Charges,
-            RealizedCharges = Charges,
-            RealizedGrossProfit = GrossProfit,
-            RealizedNetProfit = ProfitLoss,
+            GrossProfit = GrossProfit,
+            NetProfit = ProfitLoss,
             EntryTime = EntryTime,
-            ExitTime = ExitTime,
-            ExitReason = ExitReason,
-            ExitCategory = ExitCategory,
-            ExitTrigger = ExitTrigger,
-            EntryDecision = EntryDecision,
-            EntryReason = EntryReason,
-            Closed = true,
-            Status = TradeStatus.Closed
+            ExitTime = ExitTime
         };
     }
 }

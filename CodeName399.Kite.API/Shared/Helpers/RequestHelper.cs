@@ -9,8 +9,6 @@ public class RequestHelper
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<RequestHelper> _logger;
-    private readonly SmartApiRateLimiter _rateLimiter;
-
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -19,12 +17,10 @@ public class RequestHelper
 
     public RequestHelper(
         IHttpClientFactory factory,
-        ILogger<RequestHelper> logger,
-        SmartApiRateLimiter rateLimiter)
+        ILogger<RequestHelper> logger)
     {
         _httpClient = factory.CreateClient(Constant.AngelRefresh);
         _logger = logger;
-        _rateLimiter = rateLimiter;
     }
 
     public async Task SendAsync(HttpRequestMessage request)
@@ -41,22 +37,13 @@ public class RequestHelper
                     response.StatusCode == System.Net.HttpStatusCode.Forbidden &&
                     content.Contains("exceeding access rate", StringComparison.OrdinalIgnoreCase);
 
-                if (isHistoricalRateLimit)
-                {
-                    // Report the cooldown here; HistoricalRateLimiter owns the
-                    // rate-limit diagnostic so we do not emit a duplicate HTTP error.
-                    _rateLimiter.ReportGlobalRateLimit(TimeSpan.FromSeconds(15));
-                }
-                else
-                {
-                    _logger.LogError(
-                        "HTTP {Method} {Url} failed. Status={StatusCode}. Response={Response}",
-                        request.Method,
-                        request.RequestUri,
-                        (int)response.StatusCode,
-                        content
-                    );
-                }
+                _logger.LogError(
+                    "HTTP {Method} {Url} failed. Status={StatusCode}. Response={Response}",
+                    request.Method,
+                    request.RequestUri,
+                    (int)response.StatusCode,
+                    content
+                );
 
                 throw new AngelApiException(response.StatusCode, content);
             }
@@ -87,22 +74,14 @@ public class RequestHelper
                     response.StatusCode == System.Net.HttpStatusCode.Forbidden &&
                     content.Contains("exceeding access rate", StringComparison.OrdinalIgnoreCase);
 
-                if (isHistoricalRateLimit)
-                {
-                    // Report the cooldown here; HistoricalRateLimiter owns the
-                    // rate-limit diagnostic so we do not emit a duplicate HTTP error.
-                    _rateLimiter.ReportGlobalRateLimit(TimeSpan.FromSeconds(15));
-                }
-                else
-                {
-                    _logger.LogError(
-                        "HTTP {Method} {Url} failed. Status={StatusCode}. Response={Response}",
-                        request.Method,
-                        request.RequestUri,
-                        (int)response.StatusCode,
-                        content
-                    );
-                }
+
+                _logger.LogError(
+                    "HTTP {Method} {Url} failed. Status={StatusCode}. Response={Response}",
+                    request.Method,
+                    request.RequestUri,
+                    (int)response.StatusCode,
+                    content
+                );
 
                 throw new AngelApiException(response.StatusCode, content);
             }
