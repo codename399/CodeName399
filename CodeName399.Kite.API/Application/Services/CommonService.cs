@@ -1008,19 +1008,21 @@ namespace CodeName399.Kite.API.Application.Services
         /// <summary>Evaluates and processes all owned positions concurrently.</summary>
         public async Task PlaceSellOrder(
             Dictionary<string, TradeOrder> ownedStocks,
-            Dictionary<string, List<Candle>> candles)
+            Dictionary<string, List<Candle>> candles,
+            bool forceSquareOff = false)
         {
             if (ownedStocks == null || ownedStocks.Count == 0 || candles == null || candles.Count == 0)
                 return;
 
             await Task.WhenAll(ownedStocks.Values
                 .Where(x => x != null && !string.IsNullOrWhiteSpace(x.SymbolToken))
-                .Select(x => ProcessSellAsync(x, candles)));
+                .Select(x => ProcessSellAsync(x, candles, forceSquareOff)));
         }
 
         private async Task ProcessSellAsync(
             TradeOrder trade,
-            Dictionary<string, List<Candle>> candles)
+            Dictionary<string, List<Candle>> candles,
+            bool forceSquareOff)
         {
             try
             {
@@ -1029,7 +1031,8 @@ namespace CodeName399.Kite.API.Application.Services
                     return;
 
                 var candle = stockCandles.OrderBy(x => x.Timestamp).Last();
-                if (!ValidateSell(trade, candle, out var outcome))
+                var outcome = forceSquareOff ? "SQUARE_OFF" : string.Empty;
+                if (!forceSquareOff && !ValidateSell(trade, candle, out outcome))
                     return;
 
                 var exitPrice = candle.Close;
