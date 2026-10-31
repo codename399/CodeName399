@@ -19,7 +19,7 @@ public sealed class MarketClock
     public DateTime Today => Now.Date;
     public DateTime MarketOpen => Today.Add(_settings.Current.MarketOpenTime);
     public DateTime MarketClose => Today.Add(_settings.Current.MarketCloseTime);
-    public DateTime AutoSquareOffTime => MarketClose.AddMinutes(-5);
+    public DateTime AutoSquareOffTime => MarketClose.AddMinutes(-(_settings.Current.AutoSquareOffMinutes));
 
     public bool IsTradingDay => Now.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday)
         && !(_settings.Current.TradingHolidays ?? []).Contains(DateOnly.FromDateTime(Now));

@@ -24,6 +24,7 @@ namespace CodeName399.Kite.API.Models.Configuration
         public int CandleBatchSize { get; set; } = 2;
         public int BatchDelay { get; set; } = 1;
         public int BuyBatchSize { get; set; } = 5;
+        public int AutoSquareOffMinutes { get; set; } = 5;
         public string CandleInterval { get; set; } = "ONE_MINUTE";
         public DateOnly? LastDailySummarySent { get; set; } = null;
         public DateTime? InstrumentLoadedAt { get; set; } = null;
