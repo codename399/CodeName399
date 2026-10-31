@@ -1,8 +1,6 @@
-using System.Text.Json;
 using CodeName399.Kite.API.Domain.Models;
-using CodeName399.Kite.API.Helpers;
 using CodeName399.Kite.API.Models;
-using CodeName399.Kite.API.Models.Enum;
+using System.Text.Json;
 
 namespace CodeName399.Kite.API.Repository;
 
@@ -84,7 +82,7 @@ public sealed class TradeOrderFileRepository : ITradeOrderFileRepository
     public async Task SaveAsync(TradeOrder trade)
     {
         ArgumentNullException.ThrowIfNull(trade);
-        if (trade.Closed) throw new InvalidOperationException("Closed TradeOrder instances are not persisted.");
+
         trade.Symbol = trade.Symbol.Trim().ToUpperInvariant();
         await WriteAsync(trade);
     }
@@ -97,11 +95,7 @@ public sealed class TradeOrderFileRepository : ITradeOrderFileRepository
     public async Task UpdateAsync(TradeOrder trade)
     {
         ArgumentNullException.ThrowIfNull(trade);
-        if (trade.Closed)
-        {
-            await DeleteAsync(trade.Id);
-            return;
-        }
+
         await WriteAsync(trade);
     }
 
@@ -137,26 +131,4 @@ public sealed class TradeOrderFileRepository : ITradeOrderFileRepository
         }
         finally { _ioLock.Release(); }
     }
-
-    public async Task CloseTradeAsync(string symbol) => await DeleteAsync(symbol);
-
-    public async Task<Dictionary<string, TradeOrder>> GetAllOpenAsync()
-        => (await ReadAllAsync()).ToDictionary(PositionIdentity.Create, StringComparer.OrdinalIgnoreCase);
-
-    public async Task UpdateManyAsync(IEnumerable<TradeOrder> trades)
-    {
-        foreach (var trade in trades) await UpdateAsync(trade);
-    }
-
-    public async Task<List<TradeOrder>> GetPendingTradesAsync()
-        => (await ReadAllAsync()).Where(x => x.Status == TradeStatus.PendingBrokerConfirmation).ToList();
-
-    public async Task UpdateStatusAsync(string symbol, TradeStatus status)
-    {
-        var trade = await GetAsync(symbol);
-        if (trade == null) return;
-        trade.Status = status;
-        await UpdateAsync(trade);
-    }
-
 }

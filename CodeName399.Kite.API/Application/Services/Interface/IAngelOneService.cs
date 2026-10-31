@@ -8,6 +8,8 @@ public interface IAngelOneService
 
     Task<decimal> GetAvailableBalanceAsync();
 
+    Task<decimal?> GetLtpDataAsync(string exchange, string tradingSymbol, string symbolToken, CancellationToken cancellationToken = default);
+
     Task<List<Position>> GetPositionsAsync(bool forceRefresh = false);
     bool LastPositionRefreshSucceeded { get; }
     bool ValidateRegisteredStaticIp(out string error);

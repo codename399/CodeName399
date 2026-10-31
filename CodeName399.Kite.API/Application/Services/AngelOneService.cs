@@ -1,4 +1,4 @@
-﻿using CodeName399.Kite.API.Constants;
+using CodeName399.Kite.API.Constants;
 using CodeName399.Kite.API.Extensions;
 using CodeName399.Kite.API.Helpers;
 using CodeName399.Kite.API.Models;
@@ -833,6 +833,35 @@ public partial class AngelOneService : IAngelOneService
         catch
         {
             return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, MarketClock.IndiaTimeZone);
+        }
+    }
+
+    public async Task<decimal?> GetLtpDataAsync(string exchange, string tradingSymbol, string symbolToken, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(exchange) || string.IsNullOrWhiteSpace(tradingSymbol) || string.IsNullOrWhiteSpace(symbolToken))
+            return null;
+
+        await _rateLimiter.WaitAsync("getltpdata", cancellationToken);
+        var login = await GetLoginDataAsync();
+        using var request = new HttpRequestMessage(HttpMethod.Post, AngelApiUrlConstant.ltpDataUrl);
+        request.AddAngelOneHeaders(_options, login.JwtToken);
+        request.AddContent(new { exchange, tradingsymbol = tradingSymbol, symboltoken = symbolToken });
+
+        try
+        {
+            var result = await _requestHelper.SendAsync<LtpDataResponse>(request);
+            var ltp = result.Data?.Ltp ?? 0m;
+            if (ltp <= 0m)
+            {
+                _logger.LogWarning("Angel One returned invalid LTP for {Exchange}:{Symbol} token={Token}", exchange, tradingSymbol, symbolToken);
+                return null;
+            }
+            return ltp;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Unable to retrieve LTP for {Exchange}:{Symbol} token={Token}", exchange, tradingSymbol, symbolToken);
+            return null;
         }
     }
 

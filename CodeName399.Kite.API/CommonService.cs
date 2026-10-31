@@ -1,4 +1,4 @@
-﻿namespace CodeName399.Kite.API
+namespace CodeName399.Kite.API
 {
     using CodeName399.Kite.API.Constants;
     using CodeName399.Kite.API.Extensions;
@@ -102,7 +102,7 @@
             var openTrades = await _tradeOrderFileRepository.GetOpenTradesAsync();
             foreach (var trade in openTrades)
             {
-                if (!trade.Closed && !string.IsNullOrWhiteSpace(trade.Symbol))
+                if (!string.IsNullOrWhiteSpace(trade.Symbol))
                     ownedSymbols.Add(trade.Symbol.Trim().ToUpperInvariant());
             }
 
@@ -148,9 +148,7 @@
                 .Select(x => x.ToUpperInvariant())
                 .ToHashSet();
 
-            var exchange = string.IsNullOrWhiteSpace(settings.Equity.Exchange)
-                ? "NSE"
-                : settings.Equity.Exchange.Trim().ToUpperInvariant();
+            var exchange = "NSE";
 
             var quotes = await GetQuotesInChunksAsync(instruments, jwt);
 
@@ -191,7 +189,6 @@
                     if (quote.Ask <= 0)
                         quote.Ask = quote.Depth?.Sell?.Where(x => x.Price > 0).Select(x => x.Price).DefaultIfEmpty(0m).Min() ?? 0m;
 
-                    quote.InstrumentType = InstrumentType.Equity;
                     quote.Exchange = exchange;
                     quote.QuoteTimeUtc = DateTime.UtcNow;
                 }
@@ -295,6 +292,7 @@
                 });
 
                 var batchResults = await Task.WhenAll(tasks);
+
                 foreach (var result in batchResults)
                 {
                     candlesByToken[result.Token] = result.Candles;
@@ -569,16 +567,33 @@
 
         public async Task PlaceBuyOrders(HashSet<MarketQuoteData> quotes, Dictionary<string, List<Candle>> candles, string jwtToken)
         {
-            foreach (var quote in quotes)
+            const int batchSize = 5;
+
+            foreach (var batch in quotes.Chunk(batchSize))
             {
-                if (ValidateBuyConditions(quote))
+                var batchTasks = batch.Select(async quote =>
                 {
-                    var quantity = await GetQuantites(quote, jwtToken, candles.TryGetValue(quote.SymbolToken, out var quoteCandles) ? quoteCandles : new List<Candle>());
+                    if (!ValidateBuyConditions(quote))
+                        return;
+
+                    var quoteCandles = candles.TryGetValue(quote.SymbolToken, out var loadedCandles)
+                        ? loadedCandles
+                        : new List<Candle>();
+
+                    var (quantity, margin, ltp) = await GetQuantitesAndMargin(quote, jwtToken, quoteCandles);
+
                     if (quantity > 0)
                     {
-                        // Place buy order
+                        var tradeOrder = MarketQuoteData.ToTradeOrder(quote);
+                        tradeOrder.Quantity = quantity;
+                        tradeOrder.TotalInvestment = margin;
+                        tradeOrder.EntryPrice = ltp;
+
+                        await _tradeOrderFileRepository.SaveAsync(tradeOrder);
                     }
-                }
+                });
+
+                await Task.WhenAll(batchTasks);
             }
         }
 
@@ -599,12 +614,21 @@
             return true;
         }
 
-        private async Task<int> GetQuantites(MarketQuoteData quote, string jwtToken, List<Candle> candles)
+        private async Task<(int Quantity, decimal Margin,decimal Ltp)> GetQuantitesAndMargin(MarketQuoteData quote, string jwtToken, List<Candle> candles)
         {
+            var ltp = await _angel.GetLtpDataAsync(quote.Exchange, quote.TradingSymbol, quote.SymbolToken);
+            if (!ltp.HasValue || ltp.Value <= 0m)
+            {
+                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=AngelOneLtp Reason=LtpUnavailable", quote.TradingSymbol);
+                return (0, 0m, 0m);
+            }
+
+            var currentLtp = ltp.Value;
             decimal lowestPriceChange;
             try
             {
                 lowestPriceChange = await GetLowestPriceChangeAsync(quote, jwtToken, candles);
+                quote.LowestPriceChange = lowestPriceChange;
             }
             catch (Exception ex)
             {
@@ -614,39 +638,39 @@
 
             if (lowestPriceChange <= 0m)
             {
-                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=ChargeCoverQuantity Price={Price:F4} LowestPriceChange={LowestPriceChange:F6} Reason=NoUsableCandleChange", quote.TradingSymbol, quote.Ltp, lowestPriceChange);
+                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=ChargeCoverQuantity Price={Price:F4} LowestPriceChange={LowestPriceChange:F6} Reason=NoUsableCandleChange", quote.TradingSymbol, currentLtp, lowestPriceChange);
 
-                return 0;
+                return (0, 0m, 0m);
             }
 
-            var minimumQuantity = await FindMinimumChargeCoverQuantityAsync(quote, quote.Ltp, lowestPriceChange);
+            var minimumQuantity = await FindMinimumChargeCoverQuantityAsync(quote, currentLtp, lowestPriceChange);
             if (minimumQuantity <= 0)
             {
-                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=ChargeCoverQuantity Price={Price:F4} LowestPriceChange={LowestPriceChange:F6} Reason=NoQuantityFound", quote.TradingSymbol, quote.Ltp, lowestPriceChange);
+                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=ChargeCoverQuantity Price={Price:F4} LowestPriceChange={LowestPriceChange:F6} Reason=NoQuantityFound", quote.TradingSymbol, currentLtp, lowestPriceChange);
 
-                return 0;
+                return (0, 0m, 0m);
             }
 
             var availableAtPrice = GetAvailableAtCurrentPrice(quote);
-            _logger.LogInformation("ORDER DIAGNOSTIC ChargeCoverAndDepth Symbol={Symbol} MinimumChargeCoverQuantity={MinimumQuantity} AvailableAskQuantityAtCurrentPrice={AvailableQuantity} CurrentPrice={Price:F4} LowestPriceChange={LowestPriceChange:F6} PriceChangeLookbackCandles={CandleCount}", quote.TradingSymbol, minimumQuantity, availableAtPrice, quote.Ltp, lowestPriceChange, chargeCoverAveragePriceChangeCandles);
+            _logger.LogInformation("ORDER DIAGNOSTIC ChargeCoverAndDepth Symbol={Symbol} MinimumChargeCoverQuantity={MinimumQuantity} AvailableAskQuantityAtCurrentPrice={AvailableQuantity} CurrentPrice={Price:F4} LowestPriceChange={LowestPriceChange:F6} PriceChangeLookbackCandles={CandleCount}", quote.TradingSymbol, minimumQuantity, availableAtPrice, currentLtp, lowestPriceChange, chargeCoverAveragePriceChangeCandles);
             if (availableAtPrice < minimumQuantity)
             {
-                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=MarketDepth MinimumRequiredQuantity={MinimumQuantity} AvailableAtCurrentPrice={AvailableQuantity} Price={Price:F4}", quote.TradingSymbol, minimumQuantity, availableAtPrice, quote.Ltp);
+                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=MarketDepth MinimumRequiredQuantity={MinimumQuantity} AvailableAtCurrentPrice={AvailableQuantity} Price={Price:F4}", quote.TradingSymbol, minimumQuantity, availableAtPrice, currentLtp);
 
-                return 0;
+                return (0, 0m, 0m);
             }
 
-            var affordable = await GetAffordableQuantity(quote, minimumQuantity, availableAtPrice, await _angel.GetAvailableBalanceAsync());
+            var affordable = await GetAffordableQuantity(quote, currentLtp, minimumQuantity, availableAtPrice, await _angel.GetAvailableBalanceAsync());
             var quantity = affordable.Quantity;
             var requiredMargin = affordable.Margin;
             if (quantity < minimumQuantity)
             {
                 _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Gate=AffordableQuantity MinimumRequiredQuantity={MinimumQuantity} AvailableAtPrice={AvailableAtPrice} AvailableBalance={Balance:F2} MarginReturned={Margin:F2}", quote.TradingSymbol, minimumQuantity, availableAtPrice, await _angel.GetAvailableBalanceAsync(), requiredMargin);
 
-                return 0;
+                return (0, 0m, 0m);
             }
 
-            return quantity;
+            return (quantity, requiredMargin, currentLtp);
         }
 
         private async Task<decimal> GetLowestPriceChangeAsync(MarketQuoteData quote, string jwtToken, List<Candle> candles)
@@ -729,10 +753,13 @@
             while (low < high)
             {
                 var middle = low + (high - low) / 2;
-                if (increment * middle > EstimatedRoundTripCharges(middle))
+                var estimatedCharges = EstimatedRoundTripCharges(middle);
+                if (increment * middle > estimatedCharges)
                     high = middle;
                 else
                     low = middle + 1;
+
+                quote.EstimatedCharges = estimatedCharges;
             }
 
             _logger.LogInformation(
@@ -761,6 +788,7 @@
 
         private async Task<(int Quantity, decimal Margin)> GetAffordableQuantity(
             MarketQuoteData quote,
+            decimal ltp,
             int minimumQuantity,
             int maximumAvailableQuantity,
             decimal availableBalance)
@@ -778,11 +806,11 @@
             {
                 var quantity = low + (high - low) / 2;
                 var margin = await _angel.GetRequiredMarginAsync(
-                    quote.SymbolToken, quantity, quote.Ltp,
+                    quote.SymbolToken, quantity, ltp,
                     quote.Exchange, "INTRADAY", "BUY");
                 _logger.LogInformation(
                     "INTRADAY MARGIN CHECK Symbol={Symbol} Token={Token} Exchange={Exchange} ProductType=INTRADAY OrderType=MARKET Quantity={Quantity} ReferencePrice={Price:F4} BrokerRequiredMargin={Margin:F2} AvailableFunds={Funds:F2}",
-                    quote.TradingSymbol, quote.SymbolToken, quote.Exchange, quantity, quote.Ltp, margin, availableBalance);
+                    quote.TradingSymbol, quote.SymbolToken, quote.Exchange, quantity, ltp, margin, availableBalance);
 
                 if (margin > 0m && margin <= availableBalance)
                 {
