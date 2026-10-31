@@ -1,5 +1,6 @@
 namespace CodeName399.Kite.API.Models.Configuration
 {
+    using CodeName399.Kite.API.Domain.Models.Enum;
     using MongoDB.Bson.Serialization.Attributes;
     using System;
     using System.Collections.Generic;
@@ -26,6 +27,8 @@ namespace CodeName399.Kite.API.Models.Configuration
         public int BuyBatchSize { get; set; } = 5;
         public int AutoSquareOffMinutes { get; set; } = 5;
         public string CandleInterval { get; set; } = "ONE_MINUTE";
+
+        public EntryStrategyEnum EntryStrategy { get; set; } = EntryStrategyEnum.EmaCrossOver;
         public DateOnly? LastDailySummarySent { get; set; } = null;
         public DateTime? InstrumentLoadedAt { get; set; } = null;
         public string MarketTimeZoneId { get; set; } = "Asia/Kolkata";

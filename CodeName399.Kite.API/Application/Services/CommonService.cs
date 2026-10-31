@@ -685,12 +685,12 @@ namespace CodeName399.Kite.API.Application.Services
             {
                 var batchTasks = batch.Select(async quote =>
                 {
-                    if (!ValidateBuyConditions(quote))
-                        return;
-
                     var quoteCandles = candles.TryGetValue(quote.SymbolToken, out var loadedCandles)
                         ? loadedCandles
                         : new List<Candle>();
+
+                    if (!EntryStrategyService.ValidateBuyConditions(_settings.Current.EntryStrategy, quote, quoteCandles))
+                        return;
 
                     var (quantity, margin, ltp) = await GetQuantitesAndMargin(quote, jwtToken, quoteCandles);
 
@@ -769,23 +769,6 @@ namespace CodeName399.Kite.API.Application.Services
 
                 await Task.WhenAll(batchTasks);
             }
-        }
-
-        private bool ValidateBuyConditions(MarketQuoteData quote)
-        {
-            if (quote == null)
-                return false;
-            if (quote.Ema9 <= 0 || quote.Ema21 <= 0 || quote.PreviousCandleEma9 <= 0 || quote.PreviousCandleEma21 <= 0)
-                return false;
-            if (quote.ChoppinessIndex > 61.8m)
-                return false;
-            if (quote.Ltp <= quote.Ema9 || quote.Ltp <= quote.Ema21)
-                return false;
-            if (quote.Ema9 <= quote.Ema21)
-                return false;
-            if (quote.PreviousCandleEma9 >= quote.PreviousCandleEma21)
-                return false;
-            return true;
         }
 
         private async Task<(int Quantity, decimal Margin, decimal Ltp)> GetQuantitesAndMargin(MarketQuoteData quote, string jwtToken, List<Candle> candles)
