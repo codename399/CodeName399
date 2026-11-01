@@ -48,14 +48,22 @@
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('scanner', 'candidates', 'candles', 'batch', 'excluded symbols', 'charge cover')">
+    <section class="settings-card" *ngIf="sectionMatches('entry strategy', 'strategy', 'ema crossover', 'fair value gap', 'fvg', 'volatility compression', 'scanner', 'candidates', 'candles', 'batch', 'excluded symbols', 'charge cover')">
       <div class="card-header">
         <button type="button" class="accordion-trigger" (click)="toggleSection('scanner')" [attr.aria-expanded]="openSection === 'scanner'">
-          <span><h2>Market Scan &amp; Candle Processing</h2><p>Candidate count, candle interval, batching and charge-cover lookback.</p></span>
+          <span><h2>Entry Strategy &amp; Market Scan</h2><p>Select the entry model, candidate count, candle interval and batching.</p></span>
           <span class="accordion-icon">{{ openSection === 'scanner' ? '−' : '+' }}</span>
         </button>
       </div>
       <div class="grid-4" *ngIf="openSection === 'scanner'">
+        <label class="wide-field"><span>Entry strategy</span>
+          <select formControlName="entryStrategy">
+            <option value="EmaCrossOver">EMA crossover</option>
+            <option value="EmaCrossOverWithPullback">EMA crossover with pullback</option>
+            <option value="FVGWithSweep">Fair Value Gap with liquidity sweep</option>
+            <option value="NoiseBand">Volatility compression breakout</option>
+          </select>
+        </label>
         <label><span>Maximum candidates</span><input type="number" formControlName="maxCandidates" min="1"></label>
         <label><span>Candle interval</span>
           <select formControlName="candleInterval">

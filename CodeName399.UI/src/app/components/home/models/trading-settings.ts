@@ -23,6 +23,7 @@ export interface TradingConfiguration {
   buyBatchSize: number;
   autoSquareOffMinutes: number;
   candleInterval: string;
+  entryStrategy: 'EmaCrossOver' | 'EmaCrossOverWithPullback' | 'FVGWithSweep' | 'NoiseBand';
   lastDailySummarySent: string | null;
   instrumentLoadedAt: string | null;
   marketTimeZoneId: string;
