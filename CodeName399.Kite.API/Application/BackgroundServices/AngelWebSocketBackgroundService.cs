@@ -38,10 +38,8 @@ public class AngelWebSocketBackgroundService : BackgroundService
                     if (ownedStocks.Count > 0)
                     {
                         await _quotePublisher.SeedOwnedAsync(ownedStocks.Values);
-                        var subscriptions = ownedStocks.Values
-                            .Where(x => !string.IsNullOrWhiteSpace(x.SymbolToken))
-                            .Select(x => new MarketSubscription(x.SymbolToken, x.Exchange));
-                        await _webSocket.SetSubscriptionsAsync(subscriptions);
+                        foreach (var trade in ownedStocks.Values.Where(x => !string.IsNullOrWhiteSpace(x.SymbolToken)))
+                            await _webSocket.SubscribeAsync([trade.SymbolToken], trade.Exchange);
                     }
                 }
 

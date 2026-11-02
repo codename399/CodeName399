@@ -36,6 +36,8 @@ namespace CodeName399.Kite.API.Application.Services
 
         private readonly MarketQuotePublisher _quotePublisher;
 
+        private readonly CandleFileStoreService _candleStore;
+
         protected readonly IBrokerageCalculatorService _brokerage;
 
         private static readonly TimeZoneInfo IndianTimeZone =
@@ -45,6 +47,14 @@ namespace CodeName399.Kite.API.Application.Services
             : "Asia/Kolkata");
 
         private readonly SemaphoreSlim _quoteSemaphore = new(2, 2);
+
+        // Historical candle API calls are globally serialized across CommonService instances.
+        // Angel One may return HTTP 403 when its historical-data access rate is exceeded.
+        private static readonly SemaphoreSlim _historicalRequestGate = new(1, 1);
+        private static DateTime _nextHistoricalRequestUtc = DateTime.MinValue;
+        private static DateTime _historicalCooldownUntilUtc = DateTime.MinValue;
+        private static readonly TimeSpan HistoricalRequestSpacing = TimeSpan.FromSeconds(1.2);
+        private static readonly TimeSpan HistoricalRateLimitCooldown = TimeSpan.FromMinutes(1);
 
 
         public CommonService(
@@ -59,7 +69,8 @@ namespace CodeName399.Kite.API.Application.Services
         IBrokerageCalculatorService brokerage,
         TradeCloseHistoryStore tradeCloseStore,
         IAngelWebSocketClient webSocket,
-        MarketQuotePublisher quotePublisher
+        MarketQuotePublisher quotePublisher,
+        CandleFileStoreService candleStore
         )
         {
             _logger = logger;
@@ -74,6 +85,7 @@ namespace CodeName399.Kite.API.Application.Services
             _tradeCloseStore = tradeCloseStore;
             _webSocket = webSocket;
             _quotePublisher = quotePublisher;
+            _candleStore = candleStore;
         }
 
         public DateTime GetIndianTime()
@@ -262,88 +274,66 @@ namespace CodeName399.Kite.API.Application.Services
             int batchDelay = 1)
         {
             var candlesByToken = new Dictionary<string, List<Candle>>(StringComparer.OrdinalIgnoreCase);
+            if (quotes == null || quotes.Count == 0 || instruments == null || instruments.Count == 0) return candlesByToken;
+            if (string.IsNullOrWhiteSpace(jwtToken)) throw new ArgumentException("JWT token is required to download historical candles.", nameof(jwtToken));
 
-            if (quotes == null || quotes.Count == 0 || instruments == null || instruments.Count == 0)
-                return candlesByToken;
-
-            if (string.IsNullOrWhiteSpace(jwtToken))
-                throw new ArgumentException("JWT token is required to download historical candles.", nameof(jwtToken));
-
-            batchSize = Math.Max(1, Math.Min(batchSize, 3));
-
-            var instrumentsByToken = instruments
-                .Where(x => !string.IsNullOrWhiteSpace(x.token))
+            var byToken = instruments.Where(x => !string.IsNullOrWhiteSpace(x.token))
                 .GroupBy(x => x.token.Trim(), StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+            var duration = CandleFileStoreService.IntervalDuration(interval);
+            var expectedLast = new DateTime(toDate.Year, toDate.Month, toDate.Day, toDate.Hour, toDate.Minute / (int)duration.TotalMinutes * (int)duration.TotalMinutes, 0).Subtract(duration);
 
-            var requestedTokens = quotes
-                .Where(q => !string.IsNullOrWhiteSpace(q.SymbolToken))
-                .Select(q => q.SymbolToken.Trim())
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Where(instrumentsByToken.ContainsKey)
-                .ToList();
-
-            for (var offset = 0; offset < requestedTokens.Count; offset += batchSize)
+            foreach (var quote in quotes.Where(q => !string.IsNullOrWhiteSpace(q.SymbolToken)))
             {
-                var batch = requestedTokens.Skip(offset).Take(batchSize).ToList();
-
-                var tasks = batch.Select(async token =>
+                var token = quote.SymbolToken.Trim();
+                if (!byToken.TryGetValue(token, out var instrument)) continue;
+                var exchange = string.IsNullOrWhiteSpace(instrument.exch_seg) ? "NSE" : instrument.exch_seg.Trim().ToUpperInvariant();
+                var cached = await _candleStore.GetAsync(token, instrument.symbol, interval);
+                var fetchFrom = fromDate;
+                if (cached.Count > 0)
                 {
-                    var instrument = instrumentsByToken[token];
-                    var exchange = string.IsNullOrWhiteSpace(instrument.exch_seg)
-                        ? "NSE"
-                        : instrument.exch_seg.Trim().ToUpperInvariant();
-
-                    try
+                    var last = cached.Max(x => x.Timestamp);
+                    if (last >= expectedLast)
                     {
-                        var candles = await DownloadCandleAsync(
-                            token,
-                            jwtToken,
-                            interval,
-                            fromDate,
-                            toDate,
-                            exchange);
-
-                        return (Token: token, Candles: candles ?? new List<Candle>());
+                        candlesByToken[token] = cached;
+                        UpdateQuoteIndicators(quote, cached, interval);
+                        _logger.LogDebug("CANDLE CACHE HIT Symbol={Symbol} Token={Token} Count={Count} Last={Last}", instrument.symbol, token, cached.Count, last);
+                        await _webSocket.SubscribeAsync([token], exchange);
+                        continue;
                     }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(
-                            ex,
-                            "Failed to download {Interval} candles for {Symbol} (token {Token})",
-                            interval,
-                            instrument.symbol,
-                            token);
-
-                        return (Token: token, Candles: new List<Candle>());
-                    }
-                });
-
-                var batchResults = await Task.WhenAll(tasks);
-
-                foreach (var result in batchResults)
-                {
-                    candlesByToken[result.Token] = result.Candles;
-
-                    // Calculate indicators immediately after each token's candles are downloaded
-                    // and write them directly into the corresponding quote.
-                    var quote = quotes.FirstOrDefault(
-                        q => string.Equals(q.SymbolToken?.Trim(), result.Token, StringComparison.OrdinalIgnoreCase));
-
-                    if (quote != null)
-                        UpdateQuoteIndicators(quote, result.Candles, interval);
+                    fetchFrom = last.Add(duration) > fromDate ? last.Add(duration) : fromDate;
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(batchDelay));
+                var rateLimited = false;
+                try
+                {
+                    var downloaded = await DownloadCandleWithRateLimitAsync(token, jwtToken, interval, fetchFrom, toDate, exchange);
+                    if (downloaded.Count > 0)
+                        await _candleStore.SaveAsync(token, instrument.symbol, interval, downloaded);
+                    var combined = await _candleStore.GetAsync(token, instrument.symbol, interval);
+                    candlesByToken[token] = combined;
+                    UpdateQuoteIndicators(quote, combined, interval);
+                    _logger.LogInformation("CANDLE CACHE UPDATED Symbol={Symbol} Token={Token} Cached={Cached} Downloaded={Downloaded} Total={Total}", instrument.symbol, token, cached.Count, downloaded.Count, combined.Count);
+                }
+                catch (Exception ex)
+                {
+                    rateLimited = IsHistoricalRateLimitException(ex);
+                    _logger.LogWarning(ex, "Candle cache/API load failed for {Symbol} token {Token}. RateLimited={RateLimited}", instrument.symbol, token, rateLimited);
+                    candlesByToken[token] = cached;
+                    UpdateQuoteIndicators(quote, cached, interval);
+                }
+
+                // Keep live ticks flowing even when historical API access is temporarily blocked.
+                await _webSocket.SubscribeAsync([token], exchange);
+                if (rateLimited)
+                {
+                    _logger.LogWarning("Stopping remaining historical candle downloads because Angel One rate-limited this process. Cached candles will be used and live ticks will continue. Cooldown={CooldownSeconds}s", HistoricalRateLimitCooldown.TotalSeconds);
+                    break;
+                }
+                if (batchDelay > 0) await Task.Delay(TimeSpan.FromSeconds(batchDelay));
             }
 
-            _logger.LogInformation(
-                "Downloaded {LoadedCount} of {RequestedCount} stocks with {Interval} candles in batches of {BatchSize}",
-                candlesByToken.Count(x => x.Value.Count > 0),
-                requestedTokens.Count,
-                interval,
-                batchSize);
-
+            _logger.LogInformation("Loaded candles for {LoadedCount}/{RequestedCount} stocks from JSON cache/API. Interval={Interval}", candlesByToken.Count(x => x.Value.Count > 0), quotes.Count, interval);
             return candlesByToken;
         }
 
@@ -393,37 +383,46 @@ namespace CodeName399.Kite.API.Application.Services
             foreach (var symbol in unresolvedSymbols)
                 _logger.LogWarning("Could not resolve owned symbol {Symbol} in instrument master; candle download skipped.", symbol);
 
-            for (var offset = 0; offset < requestedInstruments.Count; offset += batchSize)
+            var duration = CandleFileStoreService.IntervalDuration(interval);
+            var expectedLast = new DateTime(toDate.Year, toDate.Month, toDate.Day, toDate.Hour, toDate.Minute / (int)duration.TotalMinutes * (int)duration.TotalMinutes, 0).Subtract(duration);
+
+            foreach (var instrument in requestedInstruments)
             {
-                var batch = requestedInstruments.Skip(offset).Take(batchSize).ToList();
-                var tasks = batch.Select(async instrument =>
+                var token = instrument.token.Trim();
+                var exchange = string.IsNullOrWhiteSpace(instrument.exch_seg) ? "NSE" : instrument.exch_seg.Trim().ToUpperInvariant();
+                var cached = await _candleStore.GetAsync(token, instrument.symbol, interval);
+                var fetchFrom = fromDate;
+                if (cached.Count > 0)
                 {
-                    var token = instrument.token.Trim();
-                    var exchange = string.IsNullOrWhiteSpace(instrument.exch_seg)
-                        ? "NSE"
-                        : instrument.exch_seg.Trim().ToUpperInvariant();
-
-                    try
+                    var last = cached.Max(x => x.Timestamp);
+                    if (last >= expectedLast)
                     {
-                        var candles = await DownloadCandleAsync(
-                            token, jwtToken, interval, fromDate, toDate, exchange);
-                        return (Token: token, Candles: candles ?? new List<Candle>());
+                        candlesByToken[token] = cached;
+                        await _webSocket.SubscribeAsync([token], exchange);
+                        continue;
                     }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(
-                            ex,
-                            "Failed to download {Interval} candles for owned symbol {Symbol} (token {Token})",
-                            interval, instrument.symbol, token);
-                        return (Token: token, Candles: new List<Candle>());
-                    }
-                });
-
-                foreach (var result in await Task.WhenAll(tasks))
-                    candlesByToken[result.Token] = result.Candles;
-
-                if (offset + batchSize < requestedInstruments.Count && batchDelay > 0)
-                    await Task.Delay(TimeSpan.FromSeconds(batchDelay));
+                    fetchFrom = last.Add(duration) > fromDate ? last.Add(duration) : fromDate;
+                }
+                var rateLimited = false;
+                try
+                {
+                    var downloaded = await DownloadCandleWithRateLimitAsync(token, jwtToken, interval, fetchFrom, toDate, exchange);
+                    if (downloaded.Count > 0) await _candleStore.SaveAsync(token, instrument.symbol, interval, downloaded);
+                    candlesByToken[token] = await _candleStore.GetAsync(token, instrument.symbol, interval);
+                }
+                catch (Exception ex)
+                {
+                    rateLimited = IsHistoricalRateLimitException(ex);
+                    _logger.LogWarning(ex, "Failed to load cached/API candles for owned symbol {Symbol} token {Token}. RateLimited={RateLimited}", instrument.symbol, token, rateLimited);
+                    candlesByToken[token] = cached;
+                }
+                await _webSocket.SubscribeAsync([token], exchange);
+                if (rateLimited)
+                {
+                    _logger.LogWarning("Stopping remaining owned-stock historical downloads because Angel One rate-limited this process. Cached candles will be used and live ticks will continue.");
+                    break;
+                }
+                if (batchDelay > 0) await Task.Delay(TimeSpan.FromSeconds(batchDelay));
             }
 
             _logger.LogInformation(
@@ -530,6 +529,58 @@ namespace CodeName399.Kite.API.Application.Services
                 return 0m;
 
             return (decimal)index;
+        }
+
+        private async Task<List<Candle>> DownloadCandleWithRateLimitAsync(
+            string token,
+            string jwtToken,
+            string interval,
+            DateTime fromDate,
+            DateTime toDate,
+            string exchange)
+        {
+            await _historicalRequestGate.WaitAsync();
+            try
+            {
+                var now = DateTime.UtcNow;
+                var allowedAt = _nextHistoricalRequestUtc > _historicalCooldownUntilUtc
+                    ? _nextHistoricalRequestUtc
+                    : _historicalCooldownUntilUtc;
+                var delay = allowedAt - now;
+                if (delay > TimeSpan.Zero)
+                {
+                    _logger.LogDebug("Throttling historical candle request. Token={Token}, DelayMs={DelayMs}", token, delay.TotalMilliseconds);
+                    await Task.Delay(delay);
+                }
+
+                try
+                {
+                    return await DownloadCandleAsync(token, jwtToken, interval, fromDate, toDate, exchange);
+                }
+                catch (AngelApiException ex) when (IsHistoricalRateLimitException(ex))
+                {
+                    _historicalCooldownUntilUtc = DateTime.UtcNow.Add(HistoricalRateLimitCooldown);
+                    _logger.LogError(
+                        "Angel One historical API rate limit detected. Token={Token}, Interval={Interval}. No more historical requests will be sent for {CooldownSeconds}s. Response={Response}",
+                        token, interval, HistoricalRateLimitCooldown.TotalSeconds, ex.Response);
+                    throw;
+                }
+                finally
+                {
+                    _nextHistoricalRequestUtc = DateTime.UtcNow.Add(HistoricalRequestSpacing);
+                }
+            }
+            finally
+            {
+                _historicalRequestGate.Release();
+            }
+        }
+
+        private static bool IsHistoricalRateLimitException(Exception exception)
+        {
+            return exception is AngelApiException apiException
+                && apiException.StatusCode == System.Net.HttpStatusCode.Forbidden
+                && apiException.Response.Contains("exceeding access rate", StringComparison.OrdinalIgnoreCase);
         }
 
         public async Task<List<Candle>> DownloadCandleAsync(
@@ -756,7 +807,6 @@ namespace CodeName399.Kite.API.Application.Services
                             await _tradeOrderFileRepository.SaveAsync(tradeOrder);
                         }
 
-                        await _webSocket.SubscribeAsync([tradeOrder.SymbolToken], tradeOrder.Exchange);
                         await _quotePublisher.SetOwnedAsync(tradeOrder.SymbolToken, tradeOrder.Quantity, tradeOrder.TotalInvestment, tradeOrder.StopLoss);
 
                         EmailHelper.SendEmail(
@@ -1055,7 +1105,6 @@ namespace CodeName399.Kite.API.Application.Services
                         return;
                     }
 
-                    await _webSocket.UnsubscribeAsync([trade.SymbolToken], trade.Exchange);
                     await _quotePublisher.SetOwnedAsync(trade.SymbolToken, 0);
                     await _tradeOrderFileRepository.DeleteAsync(trade.Symbol);
                     _logger.LogInformation("SELL ORDER SUBMITTED Symbol={Symbol} Outcome={Outcome} OrderId={OrderId}", trade.Symbol, outcome, response.Data.OrderId);
@@ -1068,7 +1117,6 @@ namespace CodeName399.Kite.API.Application.Services
                 trade.NetProfit = trade.GrossProfit - trade.EstimatedCharges;
 
                 await _tradeCloseStore.AppendAsync(trade);
-                await _webSocket.UnsubscribeAsync([trade.SymbolToken], trade.Exchange);
                 await _quotePublisher.SetOwnedAsync(trade.SymbolToken, 0);
                 await _tradeOrderFileRepository.DeleteAsync(
                     string.IsNullOrWhiteSpace(trade.Id) ? trade.Symbol : trade.Id);
