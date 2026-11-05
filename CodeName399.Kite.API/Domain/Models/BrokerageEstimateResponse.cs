@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace CodeName399.Kite.API.Models
 {
@@ -22,6 +22,9 @@ namespace CodeName399.Kite.API.Models
 
     public class BrokerageSummary
     {
+        [JsonPropertyName("total_charges")]
+        public decimal TotalCharges { get; set; }
+
         [JsonPropertyName("trade_value")]
         public decimal TradeValue { get; set; }
 

@@ -1,4 +1,4 @@
-﻿namespace CodeName399.Kite.API.Services.Brokerage;
+namespace CodeName399.Kite.API.Services.Brokerage;
 
 public class BrokerageCharge
 {
@@ -14,8 +14,12 @@ public class BrokerageCharge
 
     public decimal StampDuty { get; set; }
 
-    public decimal TotalCharges =>
-        Brokerage + STT + ExchangeCharges + SEBICharges + GST + StampDuty;
+    // Angel One returns an authoritative summary total. Prefer it when present;
+    // the component sum remains available for older/partial response payloads.
+    public decimal? ReportedTotalCharges { get; set; }
+
+    public decimal TotalCharges => ReportedTotalCharges ??
+        (Brokerage + STT + ExchangeCharges + SEBICharges + GST + StampDuty);
 
     public decimal GrossProfit(decimal buyPrice, decimal sellPrice, int quantity)
     {
@@ -32,6 +36,7 @@ public class BrokerageCharge
             SEBICharges = buy.SEBICharges + sell.SEBICharges,
             GST = buy.GST + sell.GST,
             StampDuty = buy.StampDuty + sell.StampDuty,
+            ReportedTotalCharges = buy.TotalCharges + sell.TotalCharges,
         };
     }
 }

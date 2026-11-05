@@ -95,22 +95,27 @@ namespace CodeName399.Kite.API.Application.Services
                 IndianTimeZone);
         }
 
-        public TimeSpan GetDelayUntilNextCandleClose()
+        public DateTime GetNextCandleCloseTime()
         {
             var indianTime = GetIndianTime();
-
-            var nextCandleClose = new DateTime(
+            return new DateTime(
                 indianTime.Year,
                 indianTime.Month,
                 indianTime.Day,
                 indianTime.Hour,
                 indianTime.Minute,
                 0,
-                DateTimeKind.Unspecified)
-                .AddMinutes(1);
-
-            return nextCandleClose - indianTime;
+                DateTimeKind.Unspecified).AddMinutes(1);
         }
+
+        public TimeSpan GetDelayUntilCandleClose(DateTime candleCloseTime)
+        {
+            var delay = candleCloseTime - GetIndianTime();
+            return delay > TimeSpan.Zero ? delay : TimeSpan.Zero;
+        }
+
+        public TimeSpan GetDelayUntilNextCandleClose() =>
+            GetDelayUntilCandleClose(GetNextCandleCloseTime());
 
         /// <summary>
         /// Returns owned positions keyed by normalized trading symbol. Persisted
@@ -182,22 +187,31 @@ namespace CodeName399.Kite.API.Application.Services
                 .Select(x => x.ToUpperInvariant())
                 .ToHashSet();
 
-            var exchange = "NSE";
-
             var quotes = await GetQuotesInChunksAsync(instruments, jwt);
+            if (excluded.Count > 0)
+                quotes = quotes.Where(q => !excluded.Contains((q.TradingSymbol ?? string.Empty).ToUpperInvariant())).ToList();
 
             return quotes;
         }
 
         private async Task<List<MarketQuoteData>> GetQuotesInChunksAsync(List<Instrument> instruments, string jwt)
         {
-            var result = new List<MarketQuoteData>();
-            foreach (var group in instruments.GroupBy(x => x.exch_seg))
-            {
-                foreach (var batch in ChunkTokens(group.Select(x => x.token).ToList()))
-                    result.AddRange(await GetBatchAsync(batch, jwt, group.Key));
-            }
-            return result;
+            // Quote requests were previously issued one 50-token chunk at a time.
+            // With a full NSE equity master this consumed most of the minute and
+            // caused the next buy evaluation to miss a candle close. Keep a strict
+            // concurrency limit of two (also enforced by _quoteSemaphore), while
+            // allowing independent exchange/token chunks to overlap.
+            var requests = instruments
+                .Where(x => !string.IsNullOrWhiteSpace(x.token) && !string.IsNullOrWhiteSpace(x.exch_seg))
+                .GroupBy(x => x.exch_seg.Trim(), StringComparer.OrdinalIgnoreCase)
+                .SelectMany(group => ChunkTokens(group.Select(x => x.token.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList())
+                    .Select(batch => (Exchange: group.Key, Tokens: batch)))
+                .ToList();
+
+            var tasks = requests.Select(async request =>
+                await GetBatchAsync(request.Tokens, jwt, request.Exchange));
+            var batches = await Task.WhenAll(tasks);
+            return batches.SelectMany(x => x).ToList();
         }
 
         private IEnumerable<List<string>> ChunkTokens(List<string> tokens, int size = 50)
@@ -254,7 +268,7 @@ namespace CodeName399.Kite.API.Application.Services
             .Where(x => GetActivityVolume(x) > 0L)
             .OrderByDescending(GetActivityVolume)
             .ThenByDescending(x => (x.Ltp - x.Close) / x.Close)
-            .ThenByDescending(x => (x.Ltp - x.Open) / x.Open)
+            .ThenByDescending(x => x.Open > 0m ? (x.Ltp - x.Open) / x.Open : decimal.MinValue)
             .Take(count)
             .ToList();
         }
@@ -889,7 +903,7 @@ namespace CodeName399.Kite.API.Application.Services
                 .ToList();
 
             // Exclude the currently forming candle. Historical data is timestamped in market time.
-            var now = DateTime.Now;
+            var now = GetIndianTime();
             if (completed.Count > 0)
             {
                 var latest = completed[^1];
@@ -938,6 +952,11 @@ namespace CodeName399.Kite.API.Application.Services
 
             var buyModel = Fit(buyOne.TotalCharges, buySample.TotalCharges, sampleQuantity);
             var sellModel = Fit(sellOne.TotalCharges, sellSample.TotalCharges, sampleQuantity);
+            _logger.LogInformation(
+                "CHARGE COVER SAMPLES Symbol={Symbol} Price={Price:F4} SellPrice={SellPrice:F4} Increment={Increment:F6} BuyQty1={BuyQty1:F4} BuyQty1000={BuyQty1000:F4} SellQty1={SellQty1:F4} SellQty1000={SellQty1000:F4} BuyFixed={BuyFixed:F4} BuyPerUnit={BuyPerUnit:F6} SellFixed={SellFixed:F4} SellPerUnit={SellPerUnit:F6}",
+                quote.TradingSymbol, price, price + increment, increment,
+                buyOne.TotalCharges, buySample.TotalCharges, sellOne.TotalCharges, sellSample.TotalCharges,
+                buyModel.Fixed, buyModel.PerUnit, sellModel.Fixed, sellModel.PerUnit);
             decimal EstimatedRoundTripCharges(int quantity) =>
                 (buyModel.Fixed + buyModel.PerUnit * quantity +
                  sellModel.Fixed + sellModel.PerUnit * quantity) * 1.15m;

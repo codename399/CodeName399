@@ -5,6 +5,15 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+  <!-- Exclude an accidentally nested copy of this project. The previous patch ZIP
+       was extracted with an extra CodeName399.Kite.API directory, causing duplicate types. -->
+  <ItemGroup>
+    <Compile Remove="CodeName399.Kite.API/**/*.cs" />
+    <Content Remove="CodeName399.Kite.API/**/*" />
+    <EmbeddedResource Remove="CodeName399.Kite.API/**/*" />
+    <None Remove="CodeName399.Kite.API/**/*" />
+  </ItemGroup>
+
 
   <!-- Compatibility exclusions for a working tree that still contains the pre-refactor source folders. -->
   <ItemGroup>

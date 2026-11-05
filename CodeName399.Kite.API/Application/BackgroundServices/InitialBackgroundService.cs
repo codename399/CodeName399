@@ -36,15 +36,43 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
         {
             _logger.LogInformation("InitialBackgroundService started at {Time} IST", _commonService.GetIndianTime());
 
+            // Keep the candle schedule anchored to exchange minute boundaries.
+            // Recomputing a one-minute delay after a long-running cycle caused
+            // alternating candle closes to be skipped (the cycle itself takes
+            // longer than one minute when quote batches are large).
+            var nextCandleClose = _commonService.GetNextCandleCloseTime();
+
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
-                    await Task.Delay(_commonService.GetDelayUntilNextCandleClose(), stoppingToken);
+                    var delay = _commonService.GetDelayUntilCandleClose(nextCandleClose);
+                    if (delay > TimeSpan.Zero)
+                        await Task.Delay(delay, stoppingToken);
                     if (stoppingToken.IsCancellationRequested)
                         break;
 
-                    var candleCloseTime = _commonService.GetIndianTime();
+                    var actualNow = _commonService.GetIndianTime();
+                    var lag = actualNow - nextCandleClose;
+                    if (lag > TimeSpan.FromSeconds(45))
+                    {
+                        // Do not replay stale entry checks with current LTP. Jump
+                        // to the latest fully closed minute and report the missed
+                        // closes explicitly. The quote scan is also parallelized
+                        // so normal cycles should remain close to one minute.
+                        var latestClosed = new DateTime(actualNow.Year, actualNow.Month, actualNow.Day,
+                            actualNow.Hour, actualNow.Minute, 0, DateTimeKind.Unspecified);
+                        if (latestClosed > nextCandleClose)
+                        {
+                            var skipped = (int)(latestClosed - nextCandleClose).TotalMinutes;
+                            _logger.LogWarning("BUY CANDLE SCHEDULER LAG. Skipping {SkippedCandles} stale close(s). Scheduled={Scheduled} LatestClosed={LatestClosed} LagSeconds={LagSeconds:F1}",
+                                skipped, nextCandleClose, latestClosed, lag.TotalSeconds);
+                            nextCandleClose = latestClosed;
+                        }
+                    }
+
+                    var candleCloseTime = nextCandleClose;
+                    nextCandleClose = nextCandleClose.AddMinutes(1);
                     if (!_marketHours.IsOpen())
                     {
                         _logger.LogDebug("Skipping buy cycle: market is closed. Time={Time} IST", candleCloseTime);

@@ -1,4 +1,4 @@
-using CodeName399.Kite.API.Domain.Models.Enum;
+﻿using CodeName399.Kite.API.Domain.Models.Enum;
 using CodeName399.Kite.API.Models;
 using CodeName399.Kite.API.Models.Indicator;
 
@@ -36,6 +36,42 @@ namespace CodeName399.Kite.API.Application.Services
                 EntryStrategyEnum.NoiseBand => ValidateNoiseBandBreakout(quote, completedCandles),
                 _ => false
             };
+        }
+
+        /// <summary>
+        /// Returns a human-readable reason when an entry strategy rejects a quote.
+        /// The result is diagnostic only; it does not change the strategy decision.
+        /// </summary>
+        public static string GetBuyRejectionReason(EntryStrategyEnum strategyEnum, MarketQuoteData quote, List<Candle> candles)
+        {
+            if (quote == null)
+                return "QuoteUnavailable";
+
+            if (strategyEnum == EntryStrategyEnum.EmaCrossOver)
+            {
+                if (quote.Ema9 <= 0m || quote.Ema21 <= 0m ||
+                    quote.PreviousCandleEma9 <= 0m || quote.PreviousCandleEma21 <= 0m)
+                    return "EMADataUnavailable";
+
+                if (quote.ChoppinessIndex > 61.8m)
+                    return "MarketTooChoppy";
+
+                if (quote.Ltp <= quote.Ema9 || quote.Ltp <= quote.Ema21)
+                    return "LtpNotAboveBothEmas";
+
+                if (quote.Ema9 <= quote.Ema21)
+                    return "Ema9NotAboveEma21";
+
+                if (quote.PreviousCandleEma9 > quote.PreviousCandleEma21)
+                    return "CrossoverAlreadyOccurredBeforePreviousCandle";
+
+                return "EmaCrossoverConditionsNotSatisfied";
+            }
+
+            if (candles == null || candles.Count < 3)
+                return "InsufficientCandles";
+
+            return "SelectedStrategyPatternNotSatisfied";
         }
 
         private static bool ValidateEmaCrossOver(MarketQuoteData quote)

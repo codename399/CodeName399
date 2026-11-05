@@ -1,8 +1,7 @@
-using CodeName399.Kite.API.Repository;
 using CodeName399.Kite.API.Helpers;
 using CodeName399.Kite.API.Models;
+using CodeName399.Kite.API.Repository;
 using CodeName399.Kite.API.Services.Interface;
-using CodeName399.Kite.API.Models.Enum;
 
 namespace CodeName399.Kite.API.Services
 {
@@ -52,7 +51,7 @@ namespace CodeName399.Kite.API.Services
             {
                 var investment = trade.EntryPrice * trade.Quantity;
                 var gross = trade.GrossProfit;
-                var charges =  trade.EstimatedCharges;
+                var charges = trade.EstimatedCharges;
                 var net = trade.NetProfit != 0 || gross != 0 ? trade.NetProfit : gross - charges;
                 if (net >= 0) summary.WinningTrades++; else summary.LosingTrades++;
                 summary.GrossProfit += Math.Max(0, gross);

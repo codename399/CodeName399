@@ -1,5 +1,4 @@
 using CodeName399.Kite.API.Application.Services;
-using CodeName399.Kite.API.Services;
 using CodeName399.Kite.API.Services.Interface;
 
 namespace CodeName399.Kite.API.Services;

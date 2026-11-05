@@ -1,8 +1,8 @@
-using System.Collections.Concurrent;
 using CodeName399.Kite.API.Models;
 using CodeName399.Kite.API.SignalRHubs;
 using CodeName399.Kite.API.WebSocket.Interface;
 using Microsoft.AspNetCore.SignalR;
+using System.Collections.Concurrent;
 
 namespace CodeName399.Kite.API.Application.Services;
 

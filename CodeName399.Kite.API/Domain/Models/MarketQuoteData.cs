@@ -39,7 +39,7 @@ namespace CodeName399.Kite.API.Models
         public decimal StopLoss { get; set; }
         public decimal TotalInvestment { get; set; }
 
-        public static TradeOrder ToTradeOrder(MarketQuoteData quote,bool isAutoTrading)
+        public static TradeOrder ToTradeOrder(MarketQuoteData quote, bool isAutoTrading)
         {
             return new TradeOrder
             {

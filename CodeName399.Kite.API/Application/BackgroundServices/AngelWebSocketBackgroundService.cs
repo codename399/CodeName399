@@ -1,6 +1,5 @@
-using CodeName399.Kite.API.WebSocket.Interface;
 using CodeName399.Kite.API.Application.Services;
-using CodeName399.Kite.API.Models;
+using CodeName399.Kite.API.WebSocket.Interface;
 
 namespace CodeName399.Kite.API.BackgroundServices;
 

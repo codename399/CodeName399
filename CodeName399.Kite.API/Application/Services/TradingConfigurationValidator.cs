@@ -7,7 +7,7 @@ public static class TradingConfigurationValidator
     public static void Validate(TradingConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
-        
+
         if (configuration.MarketOpenTime >= configuration.MarketCloseTime)
             throw new InvalidOperationException("MarketOpenTime must be earlier than MarketCloseTime.");
 

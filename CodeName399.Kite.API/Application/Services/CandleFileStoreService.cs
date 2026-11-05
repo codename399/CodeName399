@@ -25,8 +25,40 @@ public sealed class CandleFileStoreService : BackgroundService
         _webSocket = webSocket;
         _settings = settings;
         _logger = logger;
-        _directory = Path.Combine(environment.ContentRootPath, "App_Data", "Candles");
-        Directory.CreateDirectory(_directory);
+        _directory = ResolveWritableDirectory(environment, logger);
+    }
+
+
+    private static string ResolveWritableDirectory(IWebHostEnvironment environment, ILogger logger)
+    {
+        var configured = Environment.GetEnvironmentVariable("CODENAME399_CANDLE_STORAGE_PATH");
+        var candidates = new List<string>();
+        if (!string.IsNullOrWhiteSpace(configured)) candidates.Add(configured.Trim());
+        candidates.Add(Path.Combine(environment.ContentRootPath, "App_Data", "Candles"));
+        candidates.Add(Path.Combine(AppContext.BaseDirectory, "App_Data", "Candles"));
+        candidates.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "CodeName399", "Kite", "Candles"));
+        candidates.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CodeName399", "Kite", "Candles"));
+
+        foreach (var candidate in candidates.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(candidate)) continue;
+            try
+            {
+                var fullPath = Path.GetFullPath(candidate);
+                Directory.CreateDirectory(fullPath);
+                var probe = Path.Combine(fullPath, $".write-test-{Guid.NewGuid():N}.tmp");
+                using (new FileStream(probe, FileMode.CreateNew, FileAccess.Write, FileShare.None)) { }
+                File.Delete(probe);
+                logger.LogInformation("Candle JSON storage directory selected: {CandleDirectory}", fullPath);
+                return fullPath;
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or ArgumentException or NotSupportedException)
+            {
+                logger.LogWarning(ex, "Candle JSON directory is not writable; trying fallback. Directory={CandleDirectory}", candidate);
+            }
+        }
+
+        throw new InvalidOperationException("No writable candle JSON directory could be created. Set CODENAME399_CANDLE_STORAGE_PATH to a directory writable by the Windows service account.");
     }
 
     public async Task<List<Candle>> GetAsync(string token, string symbol, string interval, CancellationToken ct = default)
@@ -62,10 +94,17 @@ public sealed class CandleFileStoreService : BackgroundService
             _candles[key] = merged;
             var path = GetPath(token, symbol, interval);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            var temp = path + ".tmp";
-            await using (var stream = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None, 65536, true))
-                await JsonSerializer.SerializeAsync(stream, merged, _json, ct);
-            File.Move(temp, path, true);
+            var temp = path + $".{Guid.NewGuid():N}.tmp";
+            try
+            {
+                await using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 65536, true))
+                    await JsonSerializer.SerializeAsync(stream, merged, _json, ct);
+                File.Move(temp, path, true);
+            }
+            finally
+            {
+                if (File.Exists(temp)) File.Delete(temp);
+            }
         }
         finally { gate.Release(); }
     }
@@ -143,10 +182,17 @@ public sealed class CandleFileStoreService : BackgroundService
     {
         var path = GetPath(token, symbol, interval);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        var temp = path + ".tmp";
-        await using (var stream = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None, 65536, true))
-            await JsonSerializer.SerializeAsync(stream, list, _json, ct);
-        File.Move(temp, path, true);
+        var temp = path + $".{Guid.NewGuid():N}.tmp";
+        try
+        {
+            await using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 65536, true))
+                await JsonSerializer.SerializeAsync(stream, list, _json, ct);
+            File.Move(temp, path, true);
+        }
+        finally
+        {
+            if (File.Exists(temp)) File.Delete(temp);
+        }
     }
 
     private async Task<List<Candle>> ReadFileAsync(string path, CancellationToken ct)

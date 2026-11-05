@@ -76,44 +76,60 @@ public class BrokerageCalculatorService : IBrokerageCalculatorService
         if (!response.Status)
             throw new Exception(response.Message);
 
-        var charge = new BrokerageCharge();
+        var charge = new BrokerageCharge
+        {
+            ReportedTotalCharges = response.Data?.Summary?.TotalCharges > 0m
+                ? response.Data.Summary.TotalCharges
+                : null
+        };
 
         foreach (var group in response.Data?.Summary?.Breakup ?? [])
         {
-            if (group.Name.Equals("Angel One Brokerage", StringComparison.OrdinalIgnoreCase))
-            {
+            if (group == null) continue;
+
+            if (string.Equals(group.Name, "Angel One Brokerage", StringComparison.OrdinalIgnoreCase))
                 charge.Brokerage = group.Amount;
-            }
 
-            if (group.BreakupDetails == null)
-                continue;
-
-            foreach (var item in group.BreakupDetails)
+            foreach (var item in group.BreakupDetails ?? [])
             {
-                switch (item.Name)
+                if (item == null) continue;
+                switch ((item.Name ?? string.Empty).Trim().ToUpperInvariant())
                 {
-                    case "Exchange Transaction Charges":
-                        charge.ExchangeCharges = item.Amount;
+                    case "EXCHANGE TRANSACTION CHARGES":
+                        charge.ExchangeCharges += item.Amount;
                         break;
-
-                    case "Stamp Duty":
-                        charge.StampDuty = item.Amount;
+                    case "STAMP DUTY":
+                        charge.StampDuty += item.Amount;
                         break;
-
-                    case "SEBI Fees":
-                        charge.SEBICharges = item.Amount;
+                    case "SEBI FEES":
+                    case "SEBI CHARGES":
+                        charge.SEBICharges += item.Amount;
                         break;
-
-                    case "Security Transaction Tax":
-                        charge.STT = item.Amount;
+                    case "SECURITY TRANSACTION TAX":
+                    case "STT":
+                        charge.STT += item.Amount;
                         break;
-
                     case "GST":
-                        charge.GST = item.Amount;
+                        charge.GST += item.Amount;
                         break;
                 }
             }
         }
+
+        if (charge.TotalCharges < 0m || charge.TotalCharges > Math.Max(100m, price * quantity * 0.10m))
+        {
+            _logger.LogError(
+                "BROKERAGE ESTIMATE OUT OF RANGE Symbol={Symbol} Token={Token} Exchange={Exchange} Product={Product} Transaction={Transaction} Price={Price} Quantity={Quantity} TradeValue={TradeValue} ReportedTotal={ReportedTotal} ComponentTotal={ComponentTotal}. Rejecting estimate.",
+                symbol, symbolToken, exchange, productType, transactionType, price, quantity,
+                price * quantity, charge.ReportedTotalCharges, charge.Brokerage + charge.GST + charge.STT + charge.ExchangeCharges + charge.SEBICharges + charge.StampDuty);
+            throw new InvalidOperationException($"Brokerage estimate is outside the allowed sanity range for {symbol}.");
+        }
+
+        _logger.LogInformation(
+            "BROKERAGE ESTIMATE Symbol={Symbol} Token={Token} Exchange={Exchange} Product={Product} Transaction={Transaction} Price={Price:F4} Quantity={Quantity} TradeValue={TradeValue:F2} ReportedTotal={ReportedTotal:F4} CalculatedTotal={CalculatedTotal:F4} Brokerage={Brokerage:F4} GST={GST:F4} STT={STT:F4} ExchangeCharges={ExchangeCharges:F4} SEBI={SEBI:F4} StampDuty={StampDuty:F4}",
+            symbol, symbolToken, exchange, productType, transactionType, price, quantity,
+            price * quantity, charge.ReportedTotalCharges, charge.TotalCharges, charge.Brokerage,
+            charge.GST, charge.STT, charge.ExchangeCharges, charge.SEBICharges, charge.StampDuty);
 
         _cache.Set(cacheKey, charge, TimeSpan.FromSeconds(30));
 
