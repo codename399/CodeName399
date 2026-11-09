@@ -3,6 +3,9 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
     using CodeName399.Kite.API.Application.Services;
     using CodeName399.Kite.API.Services;
     using CodeName399.Kite.API.Services.Interface;
+    using CodeName399.Kite.API.WebSocket.Interface;
+    using CodeName399.Kite.API.Models;
+    using System.Collections.Concurrent;
 
     public class ExitBackgroundService : BackgroundService
     {
@@ -14,6 +17,8 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
         private readonly IMarketHoursService _marketHours;
         private readonly MarketClock _marketClock;
         private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IAngelWebSocketClient _webSocket;
+        private readonly ConcurrentDictionary<string, SemaphoreSlim> _tickLocks = new(StringComparer.OrdinalIgnoreCase);
         private DateOnly? _lastAutoSquareOffDate;
         private DateOnly? _lastDailySummaryDate;
 
@@ -25,7 +30,8 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
             TradingSettingsProvider settings,
             IMarketHoursService marketHours,
             MarketClock marketClock,
-            IServiceScopeFactory scopeFactory)
+            IServiceScopeFactory scopeFactory,
+            IAngelWebSocketClient webSocket)
         {
             _logger = logger;
             _commonService = commonService;
@@ -35,79 +41,41 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
             _marketHours = marketHours;
             _marketClock = marketClock;
             _scopeFactory = scopeFactory;
+            _webSocket = webSocket;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("ExitBackgroundService started at {Time} IST", _marketClock.Now);
-
+            _logger.LogInformation("ExitBackgroundService started at {Time} IST. Sell monitoring uses live ticks.", _marketClock.Now);
+            _webSocket.TickReceived += OnTickReceived;
+            try
+            {
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
-                    await Task.Delay(_commonService.GetDelayUntilNextCandleClose(), stoppingToken);
+                    await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
                     if (stoppingToken.IsCancellationRequested)
                         break;
 
                     var now = _marketClock.Now;
                     var today = DateOnly.FromDateTime(now);
 
-                    // Flatten all positions five minutes before the configured market close.
-                    if (_marketClock.IsTradingDay
-                        && _settings.Current.AutoSquareOff
-                        && now >= _marketClock.AutoSquareOffTime
-                        && _lastAutoSquareOffDate != today)
+                    if (_marketClock.IsTradingDay && _settings.Current.AutoSquareOff
+                        && now >= _marketClock.AutoSquareOffTime && _lastAutoSquareOffDate != today)
                     {
                         using var squareOffScope = _scopeFactory.CreateScope();
-                        await squareOffScope.ServiceProvider
-                            .GetRequiredService<SquareOffService>()
+                        await squareOffScope.ServiceProvider.GetRequiredService<SquareOffService>()
                             .ExecuteAtMarketCloseAsync(stoppingToken);
                         _lastAutoSquareOffDate = today;
                     }
 
-                    // Send the daily summary after the market has closed. The summary
-                    // service also persists its sent date, so retries are safe.
-                    if (_marketClock.IsTradingDay
-                        && now >= _marketClock.MarketClose
-                        && _lastDailySummaryDate != today)
+                    if (_marketClock.IsTradingDay && now >= _marketClock.MarketClose && _lastDailySummaryDate != today)
                     {
                         using var summaryScope = _scopeFactory.CreateScope();
                         var summaryService = summaryScope.ServiceProvider.GetRequiredService<IDailySummaryService>();
-                        if (await summaryService.SendDailySummaryAsync())
-                            _lastDailySummaryDate = today;
+                        if (await summaryService.SendDailySummaryAsync()) _lastDailySummaryDate = today;
                     }
-
-                    var candleCloseTime = now;
-                    if (!_marketHours.IsOpen())
-                    {
-                        _logger.LogDebug("Skipping sell candle cycle: market is closed. Time={Time} IST", candleCloseTime);
-                        continue;
-                    }
-
-                    _logger.LogInformation("Processing sell candle closing at {CandleCloseTime} IST", candleCloseTime.ToString("yyyy-MM-dd HH:mm:ss"));
-
-                    var login = await _angel.GetLoginDataAsync();
-                    var instruments = await _instrumentService.LoadInstruments();
-                    var ownedStocks = await _commonService.GetOwnedStocksAsync();
-
-                    if (ownedStocks.Count == 0)
-                    {
-                        _logger.LogInformation("No owned stocks found. Skipping candle download.");
-                        continue;
-                    }
-
-                    var fromDate = new DateTime(candleCloseTime.Year, candleCloseTime.Month, candleCloseTime.Day, 9, 15, 0, DateTimeKind.Unspecified);
-                    var candles = await _commonService.DownloadCandlesInBatchesAsync(
-                        ownedStocks.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase),
-                        instruments,
-                        login.JwtToken,
-                        _settings.Current.CandleInterval,
-                        fromDate,
-                        candleCloseTime,
-                        _settings.Current.CandleBatchSize,
-                        _settings.Current.BatchDelay);
-
-                    await _commonService.PlaceSellOrder(ownedStocks, candles);
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
@@ -119,8 +87,39 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
                     await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
                 }
             }
+            }
+            finally
+            {
+                _webSocket.TickReceived -= OnTickReceived;
+            }
 
             _logger.LogInformation("ExitBackgroundService stopped at {Time} IST", _marketClock.Now);
+        }
+
+        private void OnTickReceived(object? sender, MarketTick tick)
+        {
+            if (tick == null || string.IsNullOrWhiteSpace(tick.SymbolToken) || tick.Ltp <= 0m)
+                return;
+            _ = ProcessTickAsync(tick);
+        }
+
+        private async Task ProcessTickAsync(MarketTick tick)
+        {
+            var gate = _tickLocks.GetOrAdd(tick.SymbolToken, _ => new SemaphoreSlim(1, 1));
+            if (!await gate.WaitAsync(0)) return;
+            try
+            {
+                if (!_marketHours.IsOpen()) return;
+                var owned = await _commonService.GetOwnedStocksAsync();
+                var trade = owned.Values.FirstOrDefault(x => string.Equals(x.SymbolToken, tick.SymbolToken, StringComparison.OrdinalIgnoreCase));
+                if (trade == null) return;
+                await _commonService.ProcessSellTickAsync(trade, tick.Ltp, _marketClock.Now);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Live tick sell processing failed. Token={Token} LTP={Ltp}", tick.SymbolToken, tick.Ltp);
+            }
+            finally { gate.Release(); }
         }
     }
 }

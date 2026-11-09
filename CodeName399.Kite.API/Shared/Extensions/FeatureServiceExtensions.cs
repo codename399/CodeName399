@@ -95,6 +95,7 @@ namespace CodeName399.Extensions
             services.AddHostedService<OrderWebSocketBackgroundService>();
             services.AddHostedService<InitialBackgroundService>();
             services.AddHostedService<ExitBackgroundService>();
+            //services.AddHostedService<TopStocksExcelExportBackgroundService>();
         }
 
         public static void AddRepositoryDependencies(this IServiceCollection services)

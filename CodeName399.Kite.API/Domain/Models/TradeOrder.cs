@@ -18,12 +18,15 @@ namespace CodeName399.Kite.API.Models
         public DateTime EntryTime { get; set; }
         public decimal Ema9 { get; set; }
         public decimal Ema21 { get; set; }
+        public string EntryReason { get; set; } = "";
         public decimal ChoppinessIndex { get; set; }
         public decimal ExitPrice { get; set; }
         public DateTime? ExitTime { get; set; }
         public decimal EstimatedCharges { get; set; }
         public decimal BreakEvenPrice { get; set; }
         public bool TrailingActivated { get; set; }
+        public decimal HighestPriceSinceEntry { get; set; }
+        public decimal TrailingStopPrice { get; set; }
         public string ExecutionMode { get; set; } = TradeExecutionMode.Paper.ToString();
         public decimal LowestPriceChange { get; set; }
         public decimal GrossProfit { get; set; }

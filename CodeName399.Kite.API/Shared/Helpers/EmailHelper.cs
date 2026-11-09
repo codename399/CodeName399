@@ -190,9 +190,28 @@ namespace CodeName399.Kite.API.Helpers
             }
         }
 
-        private static string FormatValue(object? value)
+        private static readonly TimeZoneInfo IndiaTimeZone = TimeZoneInfo.FindSystemTimeZoneById(
+            OperatingSystem.IsWindows() ? "India Standard Time" : "Asia/Kolkata");
+
+        private static string FormatTradeTime(DateTime value)
+        {
+            // Persisted entry timestamps are UTC. Broker candle timestamps with an
+            // unspecified Kind are already exchange-local; preserve those as IST.
+            var india = value.Kind switch
+            {
+                DateTimeKind.Utc => TimeZoneInfo.ConvertTimeFromUtc(value, IndiaTimeZone),
+                DateTimeKind.Local => TimeZoneInfo.ConvertTime(value, IndiaTimeZone),
+                _ => value
+            };
+            return india.ToString("dd-MMM-yyyy HH:mm:ss", CultureInfo.InvariantCulture) + " IST";
+        }
+
+        private static string FormatValue(string propertyName, object? value)
         {
             if (value == null) return string.Empty;
+            if ((propertyName.Equals("EntryTime", StringComparison.OrdinalIgnoreCase) ||
+                 propertyName.Equals("ExitTime", StringComparison.OrdinalIgnoreCase)) && value is DateTime tradeTime)
+                return FormatTradeTime(tradeTime);
             return value switch
             {
                 decimal d => d.ToString("0.##########", CultureInfo.InvariantCulture),
@@ -243,7 +262,7 @@ namespace CodeName399.Kite.API.Helpers
                     .Append(";\"><th>")
                     .Append(H(property.Name))
                     .Append("</th><td>")
-                    .Append(H(FormatValue(value)))
+                    .Append(H(FormatValue(property.Name, value)))
                     .AppendLine("</td></tr>");
             }
 
@@ -254,14 +273,16 @@ namespace CodeName399.Kite.API.Helpers
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-body { font-family: Arial, Helvetica, sans-serif; background:#eef2f7; color:#1f2937; margin:0; padding:20px; }
-.container { max-width:760px; margin:0 auto; background:#fff; border-radius:8px; overflow:hidden; }
+body { font-family: Arial, Helvetica, sans-serif; background:#eef2f7; color:#1f2937; margin:0; padding:12px; width:100%; box-sizing:border-box; }
+.container { width:100%; max-width:100%; margin:0 auto; background:#fff; border-radius:8px; overflow:hidden; box-sizing:border-box; }
 .header { background:{{color}}; color:#fff; padding:20px 24px; }
 .header h2 { margin:0 0 6px; }
 .header p { margin:0; opacity:.95; }
-table { border-collapse:collapse; width:100%; }
-th, td { border:1px solid #e5e7eb; padding:10px 12px; text-align:left; vertical-align:top; overflow-wrap:anywhere; }
-th { width:38%; background:transparent; font-weight:600; }
+table { border-collapse:collapse; width:100%; max-width:100%; table-layout:fixed; }
+th, td { border:1px solid #e5e7eb; padding:9px 10px; text-align:left; vertical-align:top; overflow-wrap:anywhere; word-break:break-word; white-space:normal; box-sizing:border-box; }
+th { width:34%; background:transparent; font-weight:600; }
+td { width:66%; }
+img { max-width:100%; height:auto; }
 thead th { background:#0d6efd; color:#fff; }
 .content { padding:20px 24px 24px; }
 </style>
@@ -328,7 +349,7 @@ thead th { background:#0d6efd; color:#fff; }
                     .Append(";\"><th>")
                     .Append(H(property.Name))
                     .Append("</th><td>")
-                    .Append(H(FormatValue(value)))
+                    .Append(H(FormatValue(property.Name, value)))
                     .AppendLine("</td></tr>");
             }
 
@@ -339,14 +360,16 @@ thead th { background:#0d6efd; color:#fff; }
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-body { font-family: Arial, Helvetica, sans-serif; background:#eef2f7; color:#1f2937; margin:0; padding:20px; }
-.container { max-width:760px; margin:0 auto; background:#fff; border-radius:8px; overflow:hidden; }
+body { font-family: Arial, Helvetica, sans-serif; background:#eef2f7; color:#1f2937; margin:0; padding:12px; width:100%; box-sizing:border-box; }
+.container { width:100%; max-width:100%; margin:0 auto; background:#fff; border-radius:8px; overflow:hidden; box-sizing:border-box; }
 .header { background:{{color}}; color:#fff; padding:20px 24px; }
 .header h2 { margin:0 0 6px; }
 .header p { margin:0; opacity:.95; }
-table { border-collapse:collapse; width:100%; }
-th, td { border:1px solid #e5e7eb; padding:10px 12px; text-align:left; vertical-align:top; overflow-wrap:anywhere; }
-th { width:38%; background:transparent; font-weight:600; }
+table { border-collapse:collapse; width:100%; max-width:100%; table-layout:fixed; }
+th, td { border:1px solid #e5e7eb; padding:9px 10px; text-align:left; vertical-align:top; overflow-wrap:anywhere; word-break:break-word; white-space:normal; box-sizing:border-box; }
+th { width:34%; background:transparent; font-weight:600; }
+td { width:66%; }
+img { max-width:100%; height:auto; }
 thead th { background:#0d6efd; color:#fff; }
 .content { padding:20px 24px 24px; }
 </style>

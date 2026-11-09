@@ -490,7 +490,7 @@ public class AngelWebSocketClient : IAngelWebSocketClient
         //var knownStock = _watchList.Get(tick.SymbolToken);
         //if (knownStock != null)
         //    tick.TradingSymbol = knownStock.Symbol;
-        //_rawMarketData.Record(tick);
+        _rawMarketData.Record(tick);
 
         //_cache.Update(tick);
 

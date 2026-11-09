@@ -1,5 +1,6 @@
-namespace CodeName399.Kite.API.Application.Services
+﻿namespace CodeName399.Kite.API.Application.Services
 {
+    using CodeName399.Kite.API.Domain.Models.Enum;
     using CodeName399.Kite.API.Constants;
     using CodeName399.Kite.API.Extensions;
     using CodeName399.Kite.API.Helpers;
@@ -754,8 +755,13 @@ namespace CodeName399.Kite.API.Application.Services
                         ? loadedCandles
                         : new List<Candle>();
 
-                    if (!EntryStrategyService.ValidateBuyConditions(_settings.Current.EntryStrategy, quote, quoteCandles))
+                    // Additive entry paths: EMA9/EMA21 crossover, 5-minute ORB, or EMA25 + VWAP.
+                    if (!EntryStrategyService.TryGetEntryReason(quote, quoteCandles, out var entryReason))
+                    {
+                        _logger.LogDebug("BUY SKIPPED: no EMA crossover, 5m ORB, or EMA25+VWAP setup on the latest completed candle. Symbol={Symbol} Token={Token}",
+                            quote.TradingSymbol, quote.SymbolToken);
                         return;
+                    }
 
                     var (quantity, margin, ltp) = await GetQuantitesAndMargin(quote, jwtToken, quoteCandles);
 
@@ -766,6 +772,7 @@ namespace CodeName399.Kite.API.Application.Services
                         quote.Ltp = ltp;
 
                         var tradeOrder = MarketQuoteData.ToTradeOrder(quote, _settings.Current.EnableAutoTrading);
+                        tradeOrder.EntryReason = entryReason;
 
                         if (_settings.Current.EnableAutoTrading)
                         {
@@ -822,6 +829,8 @@ namespace CodeName399.Kite.API.Application.Services
                         }
 
                         await _quotePublisher.SetOwnedAsync(tradeOrder.SymbolToken, tradeOrder.Quantity, tradeOrder.TotalInvestment, tradeOrder.StopLoss);
+                        // Ensure the newly opened position receives live ticks for immediate exit monitoring.
+                        await _webSocket.SubscribeAsync([tradeOrder.SymbolToken], tradeOrder.Exchange);
 
                         EmailHelper.SendEmail(
                     EmailHelper.BuildBuyOrderEmail(tradeOrder),
@@ -1056,16 +1065,75 @@ namespace CodeName399.Kite.API.Application.Services
         public bool ValidateSell(TradeOrder trade, Candle currentCandle, out string outcome)
         {
             outcome = string.Empty;
-            if (trade == null || currentCandle == null || trade.EntryPrice <= 0m
-                || currentCandle.Close <= 0m || trade.LowestPriceChange <= 0m)
+            if (trade == null || currentCandle == null || trade.EntryPrice <= 0m || currentCandle.Close <= 0m)
                 return false;
 
-            var difference = currentCandle.Close - trade.EntryPrice;
-            if (Math.Abs(difference) <= trade.LowestPriceChange)
-                return false;
+            // Once activated, the trailing stop is evaluated against every live tick.
+            if (trade.TrailingActivated && trade.TrailingStopPrice > 0m && currentCandle.Close <= trade.TrailingStopPrice)
+            {
+                outcome = "TRAILING_STOP";
+                return true;
+            }
 
-            outcome = difference > 0m ? "PROFIT" : "LOSS";
-            return true;
+            // Preserve the protective initial stop for positions before trailing activates.
+            if (!trade.TrailingActivated && trade.StopLoss > 0m && currentCandle.Close <= trade.StopLoss)
+            {
+                outcome = "STOP_LOSS";
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>Processes an owned position from a live tick; no candle polling is involved.</summary>
+        public async Task ProcessSellTickAsync(TradeOrder trade, decimal ltp, DateTime tickTime)
+        {
+            if (trade == null || ltp <= 0m || trade.Quantity <= 0 || trade.EntryPrice <= 0m)
+                return;
+
+            var estimatedNet = (ltp - trade.EntryPrice) * trade.Quantity - trade.EstimatedCharges;
+            var changed = false;
+
+            if (ltp > trade.HighestPriceSinceEntry)
+            {
+                trade.HighestPriceSinceEntry = ltp;
+                changed = true;
+            }
+
+            // Trailing becomes active only after charges-inclusive net P&L turns positive.
+            if (!trade.TrailingActivated && estimatedNet > 0m)
+            {
+                trade.TrailingActivated = true;
+                trade.HighestPriceSinceEntry = Math.Max(trade.HighestPriceSinceEntry, ltp);
+                trade.TrailingStopPrice = Math.Max(trade.EntryPrice, trade.HighestPriceSinceEntry - Math.Max(trade.LowestPriceChange, 0.01m));
+                changed = true;
+                _logger.LogInformation("TRAILING STOP ACTIVATED Symbol={Symbol} LTP={Ltp:F4} NetProfit={NetProfit:F2} Stop={Stop:F4}", trade.Symbol, ltp, estimatedNet, trade.TrailingStopPrice);
+            }
+            else if (trade.TrailingActivated)
+            {
+                var nextStop = Math.Max(trade.EntryPrice, trade.HighestPriceSinceEntry - Math.Max(trade.LowestPriceChange, 0.01m));
+                if (nextStop > trade.TrailingStopPrice)
+                {
+                    trade.TrailingStopPrice = nextStop;
+                    changed = true;
+                }
+            }
+
+            if (changed)
+                await _tradeOrderFileRepository.UpdateAsync(trade);
+
+            if (trade.TrailingActivated && trade.TrailingStopPrice > 0m && ltp <= trade.TrailingStopPrice)
+            {
+                var synthetic = new Candle { Timestamp = tickTime, Open = ltp, High = ltp, Low = ltp, Close = ltp };
+                await PlaceSellOrder(new Dictionary<string, TradeOrder> { [trade.Symbol] = trade },
+                    new Dictionary<string, List<Candle>> { [trade.SymbolToken] = new() { synthetic } });
+            }
+            else if (!trade.TrailingActivated && trade.StopLoss > 0m && ltp <= trade.StopLoss)
+            {
+                var synthetic = new Candle { Timestamp = tickTime, Open = ltp, High = ltp, Low = ltp, Close = ltp };
+                await PlaceSellOrder(new Dictionary<string, TradeOrder> { [trade.Symbol] = trade },
+                    new Dictionary<string, List<Candle>> { [trade.SymbolToken] = new() { synthetic } });
+            }
         }
 
         /// <summary>Evaluates and processes all owned positions concurrently.</summary>
@@ -1156,5 +1224,165 @@ namespace CodeName399.Kite.API.Application.Services
                 _logger.LogError(ex, "Failed to process sell for {Symbol}", trade.Symbol);
             }
         }
+
+        /// <summary>
+        /// Loads historical candles with a warm-up backfill even when today's candles are already cached.
+        /// The cache is merged by CandleFileStoreService; callers can calculate indicators over prior sessions.
+        /// </summary>
+        /// <summary>
+        /// Downloads an independent historical candle sample for EMA calibration.
+        /// Small date windows avoid provider maximum-range limits and bypass the candle cache,
+        /// so the workbook captures the actual response from the historical endpoint.
+        /// </summary>
+        public async Task<List<Candle>> DownloadCandlesForEmaCalibrationAsync(
+            string token,
+            string jwtToken,
+            string exchange,
+            string interval,
+            DateTime fromDate,
+            DateTime toDate,
+            int chunkDays = 5,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+                throw new ArgumentException("Instrument token is required.", nameof(token));
+            if (toDate < fromDate)
+                throw new ArgumentException("toDate must be greater than or equal to fromDate.");
+            if (chunkDays < 1 || chunkDays > 30)
+                throw new ArgumentOutOfRangeException(nameof(chunkDays), "Chunk size must be between 1 and 30 days.");
+
+            var all = new List<Candle>();
+            var cursor = fromDate;
+            while (cursor <= toDate)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var chunkEnd = cursor.Date.AddDays(chunkDays).AddTicks(-1);
+                if (chunkEnd > toDate) chunkEnd = toDate;
+
+                List<Candle> chunk;
+                try
+                {
+                    chunk = await DownloadCandleWithRateLimitAsync(
+                        token, jwtToken, interval, cursor, chunkEnd,
+                        string.IsNullOrWhiteSpace(exchange) ? "NSE" : exchange);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger.LogError(ex,
+                        "EMA calibration download stopped at failed chunk. Token={Token}, From={From}, To={To}, DownloadedSoFar={Count}",
+                        token, cursor, chunkEnd, all.Count);
+                    break; // Preserve partial data so the workbook can explain the coverage gap.
+                }
+                if (chunk.Count > 0) all.AddRange(chunk);
+
+                _logger.LogInformation(
+                    "EMA calibration download: Token={Token}, Interval={Interval}, From={From}, To={To}, Returned={Count}",
+                    token, interval, cursor, chunkEnd, chunk.Count);
+
+                cursor = chunkEnd.AddMinutes(1);
+            }
+
+            return all
+                .Where(c => c.Close > 0m && c.High >= c.Low)
+                .GroupBy(c => c.Timestamp)
+                .Select(g => g.Last())
+                .OrderBy(c => c.Timestamp)
+                .ToList();
+        }
+
+        public async Task<Dictionary<string, List<Candle>>> DownloadCandlesWithHistoricalWarmupAsync(
+            List<MarketQuoteData> quotes,
+            List<Instrument> instruments,
+            string jwtToken,
+            string interval,
+            DateTime fromDate,
+            DateTime toDate,
+            int batchDelaySeconds = 1)
+        {
+            var result = new Dictionary<string, List<Candle>>(StringComparer.OrdinalIgnoreCase);
+            if (quotes == null || quotes.Count == 0 || instruments == null || instruments.Count == 0)
+                return result;
+
+            var byToken = instruments
+                .Where(x => !string.IsNullOrWhiteSpace(x.token))
+                .GroupBy(x => x.token.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+            var duration = CandleFileStoreService.IntervalDuration(interval);
+
+            foreach (var quote in quotes.Where(q => !string.IsNullOrWhiteSpace(q.SymbolToken)))
+            {
+                var token = quote.SymbolToken.Trim();
+                if (!byToken.TryGetValue(token, out var instrument))
+                    continue;
+
+                var exchange = string.IsNullOrWhiteSpace(instrument.exch_seg)
+                    ? "NSE"
+                    : instrument.exch_seg.Trim().ToUpperInvariant();
+                var cached = await _candleStore.GetAsync(token, instrument.symbol, interval);
+                var merged = cached.OrderBy(c => c.Timestamp).ToList();
+                var rateLimited = false;
+
+                try
+                {
+                    // Backfill the gap before the earliest cached candle. This is essential:
+                    // a cache containing today's latest candle must not suppress prior-session warm-up.
+                    var earliest = merged.Count == 0 ? toDate : merged.Min(c => c.Timestamp);
+                    if (merged.Count == 0 || earliest > fromDate)
+                    {
+                        var warmupTo = merged.Count == 0 ? toDate : earliest.Subtract(duration);
+                        if (warmupTo >= fromDate)
+                        {
+                            var warmup = await DownloadCandleWithRateLimitAsync(
+                                token, jwtToken, interval, fromDate, warmupTo, exchange);
+                            if (warmup.Count > 0)
+                                await _candleStore.SaveAsync(token, instrument.symbol, interval, warmup);
+                        }
+                    }
+
+                    // Fill any missing tail after the latest cached candle.
+                    merged = (await _candleStore.GetAsync(token, instrument.symbol, interval))
+                        .OrderBy(c => c.Timestamp).ToList();
+                    var latest = merged.Count == 0 ? fromDate.Subtract(duration) : merged.Max(c => c.Timestamp);
+                    var fetchFrom = latest.Add(duration) > fromDate ? latest.Add(duration) : fromDate;
+                    if (fetchFrom <= toDate)
+                    {
+                        var tail = await DownloadCandleWithRateLimitAsync(
+                            token, jwtToken, interval, fetchFrom, toDate, exchange);
+                        if (tail.Count > 0)
+                            await _candleStore.SaveAsync(token, instrument.symbol, interval, tail);
+                    }
+
+                    merged = (await _candleStore.GetAsync(token, instrument.symbol, interval))
+                        .Where(c => c.Close > 0 && c.High >= c.Low)
+                        .GroupBy(c => c.Timestamp)
+                        .Select(g => g.Last())
+                        .OrderBy(c => c.Timestamp)
+                        .ToList();
+                    result[token] = merged;
+                    UpdateQuoteIndicators(quote, merged, interval);
+                }
+                catch (Exception ex)
+                {
+                    rateLimited = IsHistoricalRateLimitException(ex);
+                    _logger.LogWarning(ex,
+                        "Historical warm-up load failed for {Symbol} token {Token}. Using cached candles only. RateLimited={RateLimited}",
+                        instrument.symbol, token, rateLimited);
+                    result[token] = merged;
+                }
+
+                await _webSocket.SubscribeAsync([token], exchange);
+                if (rateLimited)
+                {
+                    _logger.LogWarning("Stopping historical warm-up downloads after provider rate limit. Remaining symbols will use cached data.");
+                    break;
+                }
+
+                if (batchDelaySeconds > 0)
+                    await Task.Delay(TimeSpan.FromSeconds(batchDelaySeconds));
+            }
+
+            return result;
+        }
+
     }
 }
