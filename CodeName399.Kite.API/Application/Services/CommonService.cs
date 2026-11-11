@@ -838,11 +838,28 @@ namespace CodeName399.Kite.API.Application.Services
                             ? loadedCandles
                             : new List<Candle>();
 
-                        // Additive entry paths: EMA9/EMA21 crossover, 5-minute ORB, or EMA25 + VWAP.
-                        if (!EntryStrategyService.TryGetEntryReason(quote, quoteCandles, out var entryReason))
+                        // Entry requires the latest completed 1-minute close above EMA25 and session VWAP.
+                        var entrySatisfied = EntryStrategyService.TryGetEntryReason(
+                            quote, quoteCandles, out var entryReason, out var entryDiagnostics);
+
+                        _logger.LogInformation(
+                            "ENTRY STRATEGY EVALUATION Symbol={Symbol} Token={Token} ValidCandlesLoaded={ValidCandlesLoaded} LastClose={LastClose} EMA25={EMA25} VWAP={VWAP} PriceAboveEMA25={PriceAboveEMA25} PriceAboveVWAP={PriceAboveVWAP} EntryConditionSatisfied={EntryConditionSatisfied} EntryRejectionReason={EntryRejectionReason}",
+                            quote.TradingSymbol,
+                            quote.SymbolToken,
+                            entryDiagnostics.ValidCandlesLoaded,
+                            entryDiagnostics.LastClose,
+                            entryDiagnostics.Ema25,
+                            entryDiagnostics.Vwap,
+                            entryDiagnostics.PriceAboveEma25,
+                            entryDiagnostics.PriceAboveVwap,
+                            entryDiagnostics.EntryConditionSatisfied,
+                            entryDiagnostics.EntryRejectionReason);
+
+                        if (!entrySatisfied)
                         {
-                            _logger.LogDebug("BUY SKIPPED: no EMA crossover, 5m ORB, or EMA25+VWAP setup on the latest completed candle. Symbol={Symbol} Token={Token}",
-                                quote.TradingSymbol, quote.SymbolToken);
+                            _logger.LogDebug(
+                                "BUY SKIPPED after EMA25 + VWAP evaluation. Symbol={Symbol} Token={Token} Reason={Reason}",
+                                quote.TradingSymbol, quote.SymbolToken, entryDiagnostics.EntryRejectionReason);
                             return;
                         }
 
@@ -858,11 +875,12 @@ namespace CodeName399.Kite.API.Application.Services
                             tradeOrder.EntryReason = entryReason;
                             tradeOrder.StopLoss = CalculateInitialStopLoss(
                                 tradeOrder.EntryPrice,
+                                tradeOrder.LowestPriceChange,
                                 _settings.Current.StopLossPercent);
                             _logger.LogInformation(
-                                "INITIAL STOP LOSS SET Symbol={Symbol} EntryPrice={EntryPrice:F4} StopLossPercent={StopLossPercent:F3} StopLoss={StopLoss:F4}",
+                                "INITIAL STOP LOSS SET Symbol={Symbol} EntryPrice={EntryPrice:F4} LowestPriceChange={LowestPriceChange:F6} Multiplier={Multiplier:F2} StopLoss={StopLoss:F4}",
                                 tradeOrder.Symbol, tradeOrder.EntryPrice,
-                                _settings.Current.StopLossPercent, tradeOrder.StopLoss);
+                                tradeOrder.LowestPriceChange, 2m, tradeOrder.StopLoss);
                             tradeOrder.TargetPrice = tradeOrder.EntryPrice +
                                 (tradeOrder.EstimatedCharges / Math.Max(1, tradeOrder.Quantity)) +
                                 (Math.Max(0m, _settings.Current.TargetLowestPriceChangeMultiplier) * tradeOrder.LowestPriceChange);
@@ -1156,25 +1174,27 @@ namespace CodeName399.Kite.API.Application.Services
             }
 
             var recent = completed.TakeLast(candleCount).ToList();
-            // Keep the sign. Math.Abs() incorrectly converted bearish candle bodies
-            // into positive expected upside and could approve trades on falling candles.
-            var changes = recent
+            // Consider only bullish candle bodies. Bearish and flat candles are
+            // ignored; use the smallest positive body change as the conservative
+            // expected move for the charge-cover calculation.
+            var positiveChanges = recent
                 .Select(c => c.Close - c.Open)
+                .Where(change => change > 0m)
                 .ToList();
 
-            if (changes.Count == 0)
+            if (positiveChanges.Count == 0)
             {
                 _logger.LogWarning(
-                    "ORDER BLOCKED Symbol={Symbol} Gate=LowestPriceChange Reason=NoRecentCandleBodyChanges CandleCount={CandleCount}",
+                    "ORDER BLOCKED Symbol={Symbol} Gate=LowestPriceChange Reason=NoPositiveCandleBodyChanges CandleCount={CandleCount} PositiveChangeCount=0",
                     quote.TradingSymbol, candleCount);
                 return 0m;
             }
 
-            var lowestChange = changes.Min();
+            var lowestPositiveChange = positiveChanges.Min();
             _logger.LogInformation(
-                "CHARGE COVER LOWEST SIGNED PRICE CHANGE Symbol={Symbol} CandleCount={CandleCount} ChangeCount={ChangeCount} LowestSignedChange={LowestChange:F6} LastClose={LastClose:F4} FirstOpen={FirstOpen:F4}",
-                quote.TradingSymbol, candleCount, changes.Count, lowestChange, recent[^1].Close, recent[0].Open);
-            return lowestChange;
+                "CHARGE COVER LOWEST POSITIVE PRICE CHANGE Symbol={Symbol} CandleCount={CandleCount} PositiveChangeCount={PositiveChangeCount} LowestPositiveChange={LowestPositiveChange:F6} LastClose={LastClose:F4} FirstOpen={FirstOpen:F4}",
+                quote.TradingSymbol, candleCount, positiveChanges.Count, lowestPositiveChange, recent[^1].Close, recent[0].Open);
+            return lowestPositiveChange;
         }
 
         private static List<MarketQuoteDepthLevel> GetValidAskLevels(MarketQuoteData quote)
@@ -1220,13 +1240,24 @@ namespace CodeName399.Kite.API.Application.Services
                 : 0m;
         }
 
-        private static decimal CalculateInitialStopLoss(decimal entryPrice, decimal stopLossPercent)
+        private static decimal CalculateInitialStopLoss(
+            decimal entryPrice,
+            decimal lowestPriceChange,
+            decimal fallbackStopLossPercent)
         {
             if (entryPrice <= 0m)
                 return 0m;
 
-            // Invalid/non-positive configuration falls back to the requested 0.5%.
-            var percentage = stopLossPercent > 0m ? stopLossPercent : 0.5m;
+            // Use the requested price-action stop: EntryPrice - (LowestPriceChange * 2).
+            // Retain the percentage fallback only for legacy positions without a valid
+            // LowestPriceChange value, so they do not receive an invalid stop at entry.
+            if (lowestPriceChange > 0m)
+            {
+                var stopLoss = entryPrice - (lowestPriceChange * 2m);
+                return Math.Round(Math.Max(0m, stopLoss), 2, MidpointRounding.AwayFromZero);
+            }
+
+            var percentage = fallbackStopLossPercent > 0m ? fallbackStopLossPercent : 0.5m;
             return Math.Round(entryPrice * (1m - percentage / 100m), 2, MidpointRounding.AwayFromZero);
         }
 
@@ -1237,7 +1268,10 @@ namespace CodeName399.Kite.API.Application.Services
                 return false;
 
             if (trade.StopLoss <= 0m)
-                trade.StopLoss = CalculateInitialStopLoss(trade.EntryPrice, _settings.Current.StopLossPercent);
+                trade.StopLoss = CalculateInitialStopLoss(
+                    trade.EntryPrice,
+                    trade.LowestPriceChange,
+                    _settings.Current.StopLossPercent);
 
             if (_settings.Current.EnableTargetExit && trade.TargetPrice > 0m && currentCandle.Close >= trade.TargetPrice)
             {
@@ -1284,14 +1318,15 @@ namespace CodeName399.Kite.API.Application.Services
             {
                 trade.StopLoss = CalculateInitialStopLoss(
                     trade.EntryPrice,
+                    trade.LowestPriceChange,
                     _settings.Current.StopLossPercent);
                 changed = trade.StopLoss > 0m;
                 if (changed)
                 {
                     _logger.LogInformation(
-                        "INITIAL STOP LOSS BACKFILLED Symbol={Symbol} EntryPrice={EntryPrice:F4} StopLossPercent={StopLossPercent:F3} StopLoss={StopLoss:F4}",
+                        "INITIAL STOP LOSS BACKFILLED Symbol={Symbol} EntryPrice={EntryPrice:F4} LowestPriceChange={LowestPriceChange:F6} Multiplier={Multiplier:F2} StopLoss={StopLoss:F4}",
                         trade.Symbol, trade.EntryPrice,
-                        _settings.Current.StopLossPercent, trade.StopLoss);
+                        trade.LowestPriceChange, 2m, trade.StopLoss);
                 }
             }
 
