@@ -13,6 +13,7 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
         private readonly TradingSettingsProvider _settings;
         private readonly IMarketHoursService _marketHours;
         private readonly MarketQuotePublisher _quotePublisher;
+        private readonly CandleFileStoreService _candleStore;
 
         public InitialBackgroundService(
             ILogger<InitialBackgroundService> logger,
@@ -21,7 +22,8 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
             IAngelOneService angel,
             TradingSettingsProvider settings,
             IMarketHoursService marketHours,
-            MarketQuotePublisher quotePublisher)
+            MarketQuotePublisher quotePublisher,
+            CandleFileStoreService candleStore)
         {
             _logger = logger;
             _commonService = commonService;
@@ -30,6 +32,7 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
             _settings = settings;
             _marketHours = marketHours;
             _quotePublisher = quotePublisher;
+            _candleStore = candleStore;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -99,16 +102,15 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
 
                     await _quotePublisher.PublishSnapshotAsync(quotes);
 
-                    var fromDate = new DateTime(candleCloseTime.Year, candleCloseTime.Month, candleCloseTime.Day, 9, 15, 0, DateTimeKind.Unspecified);
-                    var candles = await _commonService.DownloadCandlesInBatchesAsync(
-                        quotes,
-                        instruments,
-                        login.JwtToken,
-                        _settings.Current.CandleInterval,
-                        fromDate,
-                        candleCloseTime,
-                        _settings.Current.CandleBatchSize,
-                        _settings.Current.BatchDelay);
+                    // Close and persist the completed tick-built interval before the
+                    // strategy reads candles. Buy evaluation reads JSON files directly.
+                    var candleInterval = string.IsNullOrWhiteSpace(_settings.Current.CandleInterval)
+                        ? "ONE_MINUTE"
+                        : _settings.Current.CandleInterval;
+                    await _candleStore.FinalizeClosedCandlesAsync(
+                        candleInterval, _commonService.GetIndianTime(), stoppingToken);
+                    var candles = await _commonService.GetCandlesFromFilesForQuotesAsync(
+                        quotes, instruments, candleInterval);
 
                     await _commonService.PlaceBuyOrders(quotes.ToHashSet(), candles, login.JwtToken);
                 }

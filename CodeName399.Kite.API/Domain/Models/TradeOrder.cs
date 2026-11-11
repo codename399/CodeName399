@@ -27,6 +27,7 @@ namespace CodeName399.Kite.API.Models
         public bool TrailingActivated { get; set; }
         public decimal HighestPriceSinceEntry { get; set; }
         public decimal TrailingStopPrice { get; set; }
+        public decimal TargetPrice { get; set; }
         public string ExecutionMode { get; set; } = TradeExecutionMode.Paper.ToString();
         public decimal LowestPriceChange { get; set; }
         public decimal GrossProfit { get; set; }

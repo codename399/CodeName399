@@ -39,7 +39,7 @@ public class BrokerageCalculatorService : IBrokerageCalculatorService
             "FLOW STAGE Brokerage.Start Symbol={Symbol}, Token={Token}, Exchange={Exchange}, Product={Product}, Transaction={Transaction}, Price={Price}, Quantity={Quantity}",
             symbol, symbolToken, exchange, productType, transactionType, price, quantity);
 
-        string cacheKey = $"{exchange}_{productType}_{symbol}_{price:F2}_{quantity}_{transactionType}";
+        string cacheKey = $"{exchange}_{productType}_{symbol}_{price.ToString("G29", CultureInfo.InvariantCulture)}_{quantity}_{transactionType}";
 
         if (_cache.TryGetValue(cacheKey, out BrokerageCharge? cached))
         {

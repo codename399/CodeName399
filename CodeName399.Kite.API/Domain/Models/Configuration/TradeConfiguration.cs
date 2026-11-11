@@ -1,6 +1,5 @@
 namespace CodeName399.Kite.API.Models.Configuration
 {
-    using CodeName399.Kite.API.Domain.Models.Enum;
     using MongoDB.Bson.Serialization.Attributes;
     using System;
     using System.Collections.Generic;
@@ -12,6 +11,12 @@ namespace CodeName399.Kite.API.Models.Configuration
 
         public bool EnableAutoTrading { get; set; } = false;
         public bool EnableNotification { get; set; } = true;
+        public int MaxTrades { get; set; } = 1;
+        /// <summary>Initial protective stop as a percentage below the actual entry reference price.</summary>
+        public decimal StopLossPercent { get; set; } = 0.5m;
+        public bool EnableTrailingStop { get; set; } = false;
+        public bool EnableTargetExit { get; set; } = false;
+        public decimal TargetLowestPriceChangeMultiplier { get; set; } = 2m;
         public int ChargeCoverLowestPriceChangeCandles { get; set; } = 5;
         public TimeSpan MarketOpenTime { get; set; } = new TimeSpan(9, 15, 0);
         public TimeSpan MarketCloseTime { get; set; } = new TimeSpan(15, 30, 0);
@@ -27,8 +32,6 @@ namespace CodeName399.Kite.API.Models.Configuration
         public int BuyBatchSize { get; set; } = 5;
         public int AutoSquareOffMinutes { get; set; } = 5;
         public string CandleInterval { get; set; } = "ONE_MINUTE";
-
-        public EntryStrategyEnum EntryStrategy { get; set; } = EntryStrategyEnum.EmaCrossOver;
         public DateOnly? LastDailySummarySent { get; set; } = null;
         public DateTime? InstrumentLoadedAt { get; set; } = null;
         public string MarketTimeZoneId { get; set; } = "Asia/Kolkata";
@@ -38,7 +41,7 @@ namespace CodeName399.Kite.API.Models.Configuration
         public int WebSocketRetryMaxSeconds { get; set; } = 60;
         public List<string>? VisibleColumns { get; set; } = [];
         public bool AutoSquareOff { get; set; } = true;
-        public decimal PaperTradingBalance { get; set; } = 100000m;
+        public decimal PaperTradingBalance { get; set; } = 10000m;
         public string ResearchDataVersion { get; set; } = "v1";
         public RawMarketDataSettings RawMarketData { get; set; } = new();
     }

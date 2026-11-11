@@ -31,6 +31,9 @@ namespace CodeName399.Kite.API.Models
         public decimal Ema21 { get; set; }
         public decimal PreviousCandleEma9 { get; set; }
         public decimal PreviousCandleEma21 { get; set; }
+        public decimal Ema25 { get; set; }
+        public decimal PreviousCandleEma25 { get; set; }
+        public decimal Vwap { get; set; }
         public decimal ChoppinessIndex { get; set; }
         public long TradeVolume { get; set; }
         public DateTime QuoteTimeUtc { get; set; }

@@ -26,6 +26,10 @@
       <div class="grid-4" *ngIf="openSection === 'trading'">
         <label class="toggle-field"><input type="checkbox" formControlName="enableAutoTrading"><span>Enable auto trading</span></label>
         <label class="toggle-field"><input type="checkbox" formControlName="enableNotification"><span>Enable notifications</span></label>
+         <label><span>Maximum open trades</span><input type="number" formControlName="maxTrades" min="1"></label>
+         <label class="toggle-field"><input type="checkbox" formControlName="enableTrailingStop"><span>Enable trailing stop</span></label>
+         <label class="toggle-field"><input type="checkbox" formControlName="enableTargetExit"><span>Enable target exit</span></label>
+         <label><span>Target price-change multiplier</span><input type="number" formControlName="targetLowestPriceChangeMultiplier" min="0" step="0.01"></label>
         <label class="toggle-field"><input type="checkbox" formControlName="autoSquareOff"><span>Enable automatic square-off</span></label>
         <label><span>Paper trading balance</span><input type="number" formControlName="paperTradingBalance" min="0" step="0.01"></label>
         <label><span>Auto square-off minutes before close</span><input type="number" formControlName="autoSquareOffMinutes" min="0"></label>
@@ -48,22 +52,14 @@
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('entry strategy', 'strategy', 'ema crossover', 'fair value gap', 'fvg', 'volatility compression', 'scanner', 'candidates', 'candles', 'batch', 'excluded symbols', 'charge cover')">
+    <section class="settings-card" *ngIf="sectionMatches('market scan', 'scanner', 'candidates', 'candles', 'batch', 'excluded symbols', 'charge cover')">
       <div class="card-header">
         <button type="button" class="accordion-trigger" (click)="toggleSection('scanner')" [attr.aria-expanded]="openSection === 'scanner'">
-          <span><h2>Entry Strategy &amp; Market Scan</h2><p>Select the entry model, candidate count, candle interval and batching.</p></span>
+          <span><h2>Market Scan &amp; Batching</h2><p>Configure candidate count, candle interval and batching.</p></span>
           <span class="accordion-icon">{{ openSection === 'scanner' ? '−' : '+' }}</span>
         </button>
       </div>
       <div class="grid-4" *ngIf="openSection === 'scanner'">
-        <label class="wide-field"><span>Entry strategy</span>
-          <select formControlName="entryStrategy">
-            <option value="EmaCrossOver">EMA crossover</option>
-            <option value="EmaCrossOverWithPullback">EMA crossover with pullback</option>
-            <option value="FVGWithSweep">Fair Value Gap with liquidity sweep</option>
-            <option value="NoiseBand">Volatility compression breakout</option>
-          </select>
-        </label>
         <label><span>Maximum candidates</span><input type="number" formControlName="maxCandidates" min="1"></label>
         <label><span>Candle interval</span>
           <select formControlName="candleInterval">

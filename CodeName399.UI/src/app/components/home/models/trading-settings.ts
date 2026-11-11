@@ -11,6 +11,10 @@ export interface TradingConfiguration {
   id: string;
   enableAutoTrading: boolean;
   enableNotification: boolean;
+  maxTrades: number;
+  enableTrailingStop: boolean;
+  enableTargetExit: boolean;
+  targetLowestPriceChangeMultiplier: number;
   chargeCoverLowestPriceChangeCandles: number;
   marketOpenTime: string;
   marketCloseTime: string;
@@ -23,7 +27,6 @@ export interface TradingConfiguration {
   buyBatchSize: number;
   autoSquareOffMinutes: number;
   candleInterval: string;
-  entryStrategy: 'EmaCrossOver' | 'EmaCrossOverWithPullback' | 'FVGWithSweep' | 'NoiseBand';
   lastDailySummarySent: string | null;
   instrumentLoadedAt: string | null;
   marketTimeZoneId: string;

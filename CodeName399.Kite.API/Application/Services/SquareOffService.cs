@@ -1,31 +1,27 @@
 using CodeName399.Kite.API.Application.Services;
-using CodeName399.Kite.API.Services.Interface;
 
 namespace CodeName399.Kite.API.Services;
 
 public sealed class SquareOffService
 {
     private readonly CommonService _commonService;
-    private readonly IAngelOneService _angelOneService;
-    private readonly IInstrumentService _instrumentService;
     private readonly TradingSettingsProvider _settings;
     private readonly MarketClock _marketClock;
     private readonly ILogger<SquareOffService> _logger;
+    private readonly CandleFileStoreService _candleStore;
 
     public SquareOffService(
         CommonService commonService,
-        IAngelOneService angelOneService,
-        IInstrumentService instrumentService,
         TradingSettingsProvider settings,
         MarketClock marketClock,
-        ILogger<SquareOffService> logger)
+        ILogger<SquareOffService> logger,
+        CandleFileStoreService candleStore)
     {
         _commonService = commonService;
-        _angelOneService = angelOneService;
-        _instrumentService = instrumentService;
         _settings = settings;
         _marketClock = marketClock;
         _logger = logger;
+        _candleStore = candleStore;
     }
 
     /// <summary>
@@ -46,26 +42,11 @@ public sealed class SquareOffService
             return;
         }
 
-        var login = await _angelOneService.GetLoginDataAsync();
-        if (login == null || string.IsNullOrWhiteSpace(login.JwtToken))
-        {
-            _logger.LogWarning("Square-off skipped: Angel One login/JWT is unavailable.");
-            return;
-        }
-
-        var instruments = await _instrumentService.LoadInstruments();
-        var now = _marketClock.Now;
-        var fromDate = new DateTime(now.Year, now.Month, now.Day, 9, 15, 0, DateTimeKind.Unspecified);
-
-        var candles = await _commonService.DownloadCandlesInBatchesAsync(
-            ownedStocks.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase),
-            instruments,
-            login.JwtToken,
-            _settings.Current.CandleInterval,
-            fromDate,
-            now,
-            _settings.Current.CandleBatchSize,
-            _settings.Current.BatchDelay);
+        var interval = string.IsNullOrWhiteSpace(_settings.Current.CandleInterval)
+            ? "ONE_MINUTE"
+            : _settings.Current.CandleInterval;
+        await _candleStore.FinalizeClosedCandlesAsync(interval, _commonService.GetIndianTime(), token);
+        var candles = await _commonService.GetCandlesFromFilesForOwnedStocksAsync(ownedStocks, interval);
 
         token.ThrowIfCancellationRequested();
         await _commonService.PlaceSellOrder(ownedStocks, candles, forceSquareOff: true);
