@@ -13,8 +13,6 @@ public static class TradingConfigurationValidator
 
         if (configuration.StopLossPercent <= 0m || configuration.StopLossPercent >= 100m)
             throw new InvalidOperationException("StopLossPercent must be greater than 0 and less than 100.");
-        if (configuration.HardMonetaryStopLoss <= 0m)
-            throw new InvalidOperationException("HardMonetaryStopLoss must be greater than 0.");
 
         if (configuration.MinimumStockPrice < 0m)
             throw new InvalidOperationException("MinimumStockPrice cannot be negative.");
