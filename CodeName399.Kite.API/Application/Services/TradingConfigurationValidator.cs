@@ -14,6 +14,9 @@ public static class TradingConfigurationValidator
         if (configuration.StopLossPercent <= 0m || configuration.StopLossPercent >= 100m)
             throw new InvalidOperationException("StopLossPercent must be greater than 0 and less than 100.");
 
+        if (configuration.MinimumStockPrice < 0m)
+            throw new InvalidOperationException("MinimumStockPrice cannot be negative.");
+
         var raw = configuration.RawMarketData ?? new RawMarketDataSettings();
         if (string.IsNullOrWhiteSpace(raw.StoragePath)) throw new InvalidOperationException("RawMarketData.StoragePath is required.");
         if (raw.MaximumZipSizeMb <= 0) throw new InvalidOperationException("RawMarketData.MaximumZipSizeMb must be positive.");

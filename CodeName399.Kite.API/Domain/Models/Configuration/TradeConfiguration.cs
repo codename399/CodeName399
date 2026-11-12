@@ -27,6 +27,8 @@ namespace CodeName399.Kite.API.Models.Configuration
         public List<string> ExcludedSymbols { get; set; } =
             new List<string> { "TATSILV-EQ", "AONEGOLD-EQ", "ACUTAAS-EQ", "IDEA-EQ" };
         public int MaxCandidates { get; set; } = 10;
+        /// <summary>Minimum LTP required for a stock to qualify for the top quote candidates.</summary>
+        public decimal MinimumStockPrice { get; set; } = 20m;
         public int CandleBatchSize { get; set; } = 2;
         public int BatchDelay { get; set; } = 1;
         public int BuyBatchSize { get; set; } = 5;

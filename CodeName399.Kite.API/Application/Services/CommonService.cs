@@ -48,6 +48,8 @@ namespace CodeName399.Kite.API.Application.Services
 
         private readonly SemaphoreSlim _quoteSemaphore = new(2, 2);
         private readonly SemaphoreSlim _buyExecutionSemaphore = new(1, 1);
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTime> _lastVwapExitEvaluation =
+            new(StringComparer.OrdinalIgnoreCase);
 
         // Historical candle API calls are globally serialized across CommonService instances.
         // Angel One may return HTTP 403 when its historical-data access rate is exceeded.
@@ -265,7 +267,7 @@ namespace CodeName399.Kite.API.Application.Services
         {
             return quotes
                 .Where(x => !ownedStocks.ContainsKey(x.TradingSymbol) && !ownedStocks.Values.Any(t => string.Equals(t.SymbolToken, x.SymbolToken, StringComparison.OrdinalIgnoreCase)))
-                .Where(x => x.Ltp > 0m && x.Close > 0m && x.Ltp > x.Close)
+                .Where(x => x.Ltp >= Math.Max(0m, _settings.Current.MinimumStockPrice) && x.Close > 0m && x.Ltp > x.Close)
             .Where(x => GetActivityVolume(x) > 0L)
             .OrderByDescending(GetActivityVolume)
             .ThenByDescending(x => (x.Ltp - x.Close) / x.Close)
@@ -838,12 +840,13 @@ namespace CodeName399.Kite.API.Application.Services
                             ? loadedCandles
                             : new List<Candle>();
 
-                        // Entry requires the latest completed 1-minute close above EMA25 and session VWAP.
+                        // Entry requires a rising EMA25 trend, a recent pullback towards EMA25/VWAP,
+                        // and a bullish recovery candle closing above the previous candle high.
                         var entrySatisfied = EntryStrategyService.TryGetEntryReason(
                             quote, quoteCandles, out var entryReason, out var entryDiagnostics);
 
                         _logger.LogInformation(
-                            "ENTRY STRATEGY EVALUATION Symbol={Symbol} Token={Token} ValidCandlesLoaded={ValidCandlesLoaded} LastClose={LastClose} EMA25={EMA25} VWAP={VWAP} PriceAboveEMA25={PriceAboveEMA25} PriceAboveVWAP={PriceAboveVWAP} EntryConditionSatisfied={EntryConditionSatisfied} EntryRejectionReason={EntryRejectionReason}",
+                            "ENTRY STRATEGY EVALUATION Symbol={Symbol} Token={Token} ValidCandlesLoaded={ValidCandlesLoaded} LastClose={LastClose} EMA25={EMA25} VWAP={VWAP} PriceAboveEMA25={PriceAboveEMA25} PriceAboveVWAP={PriceAboveVWAP} Ema25Rising={Ema25Rising} PullbackDetected={PullbackDetected} RecoveryConfirmed={RecoveryConfirmed} PullbackSwingLow={PullbackSwingLow} SuggestedStopLoss={SuggestedStopLoss} EntryConditionSatisfied={EntryConditionSatisfied} EntryRejectionReason={EntryRejectionReason}",
                             quote.TradingSymbol,
                             quote.SymbolToken,
                             entryDiagnostics.ValidCandlesLoaded,
@@ -852,6 +855,11 @@ namespace CodeName399.Kite.API.Application.Services
                             entryDiagnostics.Vwap,
                             entryDiagnostics.PriceAboveEma25,
                             entryDiagnostics.PriceAboveVwap,
+                            entryDiagnostics.Ema25Rising,
+                            entryDiagnostics.PullbackDetected,
+                            entryDiagnostics.RecoveryConfirmed,
+                            entryDiagnostics.PullbackSwingLow,
+                            entryDiagnostics.SuggestedStopLoss,
                             entryDiagnostics.EntryConditionSatisfied,
                             entryDiagnostics.EntryRejectionReason);
 
@@ -873,14 +881,18 @@ namespace CodeName399.Kite.API.Application.Services
 
                             var tradeOrder = MarketQuoteData.ToTradeOrder(quote, _settings.Current.EnableAutoTrading);
                             tradeOrder.EntryReason = entryReason;
-                            tradeOrder.StopLoss = CalculateInitialStopLoss(
-                                tradeOrder.EntryPrice,
-                                tradeOrder.LowestPriceChange,
-                                _settings.Current.StopLossPercent);
+                            tradeOrder.StopLoss = entryDiagnostics.SuggestedStopLoss.HasValue &&
+                                                  entryDiagnostics.SuggestedStopLoss.Value > 0m &&
+                                                  entryDiagnostics.SuggestedStopLoss.Value < tradeOrder.EntryPrice
+                                ? entryDiagnostics.SuggestedStopLoss.Value
+                                : CalculateInitialStopLoss(
+                                    tradeOrder.EntryPrice,
+                                    tradeOrder.LowestPriceChange,
+                                    _settings.Current.StopLossPercent);
                             _logger.LogInformation(
-                                "INITIAL STOP LOSS SET Symbol={Symbol} EntryPrice={EntryPrice:F4} LowestPriceChange={LowestPriceChange:F6} Multiplier={Multiplier:F2} StopLoss={StopLoss:F4}",
+                                "INITIAL PULLBACK STOP LOSS SET Symbol={Symbol} EntryPrice={EntryPrice:F4} PullbackSwingLow={PullbackSwingLow:F4} StopLoss={StopLoss:F4}",
                                 tradeOrder.Symbol, tradeOrder.EntryPrice,
-                                tradeOrder.LowestPriceChange, 2m, tradeOrder.StopLoss);
+                                entryDiagnostics.PullbackSwingLow, tradeOrder.StopLoss);
                             tradeOrder.TargetPrice = tradeOrder.EntryPrice +
                                 (tradeOrder.EstimatedCharges / Math.Max(1, tradeOrder.Quantity)) +
                                 (Math.Max(0m, _settings.Current.TargetLowestPriceChangeMultiplier) * tradeOrder.LowestPriceChange);
@@ -1279,13 +1291,6 @@ namespace CodeName399.Kite.API.Application.Services
                 return true;
             }
 
-            if (!_settings.Current.EnableTrailingStop && !_settings.Current.EnableTargetExit
-                && (currentCandle.Close - trade.EntryPrice) * trade.Quantity - trade.EstimatedCharges > 0m)
-            {
-                outcome = "NET_PROFIT_EXIT";
-                return true;
-            }
-
             // Once activated, the trailing stop is evaluated against every live tick.
             if (_settings.Current.EnableTrailingStop && trade.TrailingActivated && trade.TrailingStopPrice > 0m && currentCandle.Close <= trade.TrailingStopPrice)
             {
@@ -1364,17 +1369,39 @@ namespace CodeName399.Kite.API.Application.Services
                 exitReason = "TARGET_EXIT";
             else if (trailingEnabled && trade.TrailingActivated && trade.TrailingStopPrice > 0m && ltp <= trade.TrailingStopPrice)
                 exitReason = "TRAILING_STOP";
-            else if (!trailingEnabled && !targetEnabled && estimatedNet > 0m)
-                exitReason = "NET_PROFIT_EXIT";
             else if (trade.StopLoss > 0m && ltp <= trade.StopLoss)
                 exitReason = "STOP_LOSS";
+
+            // Evaluate the VWAP close exit once per minute from the persisted completed
+            // candle file. Live ticks continue to handle the protective stop/trailing stop.
+            if (exitReason == null)
+            {
+                var currentMinute = new DateTime(tickTime.Year, tickTime.Month, tickTime.Day,
+                    tickTime.Hour, tickTime.Minute, 0, DateTimeKind.Unspecified);
+                if (!_lastVwapExitEvaluation.TryGetValue(trade.SymbolToken, out var evaluatedMinute) ||
+                    evaluatedMinute < currentMinute)
+                {
+                    _lastVwapExitEvaluation[trade.SymbolToken] = currentMinute;
+                    var interval = string.IsNullOrWhiteSpace(settings.CandleInterval)
+                        ? "ONE_MINUTE" : settings.CandleInterval;
+                    var completedCandles = await _candleStore.GetAsync(trade.SymbolToken, trade.Symbol, interval);
+                    if (EntryStrategyService.TryGetVwapExitReason(completedCandles, out var sessionVwap, out var candleClose))
+                    {
+                        exitReason = "VWAP_CLOSE_EXIT";
+                        _logger.LogInformation(
+                            "VWAP EXIT SIGNAL Symbol={Symbol} Token={Token} CandleClose={CandleClose:F4} SessionVWAP={SessionVWAP:F6} TickLtp={Ltp:F4}",
+                            trade.Symbol, trade.SymbolToken, candleClose, sessionVwap, ltp);
+                    }
+                }
+            }
 
             if (exitReason != null)
             {
                 var synthetic = new Candle { Timestamp = tickTime, Open = ltp, High = ltp, Low = ltp, Close = ltp };
                 await PlaceSellOrder(new Dictionary<string, TradeOrder> { [trade.Symbol] = trade },
                     new Dictionary<string, List<Candle>> { [trade.SymbolToken] = new() { synthetic } },
-                    forceSquareOff: false);
+                    forceSquareOff: false,
+                    forcedExitReason: exitReason);
             }
         }
 
@@ -1382,20 +1409,22 @@ namespace CodeName399.Kite.API.Application.Services
         public async Task PlaceSellOrder(
             Dictionary<string, TradeOrder> ownedStocks,
             Dictionary<string, List<Candle>> candles,
-            bool forceSquareOff = false)
+            bool forceSquareOff = false,
+            string? forcedExitReason = null)
         {
             if (ownedStocks == null || ownedStocks.Count == 0 || candles == null || candles.Count == 0)
                 return;
 
             await Task.WhenAll(ownedStocks.Values
                 .Where(x => x != null && !string.IsNullOrWhiteSpace(x.SymbolToken))
-                .Select(x => ProcessSellAsync(x, candles, forceSquareOff)));
+                .Select(x => ProcessSellAsync(x, candles, forceSquareOff, forcedExitReason)));
         }
 
         private async Task ProcessSellAsync(
             TradeOrder trade,
             Dictionary<string, List<Candle>> candles,
-            bool forceSquareOff)
+            bool forceSquareOff,
+            string? forcedExitReason = null)
         {
             try
             {
@@ -1404,8 +1433,8 @@ namespace CodeName399.Kite.API.Application.Services
                     return;
 
                 var candle = stockCandles.OrderBy(x => x.Timestamp).Last();
-                var outcome = forceSquareOff ? "SQUARE_OFF" : string.Empty;
-                if (!forceSquareOff && !ValidateSell(trade, candle, out outcome))
+                var outcome = forcedExitReason ?? (forceSquareOff ? "SQUARE_OFF" : string.Empty);
+                if (!forceSquareOff && forcedExitReason == null && !ValidateSell(trade, candle, out outcome))
                     return;
 
                 var exitPrice = candle.Close;
