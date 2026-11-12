@@ -14,6 +14,8 @@ namespace CodeName399.Kite.API.Models.Configuration
         public int MaxTrades { get; set; } = 1;
         /// <summary>Initial protective stop as a percentage below the actual entry reference price.</summary>
         public decimal StopLossPercent { get; set; } = 0.5m;
+        /// <summary>Maximum estimated net loss allowed per open trade, including estimated charges.</summary>
+        public decimal HardMonetaryStopLoss { get; set; } = 300m;
         public bool EnableTrailingStop { get; set; } = false;
         public bool EnableTargetExit { get; set; } = false;
         public decimal TargetLowestPriceChangeMultiplier { get; set; } = 2m;

@@ -1285,6 +1285,16 @@ namespace CodeName399.Kite.API.Application.Services
                     trade.LowestPriceChange,
                     _settings.Current.StopLossPercent);
 
+            // Hard monetary protection is evaluated on completed-candle processing too,
+            // using estimated net P&L after estimated round-trip charges.
+            var estimatedNetPnl = (currentCandle.Close - trade.EntryPrice) * trade.Quantity
+                                  - trade.EstimatedCharges;
+            if (estimatedNetPnl <= -_settings.Current.HardMonetaryStopLoss)
+            {
+                outcome = "HARD_MONETARY_STOP_LOSS";
+                return true;
+            }
+
             if (_settings.Current.EnableTargetExit && trade.TargetPrice > 0m && currentCandle.Close >= trade.TargetPrice)
             {
                 outcome = "TARGET_EXIT";
@@ -1365,7 +1375,9 @@ namespace CodeName399.Kite.API.Application.Services
             if (changed) await _tradeOrderFileRepository.UpdateAsync(trade);
 
             string? exitReason = null;
-            if (targetEnabled && ltp >= trade.TargetPrice)
+            if (estimatedNet <= -settings.HardMonetaryStopLoss)
+                exitReason = "HARD_MONETARY_STOP_LOSS";
+            else if (targetEnabled && ltp >= trade.TargetPrice)
                 exitReason = "TARGET_EXIT";
             else if (trailingEnabled && trade.TrailingActivated && trade.TrailingStopPrice > 0m && ltp <= trade.TrailingStopPrice)
                 exitReason = "TRAILING_STOP";
@@ -1397,6 +1409,14 @@ namespace CodeName399.Kite.API.Application.Services
 
             if (exitReason != null)
             {
+                if (exitReason == "HARD_MONETARY_STOP_LOSS")
+                {
+                    _logger.LogWarning(
+                        "HARD MONETARY STOP LOSS triggered. Symbol={Symbol} Quantity={Quantity} EntryPrice={EntryPrice:F4} Ltp={Ltp:F4} EstimatedCharges={EstimatedCharges:F2} EstimatedNetPnl={EstimatedNetPnl:F2} Limit={Limit:F2}",
+                        trade.Symbol, trade.Quantity, trade.EntryPrice, ltp,
+                        trade.EstimatedCharges, estimatedNet, settings.HardMonetaryStopLoss);
+                }
+
                 var synthetic = new Candle { Timestamp = tickTime, Open = ltp, High = ltp, Low = ltp, Close = ltp };
                 await PlaceSellOrder(new Dictionary<string, TradeOrder> { [trade.Symbol] = trade },
                     new Dictionary<string, List<Candle>> { [trade.SymbolToken] = new() { synthetic } },
