@@ -211,10 +211,25 @@ namespace CodeName399.Kite.API.Application.Services
                     .Select(batch => (Exchange: group.Key, Tokens: batch)))
                 .ToList();
 
-            var tasks = requests.Select(async request =>
-                await GetBatchAsync(request.Tokens, jwt, request.Exchange));
-            var batches = await Task.WhenAll(tasks);
-            return batches.SelectMany(x => x).ToList();
+            var quotes = new List<MarketQuoteData>();
+            foreach (var request in requests)
+            {
+                // A provider 403 activates the shared endpoint cooldown in RequestHelper.
+                // Stop issuing quote requests for the rest of this scan instead of
+                // queuing dozens of requests that cannot succeed during the cooldown.
+                if (RequestHelper.IsEndpointCoolingDown(AngelApiUrlConstant.marketDataUrl))
+                {
+                    _logger.LogWarning(
+                        "QUOTE SCAN PAUSED: Angel One market-quote endpoint is cooling down. RemainingBatches={RemainingBatches}",
+                        requests.Count - requests.IndexOf(request));
+                    break;
+                }
+
+                var batch = await GetBatchAsync(request.Tokens, jwt, request.Exchange);
+                quotes.AddRange(batch);
+            }
+
+            return quotes;
         }
 
         private IEnumerable<List<string>> ChunkTokens(List<string> tokens, int size = 50)
@@ -267,7 +282,7 @@ namespace CodeName399.Kite.API.Application.Services
         {
             return quotes
                 .Where(x => !ownedStocks.ContainsKey(x.TradingSymbol) && !ownedStocks.Values.Any(t => string.Equals(t.SymbolToken, x.SymbolToken, StringComparison.OrdinalIgnoreCase)))
-                .Where(x => x.Ltp >= Math.Max(0m, _settings.Current.MinimumStockPrice) && x.Close > 0m && x.Ltp > x.Close)
+                .Where(x => x.Ltp <= Math.Max(0m, _settings.Current.MinimumStockPrice) && x.Close > 0m && x.Ltp > x.Close)
             .Where(x => GetActivityVolume(x) > 0L)
             .OrderByDescending(GetActivityVolume)
             .ThenByDescending(x => (x.Ltp - x.Close) / x.Close)
@@ -275,78 +290,6 @@ namespace CodeName399.Kite.API.Application.Services
             .ThenBy(x => x.Ltp)
             .Take(Math.Max(0, count))
             .ToList();
-        }
-
-        /// <summary>
-        /// Reads completed tick-built candles directly from local JSON files
-        /// and ensures WebSocket subscriptions are active. No historical API or database
-        /// request is made by this method.
-        /// </summary>
-        public async Task<Dictionary<string, List<Candle>>> GetCandlesFromFilesForQuotesAsync(
-            List<MarketQuoteData> quotes,
-            List<Instrument> instruments,
-            string interval)
-        {
-            var result = new Dictionary<string, List<Candle>>(StringComparer.OrdinalIgnoreCase);
-            if (quotes == null || quotes.Count == 0 || instruments == null || instruments.Count == 0)
-                return result;
-
-            var byToken = instruments
-                .Where(x => !string.IsNullOrWhiteSpace(x.token))
-                .GroupBy(x => x.token.Trim(), StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
-
-            foreach (var quote in quotes.Where(q => !string.IsNullOrWhiteSpace(q.SymbolToken)))
-            {
-                var token = quote.SymbolToken.Trim();
-                if (!byToken.TryGetValue(token, out var instrument))
-                    continue;
-
-                var exchange = string.IsNullOrWhiteSpace(instrument.exch_seg)
-                    ? "NSE"
-                    : instrument.exch_seg.Trim().ToUpperInvariant();
-
-                var fileCandles = await _candleStore.GetAsync(token, instrument.symbol, interval);
-                result[token] = fileCandles;
-                UpdateQuoteIndicators(quote, fileCandles, interval);
-
-                // Subscribe even when the file has no candles yet; subsequent live ticks
-                // will build and persist completed candles for the next evaluation.
-                await _webSocket.SubscribeAsync([token], exchange);
-
-                _logger.LogDebug(
-                    "TICK CANDLE FILE READ Symbol={Symbol} Token={Token} FileCandles={Count} Interval={Interval}",
-                    instrument.symbol, token, fileCandles.Count, interval);
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// Reads tick-built candles for currently owned positions directly from JSON files and
-        /// keeps their WebSocket subscriptions active. No historical API or database
-        /// request is made.
-        /// </summary>
-        public async Task<Dictionary<string, List<Candle>>> GetCandlesFromFilesForOwnedStocksAsync(
-            Dictionary<string, TradeOrder> ownedStocks,
-            string interval)
-        {
-            var result = new Dictionary<string, List<Candle>>(StringComparer.OrdinalIgnoreCase);
-            if (ownedStocks == null || ownedStocks.Count == 0)
-                return result;
-
-            foreach (var trade in ownedStocks.Values.Where(x => !string.IsNullOrWhiteSpace(x.SymbolToken)))
-            {
-                var token = trade.SymbolToken.Trim();
-                var fileCandles = await _candleStore.GetAsync(token, trade.Symbol, interval);
-                result[token] = fileCandles;
-                await _webSocket.SubscribeAsync([token], string.IsNullOrWhiteSpace(trade.Exchange) ? "NSE" : trade.Exchange);
-                _logger.LogDebug(
-                    "OWNED TICK CANDLE FILE READ Symbol={Symbol} Token={Token} FileCandles={Count} Interval={Interval}",
-                    trade.Symbol, token, fileCandles.Count, interval);
-            }
-
-            return result;
         }
 
         /// <summary>
@@ -363,74 +306,176 @@ namespace CodeName399.Kite.API.Application.Services
             int batchSize = 2,
             int batchDelay = 1)
         {
+            const int minimumEmaCandles = 22;
             var candlesByToken = new Dictionary<string, List<Candle>>(StringComparer.OrdinalIgnoreCase);
-            if (quotes == null || quotes.Count == 0 || instruments == null || instruments.Count == 0) return candlesByToken;
-            if (string.IsNullOrWhiteSpace(jwtToken)) throw new ArgumentException("JWT token is required to download historical candles.", nameof(jwtToken));
+            if (quotes == null || quotes.Count == 0 || instruments == null || instruments.Count == 0)
+                return candlesByToken;
+            if (string.IsNullOrWhiteSpace(jwtToken))
+                throw new ArgumentException("JWT token is required to download historical candles.", nameof(jwtToken));
 
-            var byToken = instruments.Where(x => !string.IsNullOrWhiteSpace(x.token))
+            var byToken = instruments
+                .Where(x => !string.IsNullOrWhiteSpace(x.token))
                 .GroupBy(x => x.token.Trim(), StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
             var duration = CandleFileStoreService.IntervalDuration(interval);
-            var expectedLast = new DateTime(toDate.Year, toDate.Month, toDate.Day, toDate.Hour, toDate.Minute / (int)duration.TotalMinutes * (int)duration.TotalMinutes, 0).Subtract(duration);
+            var intervalMinutes = Math.Max(1, (int)duration.TotalMinutes);
+            var expectedLast = new DateTime(
+                toDate.Year, toDate.Month, toDate.Day,
+                toDate.Hour, (toDate.Minute / intervalMinutes) * intervalMinutes, 0)
+                .Subtract(duration);
+
+            var providerRateLimited = false;
+            var requestedCount = quotes.Count(q => !string.IsNullOrWhiteSpace(q.SymbolToken));
 
             foreach (var quote in quotes.Where(q => !string.IsNullOrWhiteSpace(q.SymbolToken)))
             {
                 var token = quote.SymbolToken.Trim();
-                if (!byToken.TryGetValue(token, out var instrument)) continue;
-                var exchange = string.IsNullOrWhiteSpace(instrument.exch_seg) ? "NSE" : instrument.exch_seg.Trim().ToUpperInvariant();
-                var cached = await _candleStore.GetAsync(token, instrument.symbol, interval);
-                var fetchFrom = fromDate;
-                if (cached.Count > 0)
+                if (!byToken.TryGetValue(token, out var instrument))
                 {
-                    var last = cached.Max(x => x.Timestamp);
-                    if (last >= expectedLast)
-                    {
-                        candlesByToken[token] = cached;
-                        UpdateQuoteIndicators(quote, cached, interval);
-                        _logger.LogDebug("CANDLE CACHE HIT Symbol={Symbol} Token={Token} Count={Count} Last={Last}", instrument.symbol, token, cached.Count, last);
-                        await _webSocket.SubscribeAsync([token], exchange);
-                        continue;
-                    }
-                    fetchFrom = last.Add(duration) > fromDate ? last.Add(duration) : fromDate;
+                    _logger.LogWarning("CANDLE LOAD SKIPPED Symbol={Symbol} Token={Token} Reason=InstrumentNotFound",
+                        quote.TradingSymbol, token);
+                    continue;
                 }
 
-                var rateLimited = false;
+                var exchange = string.IsNullOrWhiteSpace(instrument.exch_seg)
+                    ? "NSE"
+                    : instrument.exch_seg.Trim().ToUpperInvariant();
+
+                var cached = (await _candleStore.GetAsync(token, instrument.symbol, interval))
+                    .Where(c => c.Close > 0m && c.High >= c.Low)
+                    .GroupBy(c => c.Timestamp)
+                    .Select(g => g.Last())
+                    .OrderBy(c => c.Timestamp)
+                    .ToList();
+
+                var latestCached = cached.Count == 0 ? (DateTime?)null : cached[^1].Timestamp;
+                var cacheIsCurrentAndWarm = cached.Count >= minimumEmaCandles
+                    && latestCached >= expectedLast;
+
+                if (cacheIsCurrentAndWarm)
+                {
+                    candlesByToken[token] = cached;
+                    UpdateQuoteIndicators(quote, cached, interval);
+                    _logger.LogInformation(
+                        "CANDLE CACHE HIT Symbol={Symbol} Token={Token} Count={Count} Earliest={Earliest} Latest={Latest} Required={Required}",
+                        instrument.symbol, token, cached.Count, cached[0].Timestamp, cached[^1].Timestamp, minimumEmaCandles);
+                    continue;
+                }
+
+                if (providerRateLimited || RequestHelper.IsEndpointCoolingDown(AngelApiUrlConstant.historicalDataUrl))
+                {
+                    candlesByToken[token] = cached;
+                    UpdateQuoteIndicators(quote, cached, interval);
+                    _logger.LogWarning(
+                        "CANDLE CACHE FALLBACK Symbol={Symbol} Token={Token} CachedCount={Count} Latest={Latest} Reason=HistoricalEndpointCoolingDown",
+                        instrument.symbol, token, cached.Count, latestCached);
+                    continue;
+                }
+
                 try
                 {
-                    var downloaded = await DownloadCandleWithRateLimitAsync(token, jwtToken, interval, fetchFrom, toDate, exchange);
-                    if (downloaded.Count > 0)
-                        await _candleStore.SaveAsync(token, instrument.symbol, interval, downloaded);
-                    var combined = await _candleStore.GetAsync(token, instrument.symbol, interval);
+                    // Backfill earlier history when the cache is empty or does not
+                    // contain enough warm-up candles. This fixes the old behaviour
+                    // that treated a recent but tiny cache as complete.
+                    if (cached.Count < minimumEmaCandles)
+                    {
+                        var earliest = cached.Count == 0 ? (DateTime?)null : cached[0].Timestamp;
+                        var warmupTo = earliest.HasValue
+                            ? earliest.Value.Subtract(duration)
+                            : toDate;
+
+                        if (!earliest.HasValue || warmupTo >= fromDate)
+                        {
+                            var warmup = await DownloadCandleWithRateLimitAsync(
+                                token, jwtToken, interval, fromDate, warmupTo, exchange);
+
+                            if (warmup.Count > 0)
+                                await _candleStore.SaveAsync(token, instrument.symbol, interval, warmup);
+
+                            cached = (await _candleStore.GetAsync(token, instrument.symbol, interval))
+                                .OrderBy(c => c.Timestamp).ToList();
+                        }
+                    }
+
+                    // Fetch only the missing tail. If the latest completed candle is
+                    // already persisted, no historical API request is made.
+                    var latest = cached.Count == 0 ? fromDate.Subtract(duration) : cached[^1].Timestamp;
+                    if (latest < expectedLast)
+                    {
+                        var fetchFrom = latest.Add(duration) > fromDate
+                            ? latest.Add(duration)
+                            : fromDate;
+
+                        if (fetchFrom <= toDate)
+                        {
+                            var tail = await DownloadCandleWithRateLimitAsync(
+                                token, jwtToken, interval, fetchFrom, toDate, exchange);
+
+                            if (tail.Count > 0)
+                                await _candleStore.SaveAsync(token, instrument.symbol, interval, tail);
+                        }
+                    }
+
+                    var combined = (await _candleStore.GetAsync(token, instrument.symbol, interval))
+                        .Where(c => c.Close > 0m && c.High >= c.Low)
+                        .GroupBy(c => c.Timestamp)
+                        .Select(g => g.Last())
+                        .OrderBy(c => c.Timestamp)
+                        .ToList();
+
                     candlesByToken[token] = combined;
                     UpdateQuoteIndicators(quote, combined, interval);
-                    _logger.LogInformation("CANDLE CACHE UPDATED Symbol={Symbol} Token={Token} Cached={Cached} Downloaded={Downloaded} Total={Total}", instrument.symbol, token, cached.Count, downloaded.Count, combined.Count);
+
+                    _logger.LogInformation(
+                        "CANDLE CACHE UPDATED Symbol={Symbol} Token={Token} CachedBefore={CachedBefore} Total={Total} Required={Required} Latest={Latest} Current={Current}",
+                        instrument.symbol, token, cached.Count, combined.Count, minimumEmaCandles,
+                        combined.Count > 0 ? combined[^1].Timestamp : null,
+                        combined.Count >= minimumEmaCandles && combined[^1].Timestamp >= expectedLast);
+
+                    if (combined.Count < minimumEmaCandles)
+                    {
+                        _logger.LogWarning(
+                            "CANDLE WARMUP INSUFFICIENT Symbol={Symbol} Token={Token} Required={Required} Available={Available} From={From} To={To}",
+                            instrument.symbol, token, minimumEmaCandles, combined.Count, fromDate, toDate);
+                    }
                 }
                 catch (Exception ex)
                 {
-                    rateLimited = IsHistoricalRateLimitException(ex);
-                    _logger.LogWarning(ex, "Candle cache/API load failed for {Symbol} token {Token}. RateLimited={RateLimited}", instrument.symbol, token, rateLimited);
-                    candlesByToken[token] = cached;
-                    UpdateQuoteIndicators(quote, cached, interval);
+                    providerRateLimited = IsHistoricalRateLimitException(ex);
+                    var fallback = (await _candleStore.GetAsync(token, instrument.symbol, interval))
+                        .OrderBy(c => c.Timestamp).ToList();
+
+                    candlesByToken[token] = fallback;
+                    UpdateQuoteIndicators(quote, fallback, interval);
+
+                    _logger.LogWarning(
+                        ex,
+                        "CANDLE LOAD FAILED Symbol={Symbol} Token={Token} CachedFallbackCount={Count} RateLimited={RateLimited}",
+                        instrument.symbol, token, fallback.Count, providerRateLimited);
                 }
 
-                // Keep live ticks flowing even when historical API access is temporarily blocked.
-                await _webSocket.SubscribeAsync([token], exchange);
-                if (rateLimited)
+                if (providerRateLimited)
                 {
-                    _logger.LogWarning("Stopping remaining historical candle downloads because Angel One rate-limited this process. Cached candles will be used and live ticks will continue. Cooldown={CooldownSeconds}s", HistoricalRateLimitCooldown.TotalSeconds);
-                    break;
+                    _logger.LogWarning(
+                        "HISTORICAL DOWNLOADS PAUSED for remaining candidates after rate limit. Remaining candidates will still be evaluated from their own JSON cache. CooldownSeconds={CooldownSeconds}",
+                        HistoricalRateLimitCooldown.TotalSeconds);
                 }
-                if (batchDelay > 0) await Task.Delay(TimeSpan.FromSeconds(batchDelay));
+                else if (batchDelay > 0)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(batchDelay));
+                }
             }
 
-            _logger.LogInformation("Loaded candles for {LoadedCount}/{RequestedCount} stocks from JSON cache/API. Interval={Interval}", candlesByToken.Count(x => x.Value.Count > 0), quotes.Count, interval);
+            var loadedCount = candlesByToken.Count(x => x.Value.Count > 0);
+            var warmCount = candlesByToken.Count(x => x.Value.Count >= minimumEmaCandles);
+            _logger.LogInformation(
+                "CANDLE LOAD SUMMARY Loaded={Loaded}/{Requested} WithEmaWarmup={Warm}/{Requested} MinimumCandles={MinimumCandles} Interval={Interval}",
+                loadedCount, requestedCount, warmCount, requestedCount, minimumEmaCandles, interval);
+
             return candlesByToken;
         }
 
-        /// <summary>
-        /// Downloads candles for owned trading symbols. Symbols are resolved against the
-        /// instrument master, then downloaded in batches using the same limits as quote downloads.
-        /// </summary>
         public async Task<Dictionary<string, List<Candle>>> DownloadCandlesInBatchesAsync(
             HashSet<string> ownedQuotes,
             List<Instrument> instruments,
@@ -488,7 +533,6 @@ namespace CodeName399.Kite.API.Application.Services
                     if (last >= expectedLast)
                     {
                         candlesByToken[token] = cached;
-                        await _webSocket.SubscribeAsync([token], exchange);
                         continue;
                     }
                     fetchFrom = last.Add(duration) > fromDate ? last.Add(duration) : fromDate;
@@ -506,7 +550,6 @@ namespace CodeName399.Kite.API.Application.Services
                     _logger.LogWarning(ex, "Failed to load cached/API candles for owned symbol {Symbol} token {Token}. RateLimited={RateLimited}", instrument.symbol, token, rateLimited);
                     candlesByToken[token] = cached;
                 }
-                await _webSocket.SubscribeAsync([token], exchange);
                 if (rateLimited)
                 {
                     _logger.LogWarning("Stopping remaining owned-stock historical downloads because Angel One rate-limited this process. Cached candles will be used and live ticks will continue.");
@@ -549,10 +592,10 @@ namespace CodeName399.Kite.API.Application.Services
 
             var previousCandles = orderedCandles.Take(orderedCandles.Count - 1).ToList();
 
-            quote.Ema9 = Math.Round(CalculateEma(orderedCandles.Select(c => c.Close).ToList(), 9), 6, MidpointRounding.AwayFromZero);
-            quote.Ema21 = Math.Round(CalculateEma(orderedCandles.Select(c => c.Close).ToList(), 21), 6, MidpointRounding.AwayFromZero);
-            quote.PreviousCandleEma9 = Math.Round(CalculateEma(previousCandles.Select(c => c.Close).ToList(), 9), 6, MidpointRounding.AwayFromZero);
-            quote.PreviousCandleEma21 = Math.Round(CalculateEma(previousCandles.Select(c => c.Close).ToList(), 21), 6, MidpointRounding.AwayFromZero);
+            quote.Ema9 = Math.Round(EmaCalculator.Calculate(orderedCandles.Select(c => c.Close).ToList(), 9), 6, MidpointRounding.AwayFromZero);
+            quote.Ema21 = Math.Round(EmaCalculator.Calculate(orderedCandles.Select(c => c.Close).ToList(), 21), 6, MidpointRounding.AwayFromZero);
+            quote.PreviousCandleEma9 = Math.Round(EmaCalculator.Calculate(previousCandles.Select(c => c.Close).ToList(), 9), 6, MidpointRounding.AwayFromZero);
+            quote.PreviousCandleEma21 = Math.Round(EmaCalculator.Calculate(previousCandles.Select(c => c.Close).ToList(), 21), 6, MidpointRounding.AwayFromZero);
             quote.ChoppinessIndex = Math.Round(CalculateChoppinessIndex(orderedCandles, 14), 6, MidpointRounding.AwayFromZero);
 
             _logger.LogDebug(
@@ -566,21 +609,6 @@ namespace CodeName399.Kite.API.Application.Services
                 quote.PreviousCandleEma9,
                 quote.PreviousCandleEma21,
                 quote.ChoppinessIndex);
-        }
-
-        private static decimal CalculateEma(IReadOnlyList<decimal> closingPrices, int period)
-        {
-            if (closingPrices == null || closingPrices.Count < period)
-                return 0m;
-
-            // Standard EMA: SMA of the first period as the seed, then alpha = 2 / (period + 1).
-            decimal ema = closingPrices.Take(period).Average();
-            decimal alpha = 2m / (period + 1m);
-
-            for (var i = period; i < closingPrices.Count; i++)
-                ema = (closingPrices[i] * alpha) + (ema * (1m - alpha));
-
-            return ema;
         }
 
         private static decimal CalculateChoppinessIndex(IReadOnlyList<Candle> candles, int period)
@@ -840,38 +868,54 @@ namespace CodeName399.Kite.API.Application.Services
                             ? loadedCandles
                             : new List<Candle>();
 
-                        // Entry requires a rising EMA25 trend, a recent pullback towards EMA25/VWAP,
-                        // and a bullish recovery candle closing above the previous candle high.
+                        // Entry is evaluated only against completed candles for an EMA9/EMA21 bullish crossover.
                         var entrySatisfied = EntryStrategyService.TryGetEntryReason(
                             quote, quoteCandles, out var entryReason, out var entryDiagnostics);
+                        var diagnosticCandles = quoteCandles
+                            .Where(c => c != null && c.Close > 0m)
+                            .GroupBy(c => c.Timestamp)
+                            .Select(g => g.Last())
+                            .OrderBy(c => c.Timestamp)
+                            .ToList();
+                        var previousCandleClose = diagnosticCandles.Count > 1
+                            ? diagnosticCandles[^2].Close
+                            : 0m;
 
                         _logger.LogInformation(
-                            "ENTRY STRATEGY EVALUATION Symbol={Symbol} Token={Token} ValidCandlesLoaded={ValidCandlesLoaded} LastClose={LastClose} EMA25={EMA25} VWAP={VWAP} PriceAboveEMA25={PriceAboveEMA25} PriceAboveVWAP={PriceAboveVWAP} Ema25Rising={Ema25Rising} PullbackDetected={PullbackDetected} RecoveryConfirmed={RecoveryConfirmed} PullbackSwingLow={PullbackSwingLow} SuggestedStopLoss={SuggestedStopLoss} EntryConditionSatisfied={EntryConditionSatisfied} EntryRejectionReason={EntryRejectionReason}",
-                            quote.TradingSymbol,
-                            quote.SymbolToken,
-                            entryDiagnostics.ValidCandlesLoaded,
-                            entryDiagnostics.LastClose,
-                            entryDiagnostics.Ema25,
-                            entryDiagnostics.Vwap,
-                            entryDiagnostics.PriceAboveEma25,
-                            entryDiagnostics.PriceAboveVwap,
-                            entryDiagnostics.Ema25Rising,
-                            entryDiagnostics.PullbackDetected,
-                            entryDiagnostics.RecoveryConfirmed,
-                            entryDiagnostics.PullbackSwingLow,
-                            entryDiagnostics.SuggestedStopLoss,
+                            "ENTRY STRATEGY EVALUATION IST={EvaluationTime:yyyy-MM-dd HH:mm:ss.fff} Symbol={Symbol} Token={Token} LTP={Ltp:F4} QuoteTimeUtc={QuoteTimeUtc:O} CandleCount={ValidCandlesLoaded} PreviousCandleTime={PreviousCandleTime:yyyy-MM-dd HH:mm:ss} PreviousCandleClose={PreviousCandleClose:F4} PreviousEMA9={PreviousEMA9:F6} PreviousEMA21={PreviousEMA21:F6} PreviousGap={PreviousGap:F6} LastCandleTime={LastCandleTime:yyyy-MM-dd HH:mm:ss} LastClose={LastClose:F4} EMA9={EMA9:F6} EMA21={EMA21:F6} CurrentGap={CurrentGap:F6} CrossoverDetected={CrossoverDetected} EntryConditionSatisfied={EntryConditionSatisfied} EntryRejectionReason={EntryRejectionReason}",
+                            GetIndianTime(), quote.TradingSymbol, quote.SymbolToken, quote.Ltp,
+                            quote.QuoteTimeUtc, entryDiagnostics.ValidCandlesLoaded,
+                            entryDiagnostics.PreviousCandleTime,
+                            previousCandleClose,
+                            entryDiagnostics.PreviousEma9, entryDiagnostics.PreviousEma21,
+                            (entryDiagnostics.PreviousEma9 ?? 0m) - (entryDiagnostics.PreviousEma21 ?? 0m),
+                            entryDiagnostics.LastCandleTime, entryDiagnostics.LastClose,
+                            entryDiagnostics.Ema9, entryDiagnostics.Ema21,
+                            (entryDiagnostics.Ema9 ?? 0m) - (entryDiagnostics.Ema21 ?? 0m),
+                            entryDiagnostics.EntryConditionSatisfied,
                             entryDiagnostics.EntryConditionSatisfied,
                             entryDiagnostics.EntryRejectionReason);
 
                         if (!entrySatisfied)
                         {
                             _logger.LogDebug(
-                                "BUY SKIPPED after EMA25 + VWAP evaluation. Symbol={Symbol} Token={Token} Reason={Reason}",
+                                "BUY SKIPPED after EMA9/EMA21 crossover evaluation. Symbol={Symbol} Token={Token} Reason={Reason}",
                                 quote.TradingSymbol, quote.SymbolToken, entryDiagnostics.EntryRejectionReason);
                             return;
                         }
 
+                        _logger.LogInformation(
+                            "BUY ELIGIBILITY PASSED Symbol={Symbol} Token={Token} EntryReason={EntryReason}; starting quantity, margin and profitability checks.",
+                            quote.TradingSymbol, quote.SymbolToken, entryReason);
+
                         var (quantity, margin, ltp) = await GetQuantitesAndMargin(quote, quoteCandles);
+
+                        if (quantity <= 0)
+                        {
+                            _logger.LogWarning(
+                                "BUY NOT PLACED Symbol={Symbol} Token={Token} Gate=QuantityAndProfitability Reason=QuantityCalculationReturnedZero",
+                                quote.TradingSymbol, quote.SymbolToken);
+                        }
 
                         if (quantity > 0)
                         {
@@ -881,21 +925,22 @@ namespace CodeName399.Kite.API.Application.Services
 
                             var tradeOrder = MarketQuoteData.ToTradeOrder(quote, _settings.Current.EnableAutoTrading);
                             tradeOrder.EntryReason = entryReason;
-                            tradeOrder.StopLoss = entryDiagnostics.SuggestedStopLoss.HasValue &&
-                                                  entryDiagnostics.SuggestedStopLoss.Value > 0m &&
-                                                  entryDiagnostics.SuggestedStopLoss.Value < tradeOrder.EntryPrice
-                                ? entryDiagnostics.SuggestedStopLoss.Value
-                                : CalculateInitialStopLoss(
-                                    tradeOrder.EntryPrice,
-                                    tradeOrder.LowestPriceChange,
-                                    _settings.Current.StopLossPercent);
+                            tradeOrder.StopLoss = CalculateInitialStopLoss(
+                                tradeOrder.EntryPrice, 0m, 1.0m);
                             _logger.LogInformation(
-                                "INITIAL PULLBACK STOP LOSS SET Symbol={Symbol} EntryPrice={EntryPrice:F4} PullbackSwingLow={PullbackSwingLow:F4} StopLoss={StopLoss:F4}",
-                                tradeOrder.Symbol, tradeOrder.EntryPrice,
-                                entryDiagnostics.PullbackSwingLow, tradeOrder.StopLoss);
-                            tradeOrder.TargetPrice = tradeOrder.EntryPrice +
-                                (tradeOrder.EstimatedCharges / Math.Max(1, tradeOrder.Quantity)) +
-                                (Math.Max(0m, _settings.Current.TargetLowestPriceChangeMultiplier) * tradeOrder.LowestPriceChange);
+                                "INITIAL HARD STOP LOSS SET Symbol={Symbol} EntryPrice={EntryPrice:F4} StopLossPercent={StopLossPercent:F2} StopLoss={StopLoss:F4}",
+                                tradeOrder.Symbol, tradeOrder.EntryPrice, 1.0m, tradeOrder.StopLoss);
+                            tradeOrder.TargetPrice = tradeOrder.EntryPrice + tradeOrder.LowestPriceChange;
+                            tradeOrder.HighestPriceSinceEntry = tradeOrder.EntryPrice;
+                            tradeOrder.TrailingActivated = false;
+                            tradeOrder.TrailingStopPrice = tradeOrder.TargetPrice;
+
+                            _logger.LogInformation(
+                                "BUY DECISION ACCEPTED IST={Time:yyyy-MM-dd HH:mm:ss.fff} Symbol={Symbol} Token={Token} Quantity={Quantity} EntryPrice={EntryPrice:F4} Margin={Margin:F2} StopLoss={StopLoss:F4} TargetPrice={TargetPrice:F4} AutoTrading={AutoTrading} ExecutionMode={ExecutionMode} EntryReason={EntryReason}",
+                                GetIndianTime(), tradeOrder.Symbol, tradeOrder.SymbolToken,
+                                tradeOrder.Quantity, tradeOrder.EntryPrice, tradeOrder.TotalInvestment,
+                                tradeOrder.StopLoss, tradeOrder.TargetPrice,
+                                _settings.Current.EnableAutoTrading, tradeOrder.ExecutionMode, tradeOrder.EntryReason);
 
                             if (_settings.Current.EnableAutoTrading)
                             {
@@ -908,6 +953,10 @@ namespace CodeName399.Kite.API.Application.Services
                                 PlaceOrderResponse buyResponse;
                                 try
                                 {
+                                    _logger.LogInformation(
+                                        "LIVE BUY ORDER REQUEST IST={Time:yyyy-MM-dd HH:mm:ss.fff} Symbol={Symbol} Token={Token} Quantity={Quantity} Exchange={Exchange} Product=INTRADAY OrderType=MARKET Tag={OrderTag}",
+                                        GetIndianTime(), tradeOrder.Symbol, tradeOrder.SymbolToken,
+                                        tradeOrder.Quantity, tradeOrder.Exchange, orderTag);
                                     buyResponse = await _angel.PlaceOrderAsync(
                                         new PlaceOrderRequest
                                         {
@@ -1028,7 +1077,7 @@ namespace CodeName399.Kite.API.Application.Services
             // fits the available balance. Searching only up to market depth is
             // equivalent for the final min(affordable, market-available) rule.
             var affordable = await FindMaximumAffordableQuantityAsync(
-                quote, askLevels, maximumMarketQuantity, availableBalance);
+                quote, maximumMarketQuantity, availableBalance, referencePrice);
 
             var quantity = Math.Min(affordable.Quantity, maximumMarketQuantity);
             if (quantity <= 0)
@@ -1043,7 +1092,7 @@ namespace CodeName399.Kite.API.Application.Services
             // quantity. The helper's search is bounded by market depth, so the
             // selected quantity is the same quantity for which this margin was checked.
             var margin = affordable.Margin;
-            var executionPrice = GetAskSideWeightedAveragePrice(askLevels, quantity);
+            var executionPrice = referencePrice;
             if (executionPrice <= 0m || margin <= 0m)
             {
                 _logger.LogWarning(
@@ -1064,7 +1113,8 @@ namespace CodeName399.Kite.API.Application.Services
             var buyValue = quantity * executionPrice;
             var estimatedSellValue = quantity * estimatedSellPrice;
             var totalCharges = buyCharges.TotalCharges + sellCharges.TotalCharges;
-            var requiredSellValue = buyValue + totalCharges;
+            var requiredProfitPercent = Math.Max(0m, _settings.Current.RequiredProfitPercent);
+            var requiredSellValue = buyValue + totalCharges + (buyValue * requiredProfitPercent / 100m);
 
             quote.EstimatedCharges = totalCharges;
             quote.Quantity = quantity;
@@ -1100,11 +1150,11 @@ namespace CodeName399.Kite.API.Application.Services
 
         private async Task<(int Quantity, decimal Margin)> FindMaximumAffordableQuantityAsync(
             MarketQuoteData quote,
-            IReadOnlyList<MarketQuoteDepthLevel> askLevels,
             int maximumMarketQuantity,
-            decimal availableBalance)
+            decimal availableBalance,
+            decimal marginalPrice)
         {
-            if (maximumMarketQuantity <= 0 || askLevels.Count == 0 || availableBalance <= 0m)
+            if (maximumMarketQuantity <= 0 || availableBalance <= 0m || marginalPrice <= 0m)
                 return (0, 0m);
 
             var low = 1;
@@ -1118,12 +1168,7 @@ namespace CodeName399.Kite.API.Application.Services
             while (low <= high)
             {
                 var quantity = low + (high - low) / 2;
-                var estimatedBuyVwap = GetAskSideWeightedAveragePrice(askLevels, quantity);
-                if (estimatedBuyVwap <= 0m)
-                {
-                    high = quantity - 1;
-                    continue;
-                }
+                var estimatedBuyVwap = marginalPrice;
 
                 decimal requiredMargin;
                 try
@@ -1164,7 +1209,7 @@ namespace CodeName399.Kite.API.Application.Services
 
         private decimal GetLowestPriceChange(MarketQuoteData quote, List<Candle> candles)
         {
-            var candleCount = Math.Clamp(_settings.Current.ChargeCoverLowestPriceChangeCandles, 2, 100);
+            var candleCount = Math.Clamp(_settings.Current.ChargeCoverLowestPriceChangeCandles, 1, 100);
             var completed = (candles ?? new List<Candle>())
                 .Where(c => c.Close > 0m)
                 .OrderBy(c => c.Timestamp)
@@ -1217,41 +1262,6 @@ namespace CodeName399.Kite.API.Application.Services
                 .ToList();
         }
 
-        /// <summary>
-        /// Estimates the volume-weighted average price for buying the requested
-        /// quantity by walking the visible ask book from the best ask upward.
-        /// Returns zero if displayed depth cannot fill the complete quantity.
-        /// </summary>
-        private static decimal GetAskSideWeightedAveragePrice(
-            IReadOnlyList<MarketQuoteDepthLevel> askLevels,
-            int requestedQuantity)
-        {
-            if (requestedQuantity <= 0 || askLevels == null || askLevels.Count == 0)
-                return 0m;
-
-            long remaining = requestedQuantity;
-            decimal totalValue = 0m;
-            long filled = 0;
-
-            foreach (var level in askLevels.OrderBy(x => x.Price))
-            {
-                if (level.Price <= 0m || level.Quantity <= 0)
-                    continue;
-
-                var take = Math.Min(remaining, level.Quantity);
-                totalValue += take * level.Price;
-                filled += take;
-                remaining -= take;
-
-                if (remaining == 0)
-                    break;
-            }
-
-            return remaining == 0 && filled > 0
-                ? totalValue / filled
-                : 0m;
-        }
-
         private static decimal CalculateInitialStopLoss(
             decimal entryPrice,
             decimal lowestPriceChange,
@@ -1260,17 +1270,8 @@ namespace CodeName399.Kite.API.Application.Services
             if (entryPrice <= 0m)
                 return 0m;
 
-            // Use the requested price-action stop: EntryPrice - (LowestPriceChange * 2).
-            // Retain the percentage fallback only for legacy positions without a valid
-            // LowestPriceChange value, so they do not receive an invalid stop at entry.
-            if (lowestPriceChange > 0m)
-            {
-                var stopLoss = entryPrice - (lowestPriceChange * 2m);
-                return Math.Round(Math.Max(0m, stopLoss), 2, MidpointRounding.AwayFromZero);
-            }
-
-            var percentage = fallbackStopLossPercent > 0m ? fallbackStopLossPercent : 0.5m;
-            return Math.Round(entryPrice * (1m - percentage / 100m), 2, MidpointRounding.AwayFromZero);
+            // Fixed hard protective stop: 1% below entry, independent of candle movement.
+            return Math.Round(entryPrice * 0.99m, 2, MidpointRounding.AwayFromZero);
         }
 
         public bool ValidateSell(TradeOrder trade, Candle currentCandle, out string outcome)
@@ -1283,11 +1284,11 @@ namespace CodeName399.Kite.API.Application.Services
                 trade.StopLoss = CalculateInitialStopLoss(
                     trade.EntryPrice,
                     trade.LowestPriceChange,
-                    _settings.Current.StopLossPercent);
+                    1.0m);
 
-            if (_settings.Current.EnableTargetExit && trade.TargetPrice > 0m && currentCandle.Close >= trade.TargetPrice)
+            if (!_settings.Current.EnableTrailingStop && trade.TargetPrice > 0m && currentCandle.Close >= trade.TargetPrice)
             {
-                outcome = "TARGET_EXIT";
+                outcome = "LOWEST_PRICE_CHANGE_TARGET";
                 return true;
             }
 
@@ -1314,7 +1315,6 @@ namespace CodeName399.Kite.API.Application.Services
             if (trade == null || ltp <= 0m || trade.Quantity <= 0 || trade.EntryPrice <= 0m)
                 return;
 
-            var estimatedNet = (ltp - trade.EntryPrice) * trade.Quantity - trade.EstimatedCharges;
             var changed = false;
 
             // Existing/reconciled positions may predate the configured stop-loss field.
@@ -1324,7 +1324,7 @@ namespace CodeName399.Kite.API.Application.Services
                 trade.StopLoss = CalculateInitialStopLoss(
                     trade.EntryPrice,
                     trade.LowestPriceChange,
-                    _settings.Current.StopLossPercent);
+                    1.0m);
                 changed = trade.StopLoss > 0m;
                 if (changed)
                 {
@@ -1342,22 +1342,23 @@ namespace CodeName399.Kite.API.Application.Services
             }
 
             var settings = _settings.Current;
-            var targetEnabled = settings.EnableTargetExit && trade.TargetPrice > 0m;
             var trailingEnabled = settings.EnableTrailingStop;
+            var targetEnabled = !trailingEnabled && trade.TargetPrice > 0m;
 
             if (trailingEnabled)
             {
-                // Trailing activates only after estimated round-trip net profit is positive.
-                if (!trade.TrailingActivated && estimatedNet > 0m)
+                // Activate once price reaches entry + the conservative candle move.
+                // Thereafter trail upward by the same move; never lower the stop.
+                var activationPrice = trade.EntryPrice + Math.Max(trade.LowestPriceChange, 0.01m);
+                if (!trade.TrailingActivated && ltp >= activationPrice)
                 {
                     trade.TrailingActivated = true;
-                    trade.HighestPriceSinceEntry = Math.Max(trade.HighestPriceSinceEntry, ltp);
-                    trade.TrailingStopPrice = Math.Max(trade.EntryPrice, trade.HighestPriceSinceEntry - Math.Max(trade.LowestPriceChange, 0.01m));
+                    trade.TrailingStopPrice = activationPrice;
                     changed = true;
                 }
                 else if (trade.TrailingActivated)
                 {
-                    var nextStop = Math.Max(trade.EntryPrice, trade.HighestPriceSinceEntry - Math.Max(trade.LowestPriceChange, 0.01m));
+                    var nextStop = Math.Max(activationPrice, trade.HighestPriceSinceEntry - Math.Max(trade.LowestPriceChange, 0.01m));
                     if (nextStop > trade.TrailingStopPrice) { trade.TrailingStopPrice = nextStop; changed = true; }
                 }
             }
@@ -1365,35 +1366,12 @@ namespace CodeName399.Kite.API.Application.Services
             if (changed) await _tradeOrderFileRepository.UpdateAsync(trade);
 
             string? exitReason = null;
-            if (targetEnabled && ltp >= trade.TargetPrice)
-                exitReason = "TARGET_EXIT";
-            else if (trailingEnabled && trade.TrailingActivated && trade.TrailingStopPrice > 0m && ltp <= trade.TrailingStopPrice)
+            if (trailingEnabled && trade.TrailingActivated && trade.TrailingStopPrice > 0m && ltp <= trade.TrailingStopPrice)
                 exitReason = "TRAILING_STOP";
+            else if (!trailingEnabled && targetEnabled && ltp >= trade.TargetPrice)
+                exitReason = "LOWEST_PRICE_CHANGE_TARGET";
             else if (trade.StopLoss > 0m && ltp <= trade.StopLoss)
                 exitReason = "STOP_LOSS";
-
-            // Evaluate the VWAP close exit once per minute from the persisted completed
-            // candle file. Live ticks continue to handle the protective stop/trailing stop.
-            if (exitReason == null)
-            {
-                var currentMinute = new DateTime(tickTime.Year, tickTime.Month, tickTime.Day,
-                    tickTime.Hour, tickTime.Minute, 0, DateTimeKind.Unspecified);
-                if (!_lastVwapExitEvaluation.TryGetValue(trade.SymbolToken, out var evaluatedMinute) ||
-                    evaluatedMinute < currentMinute)
-                {
-                    _lastVwapExitEvaluation[trade.SymbolToken] = currentMinute;
-                    var interval = string.IsNullOrWhiteSpace(settings.CandleInterval)
-                        ? "ONE_MINUTE" : settings.CandleInterval;
-                    var completedCandles = await _candleStore.GetAsync(trade.SymbolToken, trade.Symbol, interval);
-                    if (EntryStrategyService.TryGetVwapExitReason(completedCandles, out var sessionVwap, out var candleClose))
-                    {
-                        exitReason = "VWAP_CLOSE_EXIT";
-                        _logger.LogInformation(
-                            "VWAP EXIT SIGNAL Symbol={Symbol} Token={Token} CandleClose={CandleClose:F4} SessionVWAP={SessionVWAP:F6} TickLtp={Ltp:F4}",
-                            trade.Symbol, trade.SymbolToken, candleClose, sessionVwap, ltp);
-                    }
-                }
-            }
 
             if (exitReason != null)
             {
@@ -1641,7 +1619,6 @@ namespace CodeName399.Kite.API.Application.Services
                     result[token] = merged;
                 }
 
-                await _webSocket.SubscribeAsync([token], exchange);
                 if (rateLimited)
                 {
                     _logger.LogWarning("Stopping historical warm-up downloads after provider rate limit. Remaining symbols will use cached data.");

@@ -90,7 +90,6 @@ namespace CodeName399.Extensions
             services.AddSignalR();
             services.AddHostedService<RawMarketDataArchiveHostedService>();
             services.AddHostedService<MarketQuotePublisher>(sp => sp.GetRequiredService<MarketQuotePublisher>());
-            services.AddHostedService<CandleFileStoreService>(sp => sp.GetRequiredService<CandleFileStoreService>());
             services.AddHostedService<AngelWebSocketBackgroundService>();
             services.AddHostedService<OrderWebSocketBackgroundService>();
             services.AddHostedService<InitialBackgroundService>();

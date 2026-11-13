@@ -13,7 +13,6 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
         private readonly TradingSettingsProvider _settings;
         private readonly IMarketHoursService _marketHours;
         private readonly MarketQuotePublisher _quotePublisher;
-        private readonly CandleFileStoreService _candleStore;
 
         public InitialBackgroundService(
             ILogger<InitialBackgroundService> logger,
@@ -22,8 +21,7 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
             IAngelOneService angel,
             TradingSettingsProvider settings,
             IMarketHoursService marketHours,
-            MarketQuotePublisher quotePublisher,
-            CandleFileStoreService candleStore)
+            MarketQuotePublisher quotePublisher)
         {
             _logger = logger;
             _commonService = commonService;
@@ -32,7 +30,6 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
             _settings = settings;
             _marketHours = marketHours;
             _quotePublisher = quotePublisher;
-            _candleStore = candleStore;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -102,15 +99,16 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
 
                     await _quotePublisher.PublishSnapshotAsync(quotes);
 
-                    // Close and persist the completed tick-built interval before the
-                    // strategy reads candles. Buy evaluation reads JSON files directly.
+                    // Historical API is the sole candle source. Download only missing
+                    // intervals; the same JSON candle files remain the recovery cache.
                     var candleInterval = string.IsNullOrWhiteSpace(_settings.Current.CandleInterval)
-                        ? "ONE_MINUTE"
-                        : _settings.Current.CandleInterval;
-                    await _candleStore.FinalizeClosedCandlesAsync(
-                        candleInterval, _commonService.GetIndianTime(), stoppingToken);
-                    var candles = await _commonService.GetCandlesFromFilesForQuotesAsync(
-                        quotes, instruments, candleInterval);
+                        ? "ONE_MINUTE" : _settings.Current.CandleInterval;
+                    var now = _commonService.GetIndianTime();
+                    var from = now.Date.AddDays(-5);
+                    var candles = await _commonService.DownloadCandlesInBatchesAsync(
+                        quotes, instruments, login.JwtToken, candleInterval, from, now,
+                        Math.Clamp(_settings.Current.CandleBatchSize, 1, 3),
+                        Math.Max(0, _settings.Current.BatchDelay));
 
                     await _commonService.PlaceBuyOrders(quotes.ToHashSet(), candles, login.JwtToken);
                 }

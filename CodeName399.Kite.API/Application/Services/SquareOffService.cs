@@ -1,4 +1,5 @@
 using CodeName399.Kite.API.Application.Services;
+using CodeName399.Kite.API.Services.Interface;
 
 namespace CodeName399.Kite.API.Services;
 
@@ -8,20 +9,23 @@ public sealed class SquareOffService
     private readonly TradingSettingsProvider _settings;
     private readonly MarketClock _marketClock;
     private readonly ILogger<SquareOffService> _logger;
-    private readonly CandleFileStoreService _candleStore;
+    private readonly IAngelOneService _angel;
+    private readonly IInstrumentService _instrumentService;
 
     public SquareOffService(
         CommonService commonService,
         TradingSettingsProvider settings,
         MarketClock marketClock,
         ILogger<SquareOffService> logger,
-        CandleFileStoreService candleStore)
+        IAngelOneService angel,
+        IInstrumentService instrumentService)
     {
         _commonService = commonService;
         _settings = settings;
         _marketClock = marketClock;
         _logger = logger;
-        _candleStore = candleStore;
+        _angel = angel;
+        _instrumentService = instrumentService;
     }
 
     /// <summary>
@@ -45,8 +49,12 @@ public sealed class SquareOffService
         var interval = string.IsNullOrWhiteSpace(_settings.Current.CandleInterval)
             ? "ONE_MINUTE"
             : _settings.Current.CandleInterval;
-        await _candleStore.FinalizeClosedCandlesAsync(interval, _commonService.GetIndianTime(), token);
-        var candles = await _commonService.GetCandlesFromFilesForOwnedStocksAsync(ownedStocks, interval);
+        var login = await _angel.GetLoginDataAsync();
+        var instruments = await _instrumentService.LoadInstruments();
+        var candles = await _commonService.DownloadCandlesInBatchesAsync(
+            ownedStocks.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase), instruments,
+            login.JwtToken, interval, _commonService.GetIndianTime().Date.AddDays(-5),
+            _commonService.GetIndianTime(), 2, 1);
 
         token.ThrowIfCancellationRequested();
         await _commonService.PlaceSellOrder(ownedStocks, candles, forceSquareOff: true);

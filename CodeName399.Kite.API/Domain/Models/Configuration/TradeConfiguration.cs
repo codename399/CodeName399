@@ -13,11 +13,12 @@ namespace CodeName399.Kite.API.Models.Configuration
         public bool EnableNotification { get; set; } = true;
         public int MaxTrades { get; set; } = 1;
         /// <summary>Initial protective stop as a percentage below the actual entry reference price.</summary>
-        public decimal StopLossPercent { get; set; } = 0.5m;
+        public decimal StopLossPercent { get; set; } = 1.0m;
         public bool EnableTrailingStop { get; set; } = false;
         public bool EnableTargetExit { get; set; } = false;
         public decimal TargetLowestPriceChangeMultiplier { get; set; } = 2m;
         public int ChargeCoverLowestPriceChangeCandles { get; set; } = 5;
+        public decimal RequiredProfitPercent { get; set; } = 2.0m;
         public TimeSpan MarketOpenTime { get; set; } = new TimeSpan(9, 15, 0);
         public TimeSpan MarketCloseTime { get; set; } = new TimeSpan(15, 30, 0);
         /// <summary>Last time for new intraday entries: always 30 minutes before market close.</summary>
@@ -28,7 +29,7 @@ namespace CodeName399.Kite.API.Models.Configuration
             new List<string> { "TATSILV-EQ", "AONEGOLD-EQ", "ACUTAAS-EQ", "IDEA-EQ" };
         public int MaxCandidates { get; set; } = 10;
         /// <summary>Minimum LTP required for a stock to qualify for the top quote candidates.</summary>
-        public decimal MinimumStockPrice { get; set; } = 20m;
+        public decimal MinimumStockPrice { get; set; } = 999999m;
         public int CandleBatchSize { get; set; } = 2;
         public int BatchDelay { get; set; } = 1;
         public int BuyBatchSize { get; set; } = 5;
@@ -43,7 +44,7 @@ namespace CodeName399.Kite.API.Models.Configuration
         public int WebSocketRetryMaxSeconds { get; set; } = 60;
         public List<string>? VisibleColumns { get; set; } = [];
         public bool AutoSquareOff { get; set; } = true;
-        public decimal PaperTradingBalance { get; set; } = 10000m;
+        public decimal PaperTradingBalance { get; set; } = 100000m;
         public string ResearchDataVersion { get; set; } = "v1";
         public RawMarketDataSettings RawMarketData { get; set; } = new();
     }

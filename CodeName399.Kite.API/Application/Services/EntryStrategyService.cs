@@ -1,188 +1,78 @@
 using CodeName399.Kite.API.Models;
 using CodeName399.Kite.API.Models.Indicator;
 
-namespace CodeName399.Kite.API.Application.Services
+namespace CodeName399.Kite.API.Application.Services;
+
+public sealed record EntryStrategyDiagnostics(
+    int ValidCandlesLoaded,
+    decimal? Ema9,
+    decimal? Ema21,
+    decimal? PreviousEma9,
+    decimal? PreviousEma21,
+    decimal? LastClose,
+    DateTime? LastCandleTime,
+    DateTime? PreviousCandleTime,
+    bool EntryConditionSatisfied,
+    string EntryRejectionReason);
+
+/// <summary>Enters only on the completed candle where EMA9 crosses above EMA21.</summary>
+public static class EntryStrategyService
 {
-    public sealed record EntryStrategyDiagnostics(
-        int ValidCandlesLoaded,
-        decimal? Ema25,
-        decimal? Vwap,
-        decimal? LastClose,
-        bool PriceAboveEma25,
-        bool PriceAboveVwap,
-        bool Ema25Rising,
-        bool PullbackDetected,
-        bool RecoveryConfirmed,
-        decimal? PullbackSwingLow,
-        decimal? SuggestedStopLoss,
-        bool EntryConditionSatisfied,
-        string EntryRejectionReason);
-
-    /// <summary>
-    /// Trend + pullback + recovery strategy for completed one-minute candles.
-    /// A long entry requires an established EMA25/VWAP uptrend, a recent pullback
-    /// towards either dynamic support, and a bullish recovery candle closing above
-    /// the previous candle high, EMA25 and session VWAP.
-    /// </summary>
-    public static class EntryStrategyService
+    public static bool TryGetEntryReason(
+        MarketQuoteData quote,
+        List<Candle> candles,
+        out string reason,
+        out EntryStrategyDiagnostics diagnostics)
     {
-        private const int EmaPeriod = 25;
-        private const int TrendLookback = 3;
-        private const int PullbackLookback = 5;
-        private const decimal SupportProximityPercent = 0.30m;
+        var ordered = (candles ?? [])
+            .Where(c => c != null && c.Close > 0m)
+            .GroupBy(c => c.Timestamp)
+            .Select(g => g.Last())
+            .OrderBy(c => c.Timestamp)
+            .ToList();
 
-        public static bool TryGetEntryReason(
-            MarketQuoteData quote,
-            List<Candle> candles,
-            out string reason,
-            out EntryStrategyDiagnostics diagnostics)
+        decimal? ema9 = null;
+        decimal? ema21 = null;
+        decimal? previousEma9 = null;
+        decimal? previousEma21 = null;
+        var crossed = false;
+
+        if (ordered.Count >= 22)
         {
-            var ordered = Normalize(candles);
-            decimal? ema25 = null;
-            decimal? vwap = null;
-            decimal? close = ordered.Count > 0 ? ordered[^1].Close : null;
-            decimal? swingLow = null;
-            decimal? suggestedStop = null;
-            var aboveEma = false;
-            var aboveVwap = false;
-            var emaRising = false;
-            var pullback = false;
-            var recovery = false;
-            string rejection;
+            var closes = ordered.Select(c => c.Close).ToList();
+            var ema9Values = EmaCalculator.CalculateSeries(closes, 9);
+            var ema21Values = EmaCalculator.CalculateSeries(closes, 21);
 
-            if (ordered.Count < EmaPeriod + TrendLookback + PullbackLookback + 1)
-            {
-                rejection = $"InsufficientValidCandles: required={EmaPeriod + TrendLookback + PullbackLookback + 1}, loaded={ordered.Count}";
-            }
-            else
-            {
-                var closes = ordered.Select(c => c.Close).ToList();
-                var emaValues = CalculateEmaSeries(closes, EmaPeriod);
-                var latestIndex = ordered.Count - 1;
-                ema25 = Round6(emaValues[latestIndex]);
-                emaRising = emaValues[latestIndex] > emaValues[latestIndex - TrendLookback];
+            ema9 = Math.Round(ema9Values[^1], 6, MidpointRounding.AwayFromZero);
+            ema21 = Math.Round(ema21Values[^1], 6, MidpointRounding.AwayFromZero);
+            previousEma9 = Math.Round(ema9Values[^2], 6, MidpointRounding.AwayFromZero);
+            previousEma21 = Math.Round(ema21Values[^2], 6, MidpointRounding.AwayFromZero);
 
-                var sessionDate = ordered[^1].Timestamp.Date;
-                var session = ordered.Where(c => c.Timestamp.Date == sessionDate && c.Volume > 0m).ToList();
-                var totalVolume = session.Sum(c => c.Volume);
-                if (totalVolume <= 0m)
-                {
-                    rejection = "SessionVwapUnavailable: no positive candle volume";
-                }
-                else
-                {
-                    var weighted = session.Sum(c => ((c.High + c.Low + c.Close) / 3m) * c.Volume);
-                    vwap = Round6(weighted / totalVolume);
-
-                    var latest = ordered[^1];
-                    var previous = ordered[^2];
-                    aboveEma = latest.Close > ema25.Value;
-                    aboveVwap = latest.Close > vwap.Value;
-
-                    var pullbackCandles = ordered
-                        .Skip(Math.Max(0, ordered.Count - 1 - PullbackLookback))
-                        .Take(PullbackLookback)
-                        .Where(c => c.Timestamp.Date == sessionDate)
-                        .ToList();
-
-                    if (pullbackCandles.Count >= 3)
-                    {
-                        swingLow = pullbackCandles.Min(c => c.Low);
-                        var support = Math.Max(ema25.Value, vwap.Value);
-                        var proximity = support * SupportProximityPercent / 100m;
-                        pullback = pullbackCandles.Any(c =>
-                            Math.Abs(c.Low - ema25.Value) <= proximity ||
-                            Math.Abs(c.Low - vwap.Value) <= proximity ||
-                            (c.Low <= Math.Max(ema25.Value, vwap.Value) &&
-                             c.High >= Math.Min(ema25.Value, vwap.Value)));
-                    }
-
-                    recovery = latest.Close > latest.Open &&
-                               latest.Close > previous.High &&
-                               latest.Close > ema25.Value &&
-                               latest.Close > vwap.Value;
-
-                    if (swingLow.HasValue)
-                    {
-                        // One paise below the observed pullback low; execution remains
-                        // subject to the broker's instrument tick-size rounding.
-                        suggestedStop = Math.Max(0m, swingLow.Value - 0.01m);
-                    }
-
-                    rejection = !emaRising ? "EMA25NotRising" :
-                                !aboveVwap ? "CloseNotAboveVwap" :
-                                !aboveEma ? "CloseNotAboveEma25" :
-                                !pullback ? "NoRecentPullbackNearEma25OrVwap" :
-                                !recovery ? "BullishRecoveryNotConfirmed" :
-                                !suggestedStop.HasValue || suggestedStop.Value >= latest.Close
-                                    ? "InvalidPullbackSwingLowStop" : string.Empty;
-                }
-            }
-
-            var success = rejection.Length == 0;
-            reason = success
-                ? $"TrendPullbackRecovery: EMA25 rising; pullback swing low={swingLow:F4}; recovery close={close:F4} above previous high, EMA25={ema25:F6}, VWAP={vwap:F6}"
-                : rejection;
-            diagnostics = new EntryStrategyDiagnostics(
-                ordered.Count, ema25, vwap, close, aboveEma, aboveVwap,
-                emaRising, pullback, recovery, swingLow, suggestedStop,
-                success, rejection);
-            return success;
+            // Compare unrounded values; rounding is for display only.
+            crossed = ema9Values[^2] <= ema21Values[^2] &&
+                      ema9Values[^1] > ema21Values[^1];
         }
 
-        /// <summary>
-        /// Candle-close exit signal: the latest completed candle closes below
-        /// the current session VWAP. Protective stop and tick trailing exits remain
-        /// higher priority and are handled by CommonService.
-        /// </summary>
-        public static bool TryGetVwapExitReason(List<Candle> candles, out decimal? vwap, out decimal? lastClose)
-        {
-            var ordered = Normalize(candles);
-            vwap = null;
-            lastClose = ordered.Count > 0 ? ordered[^1].Close : null;
-            if (ordered.Count == 0) return false;
+        var rejection = ordered.Count < 22
+            ? $"InsufficientValidCandles: required=22, loaded={ordered.Count}"
+            : crossed ? string.Empty : "EMA9DidNotCrossAboveEMA21OnLatestClosedCandle";
 
-            var date = ordered[^1].Timestamp.Date;
-            var session = ordered.Where(c => c.Timestamp.Date == date && c.Volume > 0m).ToList();
-            var volume = session.Sum(c => c.Volume);
-            if (volume <= 0m) return false;
+        reason = crossed
+            ? $"EMA9 crossed above EMA21 on candle close; EMA9={ema9:F6}, EMA21={ema21:F6}"
+            : rejection;
 
-            var weighted = session.Sum(c => ((c.High + c.Low + c.Close) / 3m) * c.Volume);
-            vwap = Round6(weighted / volume);
-            return lastClose.HasValue && lastClose.Value < vwap.Value;
-        }
+        diagnostics = new EntryStrategyDiagnostics(
+            ordered.Count,
+            ema9,
+            ema21,
+            previousEma9,
+            previousEma21,
+            ordered.Count > 0 ? ordered[^1].Close : null,
+            ordered.Count > 0 ? ordered[^1].Timestamp : null,
+            ordered.Count > 1 ? ordered[^2].Timestamp : null,
+            crossed,
+            rejection);
 
-        private static List<Candle> Normalize(List<Candle> candles) =>
-            (candles ?? new List<Candle>())
-                .Where(c => c != null && c.Open > 0m && c.Close > 0m && c.High > 0m &&
-                            c.Low > 0m && c.High >= c.Low && c.Volume >= 0m)
-                .GroupBy(c => c.Timestamp)
-                .Select(g => g.Last())
-                .OrderBy(c => c.Timestamp)
-                .ToList();
-
-        private static List<decimal> CalculateEmaSeries(IReadOnlyList<decimal> closes, int period)
-        {
-            var values = new List<decimal>(closes.Count);
-            if (closes.Count == 0) return values;
-            var ema = closes.Take(Math.Min(period, closes.Count)).Average();
-            var alpha = 2m / (period + 1m);
-            for (var i = 0; i < closes.Count; i++)
-            {
-                if (i == period - 1)
-                    values.Add(ema);
-                else if (i >= period)
-                {
-                    ema = (closes[i] - ema) * alpha + ema;
-                    values.Add(ema);
-                }
-                else
-                    values.Add(0m);
-            }
-            return values;
-        }
-
-        private static decimal Round6(decimal value) =>
-            Math.Round(value, 6, MidpointRounding.AwayFromZero);
+        return crossed;
     }
 }

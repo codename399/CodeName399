@@ -109,7 +109,9 @@ public sealed class TopStocksExcelExportBackgroundService : BackgroundService
         };
         for (var i = 0; i < headers.Length; i++) ws.Cell(1, i + 1).Value = headers[i];
         var closes = candles.Select(x => x.Close).ToList();
-        var ema9 = Ema(closes, 9); var ema21 = Ema(closes, 21); var ema25 = Ema(closes, 25);
+        var ema9 = EmaCalculator.CalculateSeries(closes, 9);
+        var ema21 = EmaCalculator.CalculateSeries(closes, 21);
+        var ema25 = EmaCalculator.CalculateSeries(closes, 25);
         decimal cumulativePv = 0, cumulativeVolume = 0;
 
         // NSE opening range: 09:15:00 through 09:19:59 IST (five one-minute candles).
@@ -234,18 +236,6 @@ public sealed class TopStocksExcelExportBackgroundService : BackgroundService
             ws.Cells[$"{column}2:{column}{lastRow}"],
             ws.Cells[$"A2:A{lastRow}"]);
         series.Header = name;
-    }
-
-    private static List<decimal> Ema(IReadOnlyList<decimal> values, int period)
-    {
-        var result = new List<decimal>(values.Count); if (values.Count == 0) return result;
-        var alpha = 2m / (period + 1m); decimal current = 0;
-        for (var i = 0; i < values.Count; i++)
-        {
-            current = i == 0 ? values[i] : values[i] * alpha + current * (1m - alpha);
-            result.Add(Math.Round(current, 6, MidpointRounding.AwayFromZero));
-        }
-        return result;
     }
 
     private static decimal Choppiness(IReadOnlyList<Candle> candles, int index, int period)
