@@ -41,16 +41,18 @@ public sealed class AngelWebSocketBackgroundService : BackgroundService
                 if (!_socket.IsConnected) await _socket.StartAsync(stoppingToken);
                 var loginData = await _angelOneService.GetLoginDataAsync();
                 var equity = await _instruments.LoadInstruments();
-                var quotes = GetTopQuotes(await GetQuotesAsync(equity, loginData.JwtToken), 10);
-                var selected = equity.Where(x => x.exch_seg is "NSE" or "BSE")
-                    .Take(1000).ToList();
-                foreach (var batch in selected.Chunk(100))
+                var quotes = GetTopQuotes(await GetQuotesAsync(equity, loginData.JwtToken), 1000);
+                foreach (var batch in quotes.Chunk(100))
                 {
-                    await _socket.SubscribeAsync(batch.Select(x => x.token), batch.First().exch_seg);
+                    await _socket.SubscribeAsync(batch.Select(x => x.SymbolToken), batch.First().Exchange);
                     await Task.Delay(100, stoppingToken);
                 }
-                _logger.LogInformation("Subscribed to {Count} equity instruments from instrument master.", selected.Count);
-                while (_socket.IsConnected && !stoppingToken.IsCancellationRequested) await Task.Delay(5000, stoppingToken);
+                _logger.LogInformation(
+                    "Subscribed to {Count} equity instruments. The instrument/quote scan will run again in 5 minutes.",
+                    quotes.Count);
+
+                // Refresh the instrument quote ranking and websocket subscriptions every 5 minutes.
+                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception ex) { _logger.LogError(ex, "Market websocket startup/recovery failed."); await Task.Delay(5000, stoppingToken); }

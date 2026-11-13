@@ -29,6 +29,7 @@ namespace CodeName399.Extensions
             services.AddSingleton<IAngelWebSocketClient, AngelWebSocketClient>();
             services.AddSingleton<RequestHelper>();
             services.AddSingleton<MarketClock>();
+            services.AddSingleton<IAngelOneService, AngelOneService>();
         }
 
         public static void AddScopedServiceDependencies(this IServiceCollection services)
