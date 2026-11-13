@@ -1,6 +1,5 @@
 using CodeName399.Kite.API.Application.BackgroundServices;
 using CodeName399.Kite.API.Application.Services;
-using CodeName399.Kite.API.BackgroundServices;
 using CodeName399.Kite.API.Constants;
 using CodeName399.Kite.API.Helpers;
 using CodeName399.Kite.API.Models;
@@ -56,10 +55,8 @@ namespace CodeName399.Extensions
         public static void AddSingletonServiceDependencies(this IServiceCollection services)
         {
             services.AddSingleton<IAngelOneService, AngelOneService>();
-            services.AddSingleton<RawMarketDataArchiveService>();
             services.AddSingleton<TradingSettingsProvider>();
             services.AddSingleton<AngelBinaryParser>();
-            services.AddSingleton<IAngelWebSocketClient, AngelWebSocketClient>();
             services.AddSingleton<IMarketHoursService, MarketHoursService>();
             services.AddSingleton<IBrokerageCalculatorService, BrokerageCalculatorService>();
             services.AddSingleton<OrderStatusCache>();
@@ -68,8 +65,8 @@ namespace CodeName399.Extensions
             services.AddSingleton<MarketClock>();
             services.AddSingleton<PaperPortfolioService>();
             services.AddSingleton<CommonService>();
-            services.AddSingleton<MarketQuotePublisher>();
             services.AddSingleton<CandleFileStoreService>();
+            services.AddSingleton<CandleBuilderTickClient>();
         }
 
         public static void AddScopedServiceDependencies(this IServiceCollection services)
@@ -88,10 +85,8 @@ namespace CodeName399.Extensions
         public static void AddHostedServiceDependencies(this IServiceCollection services)
         {
             services.AddSignalR();
-            services.AddHostedService<RawMarketDataArchiveHostedService>();
-            services.AddHostedService<MarketQuotePublisher>(sp => sp.GetRequiredService<MarketQuotePublisher>());
-            services.AddHostedService<AngelWebSocketBackgroundService>();
             services.AddHostedService<OrderWebSocketBackgroundService>();
+            services.AddHostedService(sp => sp.GetRequiredService<CandleBuilderTickClient>());
             services.AddHostedService<InitialBackgroundService>();
             services.AddHostedService<ExitBackgroundService>();
             //services.AddHostedService<TopStocksExcelExportBackgroundService>();

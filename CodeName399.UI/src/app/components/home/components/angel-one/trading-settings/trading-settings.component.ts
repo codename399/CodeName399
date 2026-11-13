@@ -28,9 +28,12 @@ export class TradingSettingsComponent implements OnInit {
     enableAutoTrading: [false],
     enableNotification: [true],
     maxTrades: [1, [Validators.required, Validators.min(1)]],
+    stopLossPercent: [0.5, [Validators.required, Validators.min(0)]],
     enableTrailingStop: [false],
     enableTargetExit: [false],
     targetLowestPriceChangeMultiplier: [2, [Validators.required, Validators.min(0)]],
+    requiredProfitPercent: [2, [Validators.required, Validators.min(0)]],
+    minimumStockPrice: [999999, [Validators.required, Validators.min(0)]],
     autoSquareOff: [true],
     paperTradingBalance: [100000, [Validators.required, Validators.min(0)]],
 
@@ -82,9 +85,12 @@ export class TradingSettingsComponent implements OnInit {
             enableAutoTrading: config.enableAutoTrading,
             enableNotification: config.enableNotification,
             maxTrades: config.maxTrades,
+            stopLossPercent: config.stopLossPercent,
             enableTrailingStop: config.enableTrailingStop,
             enableTargetExit: config.enableTargetExit,
             targetLowestPriceChangeMultiplier: config.targetLowestPriceChangeMultiplier,
+            requiredProfitPercent: config.requiredProfitPercent,
+            minimumStockPrice: config.minimumStockPrice,
             autoSquareOff: config.autoSquareOff,
             paperTradingBalance: config.paperTradingBalance,
             marketOpenTime: this.time(config.marketOpenTime),
@@ -134,9 +140,12 @@ export class TradingSettingsComponent implements OnInit {
       enableAutoTrading: !!v.enableAutoTrading,
       enableNotification: !!v.enableNotification,
       maxTrades: Number(v.maxTrades),
+       stopLossPercent: Number(v.stopLossPercent),
       enableTrailingStop: !!v.enableTrailingStop,
       enableTargetExit: !!v.enableTargetExit,
       targetLowestPriceChangeMultiplier: Number(v.targetLowestPriceChangeMultiplier),
+       requiredProfitPercent: Number(v.requiredProfitPercent),
+       minimumStockPrice: Number(v.minimumStockPrice),
       autoSquareOff: !!v.autoSquareOff,
       paperTradingBalance: Number(v.paperTradingBalance),
       marketOpenTime: this.toTimeSpan(v.marketOpenTime),
@@ -199,10 +208,6 @@ export class TradingSettingsComponent implements OnInit {
     link.download = `trading-settings-${new Date().toISOString().slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(link.href);
-  }
-
-  get intradayCutoffTime(): string {
-    return this.currentConfiguration?.intradayCutoffTime ?? '';
   }
 
   private time(value: string | null | undefined): string {

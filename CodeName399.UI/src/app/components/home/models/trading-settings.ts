@@ -12,13 +12,15 @@ export interface TradingConfiguration {
   enableAutoTrading: boolean;
   enableNotification: boolean;
   maxTrades: number;
+  stopLossPercent: number;
   enableTrailingStop: boolean;
   enableTargetExit: boolean;
   targetLowestPriceChangeMultiplier: number;
   chargeCoverLowestPriceChangeCandles: number;
+  requiredProfitPercent: number;
+  minimumStockPrice: number;
   marketOpenTime: string;
   marketCloseTime: string;
-  intradayCutoffTime: string;
   tradingHolidays: string[];
   excludedSymbols: string[];
   maxCandidates: number;

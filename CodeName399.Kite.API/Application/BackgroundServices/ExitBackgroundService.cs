@@ -3,7 +3,7 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
     using CodeName399.Kite.API.Application.Services;
     using CodeName399.Kite.API.Services;
     using CodeName399.Kite.API.Services.Interface;
-    using CodeName399.Kite.API.WebSocket.Interface;
+    
     using CodeName399.Kite.API.Models;
     using System.Collections.Concurrent;
 
@@ -17,7 +17,7 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
         private readonly IMarketHoursService _marketHours;
         private readonly MarketClock _marketClock;
         private readonly IServiceScopeFactory _scopeFactory;
-        private readonly IAngelWebSocketClient _webSocket;
+        private readonly CandleBuilderTickClient _tickClient;
         private readonly ConcurrentDictionary<string, SemaphoreSlim> _tickLocks = new(StringComparer.OrdinalIgnoreCase);
         private DateOnly? _lastAutoSquareOffDate;
         private DateOnly? _lastDailySummaryDate;
@@ -31,7 +31,7 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
             IMarketHoursService marketHours,
             MarketClock marketClock,
             IServiceScopeFactory scopeFactory,
-            IAngelWebSocketClient webSocket)
+            CandleBuilderTickClient tickClient)
         {
             _logger = logger;
             _commonService = commonService;
@@ -41,13 +41,13 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
             _marketHours = marketHours;
             _marketClock = marketClock;
             _scopeFactory = scopeFactory;
-            _webSocket = webSocket;
+            _tickClient = tickClient;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("ExitBackgroundService started at {Time} IST. Sell monitoring uses live ticks.", _marketClock.Now);
-            _webSocket.TickReceived += OnTickReceived;
+            _logger.LogInformation("ExitBackgroundService started at {Time} IST. Sell monitoring uses CandleBuilder SignalR ticks.", _marketClock.Now);
+            _tickClient.TickReceived += OnTickReceived;
             try
             {
             while (!stoppingToken.IsCancellationRequested)
@@ -90,7 +90,7 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
             }
             finally
             {
-                _webSocket.TickReceived -= OnTickReceived;
+                _tickClient.TickReceived -= OnTickReceived;
             }
 
             _logger.LogInformation("ExitBackgroundService stopped at {Time} IST", _marketClock.Now);

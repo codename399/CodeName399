@@ -45,8 +45,6 @@ namespace CodeName399.Kite.API.Models.Configuration
         public List<string>? VisibleColumns { get; set; } = [];
         public bool AutoSquareOff { get; set; } = true;
         public decimal PaperTradingBalance { get; set; } = 100000m;
-        public string ResearchDataVersion { get; set; } = "v1";
-        public RawMarketDataSettings RawMarketData { get; set; } = new();
     }
 
     public class RawMarketDataSettings

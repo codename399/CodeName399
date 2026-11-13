@@ -1,5 +1,5 @@
-using CodeName399.Kite.API.Models;
-namespace CodeName399.Kite.API.WebSocket.Interface;
+using CodeName399.CandleBuilder.API.Models;
+namespace CodeName399.CandleBuilder.API.WebSocket.Interface;
 
 public interface IAngelWebSocketClient
 {

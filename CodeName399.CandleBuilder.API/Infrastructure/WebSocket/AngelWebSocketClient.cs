@@ -1,13 +1,14 @@
-using CodeName399.Kite.API.Constants;
+using CodeName399.CandleBuilder.API.Constants;
+using CodeName399.CandleBuilder.API.Models;
+using CodeName399.CandleBuilder.API.Models.WebSocket;
+using CodeName399.CandleBuilder.API.WebSocket.Interface;
 using CodeName399.Kite.API.Models;
-using CodeName399.Kite.API.Models.WebSocket;
-using CodeName399.Kite.API.WebSocket.Interface;
 using Microsoft.Extensions.Options;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 
-namespace CodeName399.Kite.API.Services;
+namespace CodeName399.CandleBuilder.API.Services;
 
 public class AngelWebSocketClient : IAngelWebSocketClient
 {
@@ -15,7 +16,6 @@ public class AngelWebSocketClient : IAngelWebSocketClient
     private readonly IAngelWebSocketConnection _connection;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly AngelOneConfiguration _options;
-    private readonly TradingSettingsProvider _settings;
     private readonly AngelBinaryParser _parser;
     private readonly Dictionary<int, HashSet<string>> _subscriptions = new();
     private readonly Dictionary<int, HashSet<string>> _baseSubscriptions = new();
@@ -25,13 +25,13 @@ public class AngelWebSocketClient : IAngelWebSocketClient
     private readonly object _subscriptionLock = new();
 
     private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
-    private TimeSpan HeartbeatInterval => TimeSpan.FromSeconds(Math.Max(1, _settings.Current.WebSocketHeartbeatSeconds));
-    private TimeSpan PongTimeout => TimeSpan.FromSeconds(Math.Max(2, _settings.Current.WebSocketPongTimeoutSeconds));
+    private TimeSpan HeartbeatInterval => TimeSpan.FromSeconds(10);
+    private TimeSpan PongTimeout => TimeSpan.FromSeconds(30);
     private readonly IAngelOneService _angelOneService;
     private readonly RawMarketDataArchiveService _rawMarketData;
 
-    private TimeSpan RetryInitialDelay => TimeSpan.FromSeconds(Math.Max(1, _settings.Current.WebSocketRetryInitialSeconds));
-    private TimeSpan MaxRetryDelay => TimeSpan.FromSeconds(Math.Max(RetryInitialDelay.TotalSeconds, _settings.Current.WebSocketRetryMaxSeconds));
+    private TimeSpan RetryInitialDelay => TimeSpan.FromSeconds(10);
+    private TimeSpan MaxRetryDelay => TimeSpan.FromSeconds(60);
 
     private int _currentRetryAttempt;
 
@@ -68,7 +68,6 @@ public class AngelWebSocketClient : IAngelWebSocketClient
         IAngelWebSocketConnection connection,
         IServiceScopeFactory scopeFactory,
         IOptions<AngelOneConfiguration> options,
-        TradingSettingsProvider settings,
         AngelBinaryParser parser,
         IAngelOneService angelOneService,
         RawMarketDataArchiveService rawMarketData
@@ -78,7 +77,6 @@ public class AngelWebSocketClient : IAngelWebSocketClient
         _connection = connection;
         _scopeFactory = scopeFactory;
         _options = options.Value;
-        _settings = settings;
         _parser = parser;
         _angelOneService = angelOneService;
         _rawMarketData = rawMarketData;

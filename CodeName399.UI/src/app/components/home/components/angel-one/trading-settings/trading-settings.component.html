@@ -27,16 +27,19 @@
         <label class="toggle-field"><input type="checkbox" formControlName="enableAutoTrading"><span>Enable auto trading</span></label>
         <label class="toggle-field"><input type="checkbox" formControlName="enableNotification"><span>Enable notifications</span></label>
          <label><span>Maximum open trades</span><input type="number" formControlName="maxTrades" min="1"></label>
+         <label><span>Stop-loss percent</span><input type="number" formControlName="stopLossPercent" min="0" step="0.01"></label>
          <label class="toggle-field"><input type="checkbox" formControlName="enableTrailingStop"><span>Enable trailing stop</span></label>
          <label class="toggle-field"><input type="checkbox" formControlName="enableTargetExit"><span>Enable target exit</span></label>
          <label><span>Target price-change multiplier</span><input type="number" formControlName="targetLowestPriceChangeMultiplier" min="0" step="0.01"></label>
+         <label><span>Required profit percent</span><input type="number" formControlName="requiredProfitPercent" min="0" step="0.01"></label>
+         <label><span>Minimum stock price</span><input type="number" formControlName="minimumStockPrice" min="0" step="0.01"></label>
         <label class="toggle-field"><input type="checkbox" formControlName="autoSquareOff"><span>Enable automatic square-off</span></label>
         <label><span>Paper trading balance</span><input type="number" formControlName="paperTradingBalance" min="0" step="0.01"></label>
         <label><span>Auto square-off minutes before close</span><input type="number" formControlName="autoSquareOffMinutes" min="0"></label>
       </div>
     </section>
 
-    <section class="settings-card" *ngIf="sectionMatches('market', 'hours', 'timezone', 'holidays', 'cutoff')">
+    <section class="settings-card" *ngIf="sectionMatches('market', 'hours', 'timezone', 'holidays')">
       <div class="card-header">
         <button type="button" class="accordion-trigger" (click)="toggleSection('market')" [attr.aria-expanded]="openSection === 'market'">
           <span><h2>Market Schedule</h2><p>Exchange schedule and configured trading holidays.</p></span>
@@ -46,7 +49,6 @@
       <div class="grid-4" *ngIf="openSection === 'market'">
         <label><span>Market open (IST)</span><input type="time" formControlName="marketOpenTime"></label>
         <label><span>Market close (IST)</span><input type="time" formControlName="marketCloseTime"></label>
-        <label><span>Intraday entry cutoff (calculated by API)</span><input type="text" [value]="intradayCutoffTime" readonly></label>
         <label><span>Market time zone ID</span><input type="text" formControlName="marketTimeZoneId"></label>
         <label class="wide-field"><span>Trading holidays (comma separated YYYY-MM-DD)</span><input type="text" formControlName="tradingHolidays"></label>
       </div>

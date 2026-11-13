@@ -1,17 +1,14 @@
-using CodeName399.Kite.API.Models;
-using CodeName399.Kite.API.Models.Configuration;
+using CodeName399.CandleBuilder.API.Models;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 
-namespace CodeName399.Kite.API.Services;
+namespace CodeName399.CandleBuilder.API.Services;
 
 /// <summary>Persists raw broker market feed as compact ZIP-compressed JSONL.</summary>
 public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
 {
-    private readonly TradingSettingsProvider _settings;
-
     private readonly ILogger<RawMarketDataArchiveService> _logger;
     private readonly MarketClock _marketClock;
     private readonly Channel<RawMarketTickRecord> _channel = Channel.CreateBounded<RawMarketTickRecord>(new BoundedChannelOptions(100_000)
@@ -26,12 +23,10 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
 
     public RawMarketDataArchiveService(
         ILogger<RawMarketDataArchiveService> logger,
-        MarketClock marketClock,
-        TradingSettingsProvider settings)
+        MarketClock marketClock)
     {
         _logger = logger;
         _marketClock = marketClock;
-        _settings = settings;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -43,14 +38,8 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
     public void Record(MarketTick tick)
     {
         if (tick == null || string.IsNullOrWhiteSpace(tick.SymbolToken) || tick.Ltp <= 0) return;
-        var raw = _settings.Current.RawMarketData ?? new RawMarketDataSettings();
-        if (!raw.Enabled) return;
-
-        // Raw live market-data recording is strictly session-bound.
-        // Do not use MarketClock.IsMarketOpen here because IgnoreMarketHours is
-        // intentionally a trading/test override and must not enable recording
-        // outside the actual exchange session.
-        if (raw.RecordOnlyDuringMarketHours && !_marketClock.IsRawMarketDataRecordingOpen()) return;
+        
+        if (!_marketClock.IsRawMarketDataRecordingOpen()) return;
         var record = RawMarketTickRecord.From(tick);
         if (!_channel.Writer.TryWrite(record))
         {
@@ -91,8 +80,7 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
         async Task OpenArchiveAsync(DateTime date)
         {
             await CloseArchiveAsync();
-            var raw = _settings.Current.RawMarketData ?? new RawMarketDataSettings();
-            var rootPath = ResolveStoragePath(raw.StoragePath);
+            var rootPath = ResolveStoragePath("RawMarketData");
             Directory.CreateDirectory(rootPath);
             var directory = Path.Combine(rootPath, date.ToString("yyyy-MM-dd"));
             Directory.CreateDirectory(directory);
@@ -115,9 +103,8 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
                         await OpenArchiveAsync(date);
 
                     var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(record) + "\n");
-                    var raw = _settings.Current.RawMarketData ?? new RawMarketDataSettings();
-                    var maxZipBytes = raw.MaximumZipSizeMb * 1024L * 1024L;
-                    var rollThresholdBytes = maxZipBytes * raw.RollOverAtPercent / 100L;
+                    var maxZipBytes = 100 * 1024L * 1024L;
+                    var rollThresholdBytes = maxZipBytes * 95 / 100L;
                     if (file!.Position >= rollThresholdBytes && file.Position > 0)
                         await OpenArchiveAsync(date);
 
@@ -125,7 +112,7 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
 
                     if (file.Position > maxZipBytes)
                     {
-                        _logger.LogWarning("Raw market-data ZIP crossed configured maximum after a single record. MaximumZipSizeMb={MaximumZipSizeMb}, RecordSize={Bytes}, File={File}", raw.MaximumZipSizeMb, bytes.Length, file.Name);
+                        _logger.LogWarning("Raw market-data ZIP crossed configured maximum after a single record. MaximumZipSizeMb={MaximumZipSizeMb}, RecordSize={Bytes}, File={File}", 100, bytes.Length, file.Name);
                         await OpenArchiveAsync(date);
                     }
                 }
@@ -140,13 +127,12 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
         }
     }
 
-    public async Task RecordHistoricalCandlesAsync(string token, string exchange, string interval, IReadOnlyList<CodeName399.Kite.API.Models.Indicator.Candle> candles, CancellationToken cancellationToken = default)
+    public async Task RecordHistoricalCandlesAsync(string token, string exchange, string interval, IReadOnlyList<CodeName399.CandleBuilder.API.Models.Indicator.Candle> candles, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(token) || candles.Count == 0) return;
         var date = candles.Min(x => x.Timestamp).Date;
-        var rawSettings = _settings.Current.RawMarketData ?? new RawMarketDataSettings();
-        if (!rawSettings.Enabled) return;
-        var directory = Path.Combine(ResolveStoragePath(rawSettings.StoragePath), date.ToString("yyyy-MM-dd"));
+        
+        var directory = Path.Combine(ResolveStoragePath("RawMarketData"), date.ToString("yyyy-MM-dd"));
         Directory.CreateDirectory(directory);
         var safeToken = string.Concat(token.Select(c => char.IsLetterOrDigit(c) || c == '_' || c == '-' ? c : '_'));
         var safeExchange = string.Concat(exchange.Select(c => char.IsLetterOrDigit(c) || c == '_' || c == '-' ? c : '_'));
@@ -195,14 +181,14 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
                     Volume = candle.Volume
                 };
                 var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(record) + "\n");
-                var maxZipBytes = rawSettings.MaximumZipSizeMb * 1024L * 1024L;
-                var rollThresholdBytes = maxZipBytes * rawSettings.RollOverAtPercent / 100L;
+                var maxZipBytes = 100 * 1024L * 1024L;
+                var rollThresholdBytes = maxZipBytes * 95 / 100L;
                 if (file!.Position >= rollThresholdBytes && file.Position > 0)
                     await OpenAsync();
                 await entry!.WriteAsync(bytes, cancellationToken);
                 if (file.Position > maxZipBytes)
                 {
-                    _logger.LogWarning("Historical ZIP crossed configured maximum after a single record. MaximumZipSizeMb={MaximumZipSizeMb}, File={File}", rawSettings.MaximumZipSizeMb, file.Name);
+                    _logger.LogWarning("Historical ZIP crossed configured maximum after a single record. MaximumZipSizeMb={MaximumZipSizeMb}, File={File}", 100, file.Name);
                     await OpenAsync();
                 }
             }

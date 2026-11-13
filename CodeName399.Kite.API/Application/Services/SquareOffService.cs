@@ -1,4 +1,5 @@
 using CodeName399.Kite.API.Application.Services;
+using CodeName399.Kite.API.Models.Indicator;
 using CodeName399.Kite.API.Services.Interface;
 
 namespace CodeName399.Kite.API.Services;
@@ -51,10 +52,7 @@ public sealed class SquareOffService
             : _settings.Current.CandleInterval;
         var login = await _angel.GetLoginDataAsync();
         var instruments = await _instrumentService.LoadInstruments();
-        var candles = await _commonService.DownloadCandlesInBatchesAsync(
-            ownedStocks.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase), instruments,
-            login.JwtToken, interval, _commonService.GetIndianTime().Date.AddDays(-5),
-            _commonService.GetIndianTime(), 2, 1);
+        var candles = new Dictionary<string, List<Candle>>();
 
         token.ThrowIfCancellationRequested();
         await _commonService.PlaceSellOrder(ownedStocks, candles, forceSquareOff: true);
