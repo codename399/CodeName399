@@ -19,6 +19,8 @@ public sealed class LiveCandleEngine : IHostedService, IDisposable
     private readonly ConcurrentDictionary<string, State> _states = new(StringComparer.OrdinalIgnoreCase);
     private readonly IAngelWebSocketClient _socket;
     private readonly IHubContext<MarketHub> _hub;
+
+    private readonly RawMarketDataArchiveService _rawMarketData;
     private readonly ILogger<LiveCandleEngine> _logger;
     private readonly string _directory;
     private readonly JsonSerializerOptions _json = new(JsonSerializerDefaults.Web);
@@ -27,10 +29,11 @@ public sealed class LiveCandleEngine : IHostedService, IDisposable
     private static readonly TimeZoneInfo India = TimeZoneInfo.FindSystemTimeZoneById(
         OperatingSystem.IsWindows() ? "India Standard Time" : "Asia/Kolkata");
 
-    public LiveCandleEngine(IAngelWebSocketClient socket, IHubContext<MarketHub> hub, ILogger<LiveCandleEngine> logger)
+    public LiveCandleEngine(IAngelWebSocketClient socket, IHubContext<MarketHub> hub, RawMarketDataArchiveService rawMarketData, ILogger<LiveCandleEngine> logger)
     {
         _socket = socket;
         _hub = hub;
+        _rawMarketData = rawMarketData;
         _logger = logger;
         var configured = Environment.GetEnvironmentVariable("CODENAME399_CANDLE_STORAGE_PATH");
         if (string.IsNullOrWhiteSpace(configured))
@@ -95,6 +98,8 @@ public sealed class LiveCandleEngine : IHostedService, IDisposable
         if (tick == null || string.IsNullOrWhiteSpace(tick.SymbolToken) || tick.Ltp <= 0)
             return;
 
+        _ = _hub.Clients.All.SendAsync("TickReceived", tick);
+
         var exchangeTime = tick.ExchangeTime == default ? DateTime.UtcNow : tick.ExchangeTime;
         var time = exchangeTime.Kind == DateTimeKind.Utc
             ? TimeZoneInfo.ConvertTimeFromUtc(exchangeTime, India)
@@ -121,8 +126,6 @@ public sealed class LiveCandleEngine : IHostedService, IDisposable
             }
             // Ignore out-of-order ticks belonging to an already closed minute.
         }
-
-        _ = _hub.Clients.All.SendAsync("TickReceived", tick);
     }
 
     private void CloseCurrentCandle(string token, State state)
@@ -132,6 +135,7 @@ public sealed class LiveCandleEngine : IHostedService, IDisposable
 
         state.Current = null;
         AppendAsync(token, "1m", closed).GetAwaiter().GetResult();
+        _rawMarketData.RecordCandle(token, "NSE", "1m", closed);
         state.Minute.Add(closed);
         if (state.Minute.Count > 500)
             state.Minute.RemoveRange(0, state.Minute.Count - 500);
@@ -184,6 +188,7 @@ public sealed class LiveCandleEngine : IHostedService, IDisposable
             Volume = group.Sum(x => x.Volume)
         };
         AppendAsync(token, interval, candle).GetAwaiter().GetResult();
+        _rawMarketData.RecordCandle(token, "NSE", interval, candle);
         _ = _hub.Clients.All.SendAsync("CandleClosed", new { token, interval, candle });
     }
 

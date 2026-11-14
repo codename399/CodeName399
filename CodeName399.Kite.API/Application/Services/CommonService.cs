@@ -41,6 +41,9 @@ namespace CodeName399.Kite.API.Application.Services
 
         private readonly SemaphoreSlim _quoteSemaphore = new(2, 2);
         private readonly SemaphoreSlim _buyExecutionSemaphore = new(1, 1);
+        // A symbol remains reserved from buy evaluation through the life of its open trade.
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _symbolLocks =
+            new(StringComparer.OrdinalIgnoreCase);
         private readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTime> _lastVwapExitEvaluation =
             new(StringComparer.OrdinalIgnoreCase);
 
@@ -159,6 +162,32 @@ namespace CodeName399.Kite.API.Application.Services
                     EntryTime = buy.UpdatedTime,
                     ExecutionMode = "Live"
                 };
+            }
+
+            // Broker net positions are the final source of truth for shares already held,
+            // including positions that were opened outside this process or missed by recovery.
+            var brokerPositions = await _angel.GetPositionsAsync();
+            if (_angel.LastPositionRefreshSucceeded)
+            {
+                foreach (var position in brokerPositions.Where(x => x.NetQty > 0 && !string.IsNullOrWhiteSpace(x.TradingSymbol)))
+                {
+                    var symbol = position.TradingSymbol.Trim().ToUpperInvariant();
+                    if (owned.ContainsKey(symbol)) continue;
+                    owned[symbol] = new TradeOrder
+                    {
+                        Symbol = symbol,
+                        SymbolToken = position.SymbolToken,
+                        Exchange = string.IsNullOrWhiteSpace(position.Exchange) ? "NSE" : position.Exchange,
+                        Quantity = position.NetQty,
+                        EntryPrice = position.BuyAvgPrice,
+                        EntryTime = GetIndianTime(),
+                        ExecutionMode = "Live"
+                    };
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Broker positions refresh failed; owned-stock check is relying on persisted trades and order websocket state.");
             }
 
             return owned;
@@ -370,9 +399,28 @@ namespace CodeName399.Kite.API.Application.Services
                 var batchTasks = batch.Select(async quote =>
                 {
                     await _buyExecutionSemaphore.WaitAsync();
+                    var symbol = (quote.TradingSymbol ?? string.Empty).Trim().ToUpperInvariant();
+                    var symbolLockRetained = false;
+                    var symbolLockAcquired = false;
                     try
                     {
+                        if (string.IsNullOrWhiteSpace(symbol) || !_symbolLocks.TryAdd(symbol, 0))
+                        {
+                            _logger.LogInformation("BUY SKIPPED Symbol={Symbol} Reason=SymbolAlreadyLocked", quote.TradingSymbol);
+                            return;
+                        }
+                        symbolLockAcquired = true;
+
                         var openTrades = await GetOwnedStocksAsync();
+                        var alreadyOwned = openTrades.Values.Any(t =>
+                            string.Equals(t.Symbol, symbol, StringComparison.OrdinalIgnoreCase)
+                            || (!string.IsNullOrWhiteSpace(quote.SymbolToken)
+                                && string.Equals(t.SymbolToken, quote.SymbolToken, StringComparison.OrdinalIgnoreCase)));
+                        if (alreadyOwned)
+                        {
+                            _logger.LogInformation("BUY SKIPPED Symbol={Symbol} Token={Token} Reason=AlreadyOwned", symbol, quote.SymbolToken);
+                            return;
+                        }
                         var maxTrades = Math.Max(1, _settings.Current.MaxTrades);
                         if (openTrades.Count >= maxTrades)
                         {
@@ -463,6 +511,7 @@ namespace CodeName399.Kite.API.Application.Services
                                 // If the request times out, retaining this record prevents a duplicate buy
                                 // while broker/order-websocket reconciliation determines whether it filled.
                                 await _tradeOrderFileRepository.SaveAsync(tradeOrder);
+                                symbolLockRetained = true;
 
                                 var orderTag = $"CN399-BUY-{Guid.NewGuid():N}"[..19];
                                 PlaceOrderResponse buyResponse;
@@ -499,6 +548,7 @@ namespace CodeName399.Kite.API.Application.Services
                                 if (buyResponse?.Status != true)
                                 {
                                     await _tradeOrderFileRepository.DeleteAsync(tradeOrder.Symbol);
+                                    symbolLockRetained = false;
                                     _logger.LogError(
                                         "LIVE BUY ORDER REJECTED Symbol={Symbol} Quantity={Quantity} Message={Message}",
                                         tradeOrder.Symbol, tradeOrder.Quantity, buyResponse?.Message);
@@ -513,6 +563,7 @@ namespace CodeName399.Kite.API.Application.Services
                             else
                             {
                                 await _tradeOrderFileRepository.SaveAsync(tradeOrder);
+                                symbolLockRetained = true;
                             }
 
                             EmailHelper.SendEmail(
@@ -524,6 +575,8 @@ namespace CodeName399.Kite.API.Application.Services
                     }
                     finally
                     {
+                        if (symbolLockAcquired && !symbolLockRetained)
+                            _symbolLocks.TryRemove(symbol, out _);
                         _buyExecutionSemaphore.Release();
                     }
                 });
@@ -953,6 +1006,7 @@ namespace CodeName399.Kite.API.Application.Services
                     }
 
                     await _tradeOrderFileRepository.DeleteAsync(trade.Symbol);
+                    _symbolLocks.TryRemove(trade.Symbol, out _);
                     _logger.LogInformation("SELL ORDER SUBMITTED Symbol={Symbol} Outcome={Outcome} OrderId={OrderId}", trade.Symbol, outcome, response.Data.OrderId);
                     return;
                 }
@@ -965,6 +1019,7 @@ namespace CodeName399.Kite.API.Application.Services
                 await _tradeCloseStore.AppendAsync(trade);
                 await _tradeOrderFileRepository.DeleteAsync(
                     string.IsNullOrWhiteSpace(trade.Id) ? trade.Symbol : trade.Id);
+                _symbolLocks.TryRemove(trade.Symbol, out _);
 
                 EmailHelper.SendEmail(
                     EmailHelper.BuildSellOrderEmail(trade),
