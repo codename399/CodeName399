@@ -43,7 +43,7 @@ public sealed class MarketClock
 
         return isTradingDay
             && now.TimeOfDay >= MarketOpenTime
-            && now.TimeOfDay <= MarketCloseTime;
+            && now.TimeOfDay < MarketCloseTime;
     }
 
     public bool IsNewIntradayEntryWindowOpen => IsTradingDay

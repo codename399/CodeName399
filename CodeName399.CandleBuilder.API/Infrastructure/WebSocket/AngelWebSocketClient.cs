@@ -484,7 +484,8 @@ public class AngelWebSocketClient : IAngelWebSocketClient
         if (tick == null)
             return;
 
-        tick.LastUpdated = DateTime.UtcNow;
+        tick.ReceivedAtUtc = DateTime.UtcNow;
+        tick.LastUpdated = tick.ReceivedAtUtc;
         //var knownStock = _watchList.Get(tick.SymbolToken);
         //if (knownStock != null)
         //    tick.TradingSymbol = knownStock.Symbol;

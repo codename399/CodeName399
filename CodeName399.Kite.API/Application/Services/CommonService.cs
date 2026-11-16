@@ -838,7 +838,7 @@ namespace CodeName399.Kite.API.Application.Services
             return Math.Round(entryPrice * 0.99m, 2, MidpointRounding.AwayFromZero);
         }
 
-        public bool ValidateSell(TradeOrder trade, Candle currentCandle, out string outcome)
+        public bool ValidateSell(TradeOrder trade, IReadOnlyList<Candle> candles, Candle currentCandle, out string outcome)
         {
             outcome = string.Empty;
             if (trade == null || currentCandle == null || trade.EntryPrice <= 0m || currentCandle.Close <= 0m)
@@ -849,6 +849,27 @@ namespace CodeName399.Kite.API.Application.Services
                     trade.EntryPrice,
                     trade.LowestPriceChange,
                     1.0m);
+
+            // Exit on a confirmed bearish EMA crossover at the latest completed 1m candle.
+            // Use the same SMA-seeded EMA implementation as the entry strategy and compare
+            // unrounded values; six decimals are used only for diagnostics.
+            var orderedCandles = (candles ?? Array.Empty<Candle>())
+                .Where(c => c != null && c.Close > 0m)
+                .GroupBy(c => c.Timestamp)
+                .Select(g => g.Last())
+                .OrderBy(c => c.Timestamp)
+                .ToList();
+            if (orderedCandles.Count >= 22)
+            {
+                var closes = orderedCandles.Select(c => c.Close).ToList();
+                var ema9 = EmaCalculator.CalculateSeries(closes, 9);
+                var ema21 = EmaCalculator.CalculateSeries(closes, 21);
+                if (ema9[^2] >= ema21[^2] && ema9[^1] < ema21[^1])
+                {
+                    outcome = $"EMA9_CROSSED_BELOW_EMA21 (EMA9={ema9[^1]:F6}, EMA21={ema21[^1]:F6})";
+                    return true;
+                }
+            }
 
             if (!_settings.Current.EnableTrailingStop && trade.TargetPrice > 0m && currentCandle.Close >= trade.TargetPrice)
             {
@@ -976,7 +997,7 @@ namespace CodeName399.Kite.API.Application.Services
 
                 var candle = stockCandles.OrderBy(x => x.Timestamp).Last();
                 var outcome = forcedExitReason ?? (forceSquareOff ? "SQUARE_OFF" : string.Empty);
-                if (!forceSquareOff && forcedExitReason == null && !ValidateSell(trade, candle, out outcome))
+                if (!forceSquareOff && forcedExitReason == null && !ValidateSell(trade, stockCandles, candle, out outcome))
                     return;
 
                 var exitPrice = candle.Close;

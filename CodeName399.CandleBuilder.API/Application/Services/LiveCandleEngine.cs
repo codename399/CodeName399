@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Threading.Channels;
 using System.Text.Json;
 using CodeName399.CandleBuilder.API.Models.Indicator;
 using CodeName399.CandleBuilder.API.WebSocket.Interface;
@@ -7,45 +8,82 @@ using CodeName399.CandleBuilder.API.SignalRHubs;
 
 namespace CodeName399.CandleBuilder.API.Services;
 
-/// <summary>Builds exchange-time candles from live ticks and closes them at minute boundaries.</summary>
+/// <summary>
+/// Builds candles using exchange event-time. A new minute starts immediately at its
+/// boundary; the previous minute remains correctable for a short lateness window.
+/// </summary>
 public sealed class LiveCandleEngine : IHostedService, IDisposable
 {
+    private sealed class CandleBucket
+    {
+        public required Candle Candle { get; init; }
+        public DateTime FirstTickUtc { get; set; }
+        public DateTime LastTickUtc { get; set; }
+        public long LastSequence { get; set; }
+    }
+
     private sealed class State
     {
-        public Candle? Current;
+        public CandleBucket? Current;
+        public readonly SortedDictionary<DateTime, CandleBucket> Pending = new();
+        public readonly Dictionary<DateTime, CandleBucket> Finalized = new();
         public readonly List<Candle> Minute = [];
     }
+
+    private sealed record CandleWrite(string Token, string Interval, Candle Candle, bool Correction);
 
     private readonly ConcurrentDictionary<string, State> _states = new(StringComparer.OrdinalIgnoreCase);
     private readonly IAngelWebSocketClient _socket;
     private readonly IHubContext<MarketHub> _hub;
-
     private readonly RawMarketDataArchiveService _rawMarketData;
+    private readonly MarketClock _marketClock;
     private readonly ILogger<LiveCandleEngine> _logger;
     private readonly string _directory;
     private readonly JsonSerializerOptions _json = new(JsonSerializerDefaults.Web);
     private readonly CancellationTokenSource _timerCts = new();
+    private readonly Channel<CandleWrite> _writes = Channel.CreateUnbounded<CandleWrite>(
+        new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
     private Task? _boundaryTask;
-    private static readonly TimeZoneInfo India = TimeZoneInfo.FindSystemTimeZoneById(
-        OperatingSystem.IsWindows() ? "India Standard Time" : "Asia/Kolkata");
+    private Task? _writerTask;
+    private readonly TimeSpan _finalizationDelay;
+    private static readonly TimeZoneInfo India = ResolveIndiaTimeZone();
+    private static readonly TimeSpan FinalizedRetention = TimeSpan.FromMinutes(60);
 
-    public LiveCandleEngine(IAngelWebSocketClient socket, IHubContext<MarketHub> hub, RawMarketDataArchiveService rawMarketData, ILogger<LiveCandleEngine> logger)
+    public LiveCandleEngine(
+        IAngelWebSocketClient socket,
+        IHubContext<MarketHub> hub,
+        RawMarketDataArchiveService rawMarketData,
+        MarketClock marketClock,
+        ILogger<LiveCandleEngine> logger)
     {
         _socket = socket;
         _hub = hub;
         _rawMarketData = rawMarketData;
+        _marketClock = marketClock;
         _logger = logger;
+
         var configured = Environment.GetEnvironmentVariable("CODENAME399_CANDLE_STORAGE_PATH");
         if (string.IsNullOrWhiteSpace(configured))
             throw new InvalidOperationException("CODENAME399_CANDLE_STORAGE_PATH must be configured.");
+
         _directory = Path.GetFullPath(configured);
         Directory.CreateDirectory(_directory);
+
+        var delayMs = 2000;
+        var rawDelay = Environment.GetEnvironmentVariable("CODENAME399_CANDLE_FINALIZATION_DELAY_MS");
+        if (int.TryParse(rawDelay, out var parsed))
+            delayMs = Math.Clamp(parsed, 0, 10_000);
+        _finalizationDelay = TimeSpan.FromMilliseconds(delayMs);
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _socket.TickReceived += OnTick;
-        _boundaryTask = RunBoundaryClockAsync(_timerCts.Token);
+        _writerTask = Task.Run(CandleWriterLoopAsync);
+        _boundaryTask = Task.Run(() => RunBoundaryClockAsync(_timerCts.Token));
+        _logger.LogInformation(
+            "Live candle engine started. Timezone=Asia/Kolkata FinalizationDelayMs={DelayMs}. New candles open immediately at exchange-time minute boundaries.",
+            _finalizationDelay.TotalMilliseconds);
         return Task.CompletedTask;
     }
 
@@ -53,175 +91,308 @@ public sealed class LiveCandleEngine : IHostedService, IDisposable
     {
         _socket.TickReceived -= OnTick;
         _timerCts.Cancel();
-        if (_boundaryTask is not null)
+
+        if (_boundaryTask != null)
         {
             try { await _boundaryTask.WaitAsync(cancellationToken); }
             catch (OperationCanceledException) { }
         }
-    }
 
-    // Wake at the next exact minute boundary (India time), rather than one minute
-    // after startup. This closes a candle even if no tick arrives in the next minute.
-    private async Task RunBoundaryClockAsync(CancellationToken cancellationToken)
-    {
-        while (!cancellationToken.IsCancellationRequested)
+        _writes.Writer.TryComplete();
+        if (_writerTask != null)
         {
-            var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, India);
-            var nextBoundary = new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, 0)
-                .AddMinutes(1);
-            var delay = nextBoundary - now;
-            if (delay > TimeSpan.Zero)
-                await Task.Delay(delay, cancellationToken);
-
-            CloseExpiredCandles(nextBoundary);
+            try { await _writerTask.WaitAsync(cancellationToken); }
+            catch (OperationCanceledException) { }
         }
     }
 
-    private void CloseExpiredCandles(DateTime boundary)
+    // Boundary processing is independent from the tick callback. It moves the
+    // previous candle to Pending but does not block opening the next minute.
+    private async Task RunBoundaryClockAsync(CancellationToken cancellationToken)
     {
-        foreach (var pair in _states)
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
+        while (await timer.WaitForNextTickAsync(cancellationToken))
         {
-            var token = pair.Key;
-            var state = pair.Value;
-            lock (state)
-            {
-                if (state.Current is null || state.Current.Timestamp >= boundary)
-                    continue;
+            var nowUtc = DateTime.UtcNow;
+            var nowIst = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, India);
+            var currentMinute = FloorMinute(nowIst);
 
-                CloseCurrentCandle(token, state);
+            foreach (var pair in _states)
+            {
+                var state = pair.Value;
+                lock (state)
+                {
+                    if (state.Current != null && state.Current.Candle.Timestamp < currentMinute)
+                    {
+                        var old = state.Current;
+                        state.Current = null;
+                        state.Pending[old.Candle.Timestamp] = old;
+                    }
+
+                    FinalizeDue(pair.Key, state, nowUtc);
+                    PruneFinalized(state, nowIst);
+                }
             }
         }
     }
 
     private void OnTick(object? sender, global::MarketTick tick)
     {
-        if (tick == null || string.IsNullOrWhiteSpace(tick.SymbolToken) || tick.Ltp <= 0)
+        if (tick == null || string.IsNullOrWhiteSpace(tick.SymbolToken) || tick.Ltp <= 0m)
             return;
 
+        // Forward ticks immediately; candle finalization never delays the live tick stream.
         _ = _hub.Clients.All.SendAsync("TickReceived", tick);
 
-        var exchangeTime = tick.ExchangeTime == default ? DateTime.UtcNow : tick.ExchangeTime;
-        var time = exchangeTime.Kind == DateTimeKind.Utc
-            ? TimeZoneInfo.ConvertTimeFromUtc(exchangeTime, India)
-            : TimeZoneInfo.ConvertTime(exchangeTime, India);
-        var minute = new DateTime(time.Year, time.Month, time.Day, time.Hour, time.Minute, 0, DateTimeKind.Unspecified);
+        var exchangeUtc = NormalizeUtc(tick.ExchangeTime, tick.ReceivedAtUtc);
+        var exchangeIst = TimeZoneInfo.ConvertTimeFromUtc(exchangeUtc, India);
+
+        // Candle generation follows exchange event-time, not server receipt-time.
+        // This also allows a delayed in-session tick received after the close to
+        // correct its original candle, while rejecting pre/post-market ticks.
+        if (!_marketClock.IsRawMarketDataRecordingOpen(exchangeIst))
+        {
+            _logger.LogDebug(
+                "Ignoring tick outside the exchange market session. Token={Token} ExchangeTimeIST={ExchangeTimeIST:yyyy-MM-dd HH:mm:ss.fff} ReceivedAtUtc={ReceivedAtUtc:O}",
+                tick.SymbolToken, exchangeIst, tick.ReceivedAtUtc);
+            return;
+        }
+
+        var minute = FloorMinute(exchangeIst);
         var state = _states.GetOrAdd(tick.SymbolToken, _ => new State());
 
         lock (state)
         {
-            if (state.Current is null)
+            if (state.Current == null)
             {
-                state.Current = NewCandle(minute, tick);
+                state.Current = NewBucket(minute, tick, exchangeUtc);
             }
-            else if (minute > state.Current.Timestamp)
+            else if (minute > state.Current.Candle.Timestamp)
             {
-                // Close the previous candle using its last observed tick. No synthetic
-                // candles are generated for minutes in which this instrument had no ticks.
-                CloseCurrentCandle(tick.SymbolToken, state);
-                state.Current = NewCandle(minute, tick);
+                state.Pending[state.Current.Candle.Timestamp] = state.Current;
+                state.Current = NewBucket(minute, tick, exchangeUtc);
             }
-            else if (minute == state.Current.Timestamp)
+            else if (minute == state.Current.Candle.Timestamp)
             {
-                Update(state.Current, tick);
+                Update(state.Current, tick, exchangeUtc);
             }
-            // Ignore out-of-order ticks belonging to an already closed minute.
+            else if (state.Pending.TryGetValue(minute, out var pending))
+            {
+                // Late tick inside the grace period: correct the pending candle.
+                Update(pending, tick, exchangeUtc);
+            }
+            else if (state.Finalized.TryGetValue(minute, out var finalized))
+            {
+                // Very late tick: correct the stored candle, but do not reopen it.
+                Update(finalized, tick, exchangeUtc);
+                UpsertMinute(state, finalized.Candle);
+                QueueWrite(tick.SymbolToken, "1m", finalized.Candle, correction: true);
+                RebuildRollups(tick.SymbolToken, state, minute, correction: true);
+                _logger.LogWarning(
+                    "Late tick corrected a finalized candle. Token={Token} CandleTimeIST={CandleTime:yyyy-MM-dd HH:mm:ss} ExchangeTimeUtc={ExchangeTimeUtc:O} ReceivedAtUtc={ReceivedAtUtc:O}",
+                    tick.SymbolToken, minute, exchangeUtc, tick.ReceivedAtUtc);
+            }
+            else
+            {
+                _logger.LogDebug(
+                    "Ignoring tick older than candle retention. Token={Token} CandleTimeIST={CandleTime:yyyy-MM-dd HH:mm:ss} ExchangeTimeUtc={ExchangeTimeUtc:O}",
+                    tick.SymbolToken, minute, exchangeUtc);
+            }
         }
     }
 
-    private void CloseCurrentCandle(string token, State state)
+    private void FinalizeDue(string token, State state, DateTime nowUtc)
     {
-        if (state.Current is not { } closed)
-            return;
-
-        state.Current = null;
-        AppendAsync(token, "1m", closed).GetAwaiter().GetResult();
-        _rawMarketData.RecordCandle(token, "NSE", "1m", closed);
-        state.Minute.Add(closed);
-        if (state.Minute.Count > 500)
-            state.Minute.RemoveRange(0, state.Minute.Count - 500);
-
-        if (closed.Timestamp.Minute % 5 == 4)
-            Rollup(token, state, 5, "5m");
-        if (closed.Timestamp.Minute % 30 == 29)
-            Rollup(token, state, 30, "30m");
-
-        _ = _hub.Clients.All.SendAsync("CandleClosed", new { token, interval = "1m", candle = closed });
-    }
-
-    private static Candle NewCandle(DateTime timestamp, global::MarketTick tick) => new()
-    {
-        Timestamp = timestamp,
-        Open = tick.Ltp,
-        High = tick.Ltp,
-        Low = tick.Ltp,
-        Close = tick.Ltp,
-        Volume = Math.Max(0, tick.LastTradedQuantity)
-    };
-
-    private static void Update(Candle candle, global::MarketTick tick)
-    {
-        candle.High = Math.Max(candle.High, tick.Ltp);
-        candle.Low = Math.Min(candle.Low, tick.Ltp);
-        candle.Close = tick.Ltp;
-        candle.Volume += Math.Max(0, tick.LastTradedQuantity);
-    }
-
-    private void Rollup(string token, State state, int intervalMinutes, string interval)
-    {
-        var group = state.Minute.TakeLast(intervalMinutes).ToList();
-        if (group.Count != intervalMinutes)
-            return;
-
-        var first = group[0].Timestamp;
-        // Only aggregate a complete, contiguous interval aligned to the clock.
-        if (first.Minute % intervalMinutes != 0 ||
-            group.Where((c, i) => c.Timestamp != first.AddMinutes(i)).Any())
-            return;
-
-        var candle = new Candle
+        foreach (var item in state.Pending.ToArray())
         {
-            Timestamp = first,
+            var candleEndIst = item.Key.AddMinutes(1);
+            var candleEndUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(candleEndIst, DateTimeKind.Unspecified), India);
+            if (nowUtc < candleEndUtc + _finalizationDelay)
+                continue;
+
+            state.Pending.Remove(item.Key);
+            state.Finalized[item.Key] = item.Value;
+            UpsertMinute(state, item.Value.Candle);
+            QueueWrite(token, "1m", item.Value.Candle, correction: false);
+            RebuildRollups(token, state, item.Key, correction: false);
+        }
+    }
+
+    private void RebuildRollups(string token, State state, DateTime changedMinute, bool correction)
+    {
+        BuildRollup(token, state, changedMinute, 5, "5m", correction);
+        BuildRollup(token, state, changedMinute, 30, "30m", correction);
+    }
+
+    private void BuildRollup(string token, State state, DateTime changedMinute, int intervalMinutes, string interval, bool correction)
+    {
+        var start = new DateTime(
+            changedMinute.Year, changedMinute.Month, changedMinute.Day,
+            changedMinute.Hour, (changedMinute.Minute / intervalMinutes) * intervalMinutes, 0);
+        var group = new List<Candle>(intervalMinutes);
+        for (var i = 0; i < intervalMinutes; i++)
+        {
+            var timestamp = start.AddMinutes(i);
+            var candle = state.Finalized.TryGetValue(timestamp, out var bucket)
+                ? bucket.Candle
+                : null;
+            if (candle == null)
+                return; // Only publish complete, contiguous intervals.
+            group.Add(candle);
+        }
+
+        var aggregate = new Candle
+        {
+            Timestamp = start,
             Open = group[0].Open,
             High = group.Max(x => x.High),
             Low = group.Min(x => x.Low),
             Close = group[^1].Close,
             Volume = group.Sum(x => x.Volume)
         };
-        AppendAsync(token, interval, candle).GetAwaiter().GetResult();
-        _rawMarketData.RecordCandle(token, "NSE", interval, candle);
-        _ = _hub.Clients.All.SendAsync("CandleClosed", new { token, interval, candle });
+        QueueWrite(token, interval, aggregate, correction);
     }
 
-    private async Task AppendAsync(string token, string interval, Candle candle)
+    private void UpsertMinute(State state, Candle candle)
     {
-        var path = Path.Combine(_directory, $"{token}_{interval}.json");
+        var index = state.Minute.FindIndex(x => x.Timestamp == candle.Timestamp);
+        if (index >= 0)
+            state.Minute[index] = candle;
+        else
+            state.Minute.Add(candle);
+        state.Minute.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
+        if (state.Minute.Count > 500)
+            state.Minute.RemoveRange(0, state.Minute.Count - 500);
+    }
+
+    private static void PruneFinalized(State state, DateTime nowIst)
+    {
+        var cutoff = nowIst - FinalizedRetention;
+        foreach (var key in state.Finalized.Keys.Where(x => x < cutoff).ToArray())
+            state.Finalized.Remove(key);
+    }
+
+    private void QueueWrite(string token, string interval, Candle candle, bool correction)
+    {
+        if (!_writes.Writer.TryWrite(new CandleWrite(token, interval, candle, correction)))
+            _logger.LogError("Candle persistence queue rejected a candle. Token={Token} Interval={Interval} Timestamp={Timestamp}", token, interval, candle.Timestamp);
+    }
+
+    private async Task CandleWriterLoopAsync()
+    {
+        await foreach (var item in _writes.Reader.ReadAllAsync())
+        {
+            try
+            {
+                await UpsertFileAsync(item.Token, item.Interval, item.Candle, CancellationToken.None);
+                _rawMarketData.RecordCandle(item.Token, "NSE", item.Interval, item.Candle);
+                await _hub.Clients.All.SendAsync(
+                    item.Correction ? "CandleCorrected" : "CandleClosed",
+                    new { token = item.Token, interval = item.Interval, candle = item.Candle, isCorrection = item.Correction },
+                    CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to persist/publish candle. Token={Token} Interval={Interval} Timestamp={Timestamp}", item.Token, item.Interval, item.Candle.Timestamp);
+            }
+        }
+    }
+
+    private async Task UpsertFileAsync(string token, string interval, Candle candle, CancellationToken cancellationToken)
+    {
+        var safeToken = string.Concat(token.Select(c => char.IsLetterOrDigit(c) || c is '_' or '-' ? c : '_'));
+        var path = Path.Combine(_directory, $"{safeToken}_{interval}.json");
+        var temp = path + $".{Guid.NewGuid():N}.tmp";
+
         try
         {
             List<Candle> all = [];
             if (File.Exists(path))
             {
-                await using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                all = await JsonSerializer.DeserializeAsync<List<Candle>>(input, _json) ?? [];
+                await using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 65536, true);
+                all = await JsonSerializer.DeserializeAsync<List<Candle>>(input, _json, cancellationToken) ?? [];
             }
 
-            var existingIndex = all.FindIndex(x => x.Timestamp == candle.Timestamp);
-            if (existingIndex >= 0)
-                all[existingIndex] = candle;
+            var index = all.FindIndex(x => x.Timestamp == candle.Timestamp);
+            if (index >= 0)
+                all[index] = candle;
             else
-            {
                 all.Add(candle);
-                all = all.OrderBy(x => x.Timestamp).ToList();
-            }
+            all = all.OrderBy(x => x.Timestamp).ToList();
 
-            var temp = path + ".tmp";
-            await using (var output = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
-                await JsonSerializer.SerializeAsync(output, all, _json);
+            await using (var output = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 65536, true))
+                await JsonSerializer.SerializeAsync(output, all, _json, cancellationToken);
+
             File.Move(temp, path, true);
         }
-        catch (Exception ex)
+        finally
         {
-            _logger.LogError(ex, "Unable to persist {Interval} candle for token {Token}", interval, token);
+            if (File.Exists(temp))
+                File.Delete(temp);
         }
+    }
+
+    private static CandleBucket NewBucket(DateTime timestampIst, global::MarketTick tick, DateTime exchangeUtc)
+    {
+        var candle = new Candle
+        {
+            Timestamp = timestampIst,
+            Open = tick.Ltp,
+            High = tick.Ltp,
+            Low = tick.Ltp,
+            Close = tick.Ltp,
+            Volume = Math.Max(0, tick.LastTradedQuantity)
+        };
+        return new CandleBucket
+        {
+            Candle = candle,
+            FirstTickUtc = exchangeUtc,
+            LastTickUtc = exchangeUtc,
+            LastSequence = tick.SequenceNumber
+        };
+    }
+
+    private static void Update(CandleBucket bucket, global::MarketTick tick, DateTime exchangeUtc)
+    {
+        var candle = bucket.Candle;
+        candle.High = Math.Max(candle.High, tick.Ltp);
+        candle.Low = Math.Min(candle.Low, tick.Ltp);
+        candle.Volume += Math.Max(0, tick.LastTradedQuantity);
+
+        if (exchangeUtc < bucket.FirstTickUtc)
+        {
+            bucket.FirstTickUtc = exchangeUtc;
+            candle.Open = tick.Ltp;
+        }
+
+        if (exchangeUtc > bucket.LastTickUtc ||
+            (exchangeUtc == bucket.LastTickUtc && tick.SequenceNumber >= bucket.LastSequence))
+        {
+            bucket.LastTickUtc = exchangeUtc;
+            bucket.LastSequence = tick.SequenceNumber;
+            candle.Close = tick.Ltp;
+        }
+    }
+
+    private static DateTime NormalizeUtc(DateTime exchangeTime, DateTime receivedAtUtc)
+    {
+        var value = exchangeTime == default ? receivedAtUtc : exchangeTime;
+        if (value == default) value = DateTime.UtcNow;
+        return value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+        };
+    }
+
+    private static DateTime FloorMinute(DateTime value) =>
+        new(value.Year, value.Month, value.Day, value.Hour, value.Minute, 0, DateTimeKind.Unspecified);
+
+    private static TimeZoneInfo ResolveIndiaTimeZone()
+    {
+        try { return TimeZoneInfo.FindSystemTimeZoneById("Asia/Kolkata"); }
+        catch { return TimeZoneInfo.FindSystemTimeZoneById("India Standard Time"); }
     }
 
     public void Dispose()

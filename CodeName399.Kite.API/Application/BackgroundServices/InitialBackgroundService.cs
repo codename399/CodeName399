@@ -18,6 +18,9 @@ public sealed class InitialBackgroundService : BackgroundService
     private readonly IMarketHoursService _hours;
     private readonly string _directory;
     private readonly ConcurrentDictionary<string, DateTime> _processed = new(StringComparer.OrdinalIgnoreCase);
+    // A file may be rewritten when an exceptionally late tick corrects an older candle.
+    // Recalculate EMA for that correction, but never issue a second order decision for the same latest candle.
+    private readonly ConcurrentDictionary<string, DateTime> _lastDecisionCandle = new(StringComparer.OrdinalIgnoreCase);
     private readonly JsonSerializerOptions _json = new(JsonSerializerDefaults.Web);
 
     public InitialBackgroundService(ILogger<InitialBackgroundService> logger, CommonService common,
@@ -51,10 +54,41 @@ public sealed class InitialBackgroundService : BackgroundService
                         var closes = candles.Select(c => c.Close).ToList();
                         var e9 = EmaCalculator.CalculateSeries(closes, 9); var e21 = EmaCalculator.CalculateSeries(closes, 21);
                         var last = candles[^1].Timestamp;
-                        var crossed = e9[^2] <= e21[^2] && e9[^1] > e21[^1];
+                        var crossedAbove = e9[^2] <= e21[^2] && e9[^1] > e21[^1];
+                        var crossedBelow = e9[^2] >= e21[^2] && e9[^1] < e21[^1];
+                        var isNewDecisionCandle = !_lastDecisionCandle.TryGetValue(token, out var previousDecisionCandle)
+                            || last > previousDecisionCandle;
                         _processed[token] = info.LastWriteTimeUtc;
-                        _logger.LogInformation("CANDLE CHECK Token={Token} CloseTime={CloseTime:yyyy-MM-dd HH:mm:ss} IST EMA9={EMA9:F6} EMA21={EMA21:F6} Crossed={Crossed}", token, last, Math.Round(e9[^1], 6, MidpointRounding.AwayFromZero), Math.Round(e21[^1], 6, MidpointRounding.AwayFromZero), crossed);
-                        if (!crossed || !_hours.IsOpen() || !_hours.IsNewEntryOpen()) continue;
+                        _logger.LogInformation(
+                            "CANDLE CHECK Token={Token} CloseTime={CloseTime:yyyy-MM-dd HH:mm:ss} IST EMA9={EMA9:F6} EMA21={EMA21:F6} CrossedAbove={CrossedAbove} CrossedBelow={CrossedBelow} NewDecisionCandle={NewDecisionCandle}",
+                            token, last,
+                            Math.Round(e9[^1], 6, MidpointRounding.AwayFromZero),
+                            Math.Round(e21[^1], 6, MidpointRounding.AwayFromZero),
+                            crossedAbove, crossedBelow, isNewDecisionCandle);
+
+                        // Late-tick corrections rewrite the JSON file. Recalculate EMA,
+                        // but do not submit duplicate orders for the same completed candle.
+                        if (!isNewDecisionCandle)
+                            continue;
+
+                        _lastDecisionCandle[token] = last;
+
+                        // Evaluate EMA exit on every newly completed candle, in addition to
+                        // existing live-tick target/trailing/stop-loss exits.
+                        if (crossedBelow && _hours.IsOpen())
+                        {
+                            var owned = await _common.GetOwnedStocksAsync();
+                            var openTrade = owned.Values.FirstOrDefault(x =>
+                                string.Equals(x.SymbolToken, token, StringComparison.OrdinalIgnoreCase));
+                            if (openTrade != null)
+                            {
+                                await _common.PlaceSellOrder(
+                                    new Dictionary<string, TradeOrder> { [openTrade.Symbol] = openTrade },
+                                    new Dictionary<string, List<Candle>> { [token] = candles });
+                            }
+                        }
+
+                        if (!crossedAbove || !_hours.IsOpen() || !_hours.IsNewEntryOpen()) continue;
                         var login = await _angel.GetLoginDataAsync();
                         var quote = new MarketQuoteData
                         {
