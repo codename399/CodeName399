@@ -286,6 +286,7 @@ namespace CodeName399.Kite.API.Application.Services
                 .Where(x => GetActivityVolume(x) > 0L)
                 .OrderByDescending(GetActivityVolume)
                 .ThenBy(x => x.Ltp)
+                .Take(count)
                 .ToList();
         }
 

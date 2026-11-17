@@ -41,6 +41,7 @@ namespace CodeName399.Kite.API.Models.Configuration
         public bool AutoSquareOff { get; set; } = true;
         public decimal PaperTradingBalance { get; set; } = 100000m;
         public string ResearchDataVersion { get; set; } = "v1";
+        public int MaxCandidates { get; set; } = 10;
         public RawMarketDataSettings RawMarketData { get; set; } = new();
     }
 
