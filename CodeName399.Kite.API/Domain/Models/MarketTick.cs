@@ -6,12 +6,8 @@ public class MarketTick
     public string TradingSymbol { get; set; } = "";
     public int ExchangeType { get; set; }
     public long SequenceNumber { get; set; }
-    /// <summary>Exchange-provided tick timestamp (UTC, converted to IST only for display/candle grouping).</summary>
     public DateTime ExchangeTime { get; set; }
-    /// <summary>Local UTC time when this process received the WebSocket tick.</summary>
-    public DateTime ReceivedAtUtc { get; set; }
-    /// <summary>Backward-compatible receipt timestamp; kept equal to ReceivedAtUtc.</summary>
-    public DateTime LastUpdated { get; set; }
+    public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
     public int MarketDataMode { get; set; }
 
     public decimal Ltp { get; set; }

@@ -1,14 +1,17 @@
-using CodeName399.CandleBuilder.API.Models;
+using CodeName399.Kite.API.Models;
+using CodeName399.Kite.API.Models.Configuration;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 
-namespace CodeName399.CandleBuilder.API.Services;
+namespace CodeName399.Kite.API.Services;
 
 /// <summary>Persists raw broker market feed as compact ZIP-compressed JSONL.</summary>
 public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
 {
+    private readonly TradingSettingsProvider _settings;
+
     private readonly ILogger<RawMarketDataArchiveService> _logger;
     private readonly MarketClock _marketClock;
     private readonly Channel<RawMarketTickRecord> _channel = Channel.CreateBounded<RawMarketTickRecord>(new BoundedChannelOptions(100_000)
@@ -17,37 +20,37 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
         SingleReader = true,
         SingleWriter = false
     });
-    private readonly Channel<RawMarketCandleRecord> _candleChannel = Channel.CreateBounded<RawMarketCandleRecord>(new BoundedChannelOptions(20_000)
-    {
-        FullMode = BoundedChannelFullMode.Wait,
-        SingleReader = true,
-        SingleWriter = false
-    });
     private readonly CancellationTokenSource _cts = new();
     private Task? _writerTask;
-    private Task? _candleWriterTask;
     private long _dropped;
 
     public RawMarketDataArchiveService(
         ILogger<RawMarketDataArchiveService> logger,
-        MarketClock marketClock)
+        MarketClock marketClock,
+        TradingSettingsProvider settings)
     {
         _logger = logger;
         _marketClock = marketClock;
+        _settings = settings;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _writerTask = Task.Run(() => WriterLoopAsync(_cts.Token));
-        _candleWriterTask = Task.Run(() => CandleWriterLoopAsync(_cts.Token));
         return Task.CompletedTask;
     }
 
     public void Record(MarketTick tick)
     {
         if (tick == null || string.IsNullOrWhiteSpace(tick.SymbolToken) || tick.Ltp <= 0) return;
-        
-        if (!_marketClock.IsRawMarketDataRecordingOpen()) return;
+        var raw = _settings.Current.RawMarketData ?? new RawMarketDataSettings();
+        if (!raw.Enabled) return;
+
+        // Raw live market-data recording is strictly session-bound.
+        // Do not use MarketClock.IsMarketOpen here because IgnoreMarketHours is
+        // intentionally a trading/test override and must not enable recording
+        // outside the actual exchange session.
+        if (raw.RecordOnlyDuringMarketHours && !_marketClock.IsRawMarketDataRecordingOpen()) return;
         var record = RawMarketTickRecord.From(tick);
         if (!_channel.Writer.TryWrite(record))
         {
@@ -60,79 +63,11 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         _channel.Writer.TryComplete();
-        _candleChannel.Writer.TryComplete();
         if (_writerTask != null)
         {
             try { await _writerTask.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken); }
             catch (TimeoutException) { _logger.LogWarning("Raw market-data archive did not drain within shutdown timeout."); _cts.Cancel(); }
         }
-        if (_candleWriterTask != null)
-        {
-            try { await _candleWriterTask.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken); }
-            catch (TimeoutException) { _logger.LogWarning("Raw candle archive did not drain within shutdown timeout."); _cts.Cancel(); }
-        }
-    }
-
-
-    public void RecordCandle(string token, string exchange, string interval, CodeName399.CandleBuilder.API.Models.Indicator.Candle candle)
-    {
-        if (string.IsNullOrWhiteSpace(token) || candle == null || candle.Close <= 0m) return;
-        var record = new RawMarketCandleRecord(token, exchange, interval, candle.Timestamp,
-            candle.Open, candle.High, candle.Low, candle.Close, candle.Volume, DateTime.UtcNow);
-        if (!_candleChannel.Writer.TryWrite(record))
-            _logger.LogWarning("Raw candle archive queue is full. Dropped candle Token={Token} Interval={Interval} Timestamp={Timestamp}", token, interval, candle.Timestamp);
-    }
-
-    private async Task CandleWriterLoopAsync(CancellationToken cancellationToken)
-    {
-        FileStream? file = null;
-        ZipArchive? archive = null;
-        Stream? entry = null;
-        DateTime currentDate = default;
-        var part = 0;
-        long estimatedBytes = 0;
-
-        async Task CloseAsync()
-        {
-            if (entry != null) await entry.DisposeAsync();
-            entry = null;
-            archive?.Dispose();
-            archive = null;
-            if (file != null) await file.DisposeAsync();
-            file = null;
-        }
-
-        async Task OpenAsync(DateTime date)
-        {
-            await CloseAsync();
-            var directory = Path.Combine(ResolveStoragePath("RawMarketData"), date.ToString("yyyy-MM-dd"));
-            Directory.CreateDirectory(directory);
-            part++;
-            var path = Path.Combine(directory, $"market-candles-{DateTime.UtcNow:HHmmssfff}-part{part:000}.zip");
-            file = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read, 128 * 1024, useAsync: true);
-            archive = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true);
-            entry = archive.CreateEntry("market-candles.jsonl", CompressionLevel.Fastest).Open();
-            currentDate = date;
-            estimatedBytes = 0;
-        }
-
-        try
-        {
-            await foreach (var record in _candleChannel.Reader.ReadAllAsync(cancellationToken))
-            {
-                try
-                {
-                    if (archive == null || record.Timestamp.Date != currentDate || estimatedBytes >= 95 * 1024 * 1024)
-                        await OpenAsync(record.Timestamp.Date);
-                    var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(record) + "\n");
-                    await entry!.WriteAsync(bytes, cancellationToken);
-                    estimatedBytes += bytes.Length;
-                }
-                catch (Exception ex) { _logger.LogError(ex, "Failed to archive candle {Token} {Interval} {Timestamp}", record.Token, record.Interval, record.Timestamp); }
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
-        finally { await CloseAsync(); }
     }
 
     private async Task WriterLoopAsync(CancellationToken cancellationToken)
@@ -156,7 +91,8 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
         async Task OpenArchiveAsync(DateTime date)
         {
             await CloseArchiveAsync();
-            var rootPath = ResolveStoragePath("RawMarketData");
+            var raw = _settings.Current.RawMarketData ?? new RawMarketDataSettings();
+            var rootPath = ResolveStoragePath(raw.StoragePath);
             Directory.CreateDirectory(rootPath);
             var directory = Path.Combine(rootPath, date.ToString("yyyy-MM-dd"));
             Directory.CreateDirectory(directory);
@@ -179,8 +115,9 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
                         await OpenArchiveAsync(date);
 
                     var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(record) + "\n");
-                    var maxZipBytes = 100 * 1024L * 1024L;
-                    var rollThresholdBytes = maxZipBytes * 95 / 100L;
+                    var raw = _settings.Current.RawMarketData ?? new RawMarketDataSettings();
+                    var maxZipBytes = raw.MaximumZipSizeMb * 1024L * 1024L;
+                    var rollThresholdBytes = maxZipBytes * raw.RollOverAtPercent / 100L;
                     if (file!.Position >= rollThresholdBytes && file.Position > 0)
                         await OpenArchiveAsync(date);
 
@@ -188,7 +125,7 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
 
                     if (file.Position > maxZipBytes)
                     {
-                        _logger.LogWarning("Raw market-data ZIP crossed configured maximum after a single record. MaximumZipSizeMb={MaximumZipSizeMb}, RecordSize={Bytes}, File={File}", 100, bytes.Length, file.Name);
+                        _logger.LogWarning("Raw market-data ZIP crossed configured maximum after a single record. MaximumZipSizeMb={MaximumZipSizeMb}, RecordSize={Bytes}, File={File}", raw.MaximumZipSizeMb, bytes.Length, file.Name);
                         await OpenArchiveAsync(date);
                     }
                 }
@@ -203,12 +140,13 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
         }
     }
 
-    public async Task RecordHistoricalCandlesAsync(string token, string exchange, string interval, IReadOnlyList<CodeName399.CandleBuilder.API.Models.Indicator.Candle> candles, CancellationToken cancellationToken = default)
+    public async Task RecordHistoricalCandlesAsync(string token, string exchange, string interval, IReadOnlyList<CodeName399.Kite.API.Models.Indicator.Candle> candles, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(token) || candles.Count == 0) return;
         var date = candles.Min(x => x.Timestamp).Date;
-        
-        var directory = Path.Combine(ResolveStoragePath("RawMarketData"), date.ToString("yyyy-MM-dd"));
+        var rawSettings = _settings.Current.RawMarketData ?? new RawMarketDataSettings();
+        if (!rawSettings.Enabled) return;
+        var directory = Path.Combine(ResolveStoragePath(rawSettings.StoragePath), date.ToString("yyyy-MM-dd"));
         Directory.CreateDirectory(directory);
         var safeToken = string.Concat(token.Select(c => char.IsLetterOrDigit(c) || c == '_' || c == '-' ? c : '_'));
         var safeExchange = string.Concat(exchange.Select(c => char.IsLetterOrDigit(c) || c == '_' || c == '-' ? c : '_'));
@@ -257,14 +195,14 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
                     Volume = candle.Volume
                 };
                 var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(record) + "\n");
-                var maxZipBytes = 100 * 1024L * 1024L;
-                var rollThresholdBytes = maxZipBytes * 95 / 100L;
+                var maxZipBytes = rawSettings.MaximumZipSizeMb * 1024L * 1024L;
+                var rollThresholdBytes = maxZipBytes * rawSettings.RollOverAtPercent / 100L;
                 if (file!.Position >= rollThresholdBytes && file.Position > 0)
                     await OpenAsync();
                 await entry!.WriteAsync(bytes, cancellationToken);
                 if (file.Position > maxZipBytes)
                 {
-                    _logger.LogWarning("Historical ZIP crossed configured maximum after a single record. MaximumZipSizeMb={MaximumZipSizeMb}, File={File}", 100, file.Name);
+                    _logger.LogWarning("Historical ZIP crossed configured maximum after a single record. MaximumZipSizeMb={MaximumZipSizeMb}, File={File}", rawSettings.MaximumZipSizeMb, file.Name);
                     await OpenAsync();
                 }
             }
@@ -283,10 +221,6 @@ public sealed class RawMarketDataArchiveService : IHostedService, IDisposable
 
     public void Dispose() => _cts.Dispose();
 }
-
-public sealed record RawMarketCandleRecord(
-    string Token, string Exchange, string Interval, DateTime Timestamp,
-    decimal Open, decimal High, decimal Low, decimal Close, decimal Volume, DateTime ArchivedAtUtc);
 
 public sealed record RawMarketTickRecord(
     string TradingSymbol,

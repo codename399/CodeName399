@@ -1,6 +1,6 @@
-using CodeName399.CandleBuilder.API.Services;
+using CodeName399.Kite.API.Services;
 
-namespace CodeName399.CandleBuilder.API.Application.BackgroundServices;
+namespace CodeName399.Kite.API.Application.BackgroundServices;
 
 public sealed class RawMarketDataArchiveHostedService : IHostedService
 {
