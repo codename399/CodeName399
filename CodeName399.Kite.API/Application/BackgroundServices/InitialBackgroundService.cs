@@ -95,7 +95,7 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
                     var quotes = _commonService.GetTopQuotes(
                         await _commonService.GetQuotesAsync(instruments, login.JwtToken),
                         ownedStocks,
-                        _settings.Current.MaxCandidates);
+                        int.MaxValue);
 
                     await _quotePublisher.PublishSnapshotAsync(quotes);
 

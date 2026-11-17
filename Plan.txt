@@ -1,0 +1,12 @@
+fetch all actively traded quotes having price<=20
+download candles from angel one candle api and remove all other candle builder related codes
+entry price = lowest price in last 10 candles
+enter when ltp = entry price
+reevaluate on every candle close
+q1 = fetch max affordable quantity at available balance
+q2 = fetch max available quantity in market at entry price
+quantity = minimum of q1 and q2
+if quantity * 0.01 > buy charges + sell charges then enter else reject
+use target as entry price + 0.01
+use stop loss as entry price - 0.02
+remove trailing stop and its related code and configuration and fields

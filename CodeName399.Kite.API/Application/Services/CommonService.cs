@@ -282,14 +282,11 @@ namespace CodeName399.Kite.API.Application.Services
         {
             return quotes
                 .Where(x => !ownedStocks.ContainsKey(x.TradingSymbol) && !ownedStocks.Values.Any(t => string.Equals(t.SymbolToken, x.SymbolToken, StringComparison.OrdinalIgnoreCase)))
-                .Where(x => x.Ltp <= Math.Max(0m, _settings.Current.MinimumStockPrice) && x.Close > 0m && x.Ltp > x.Close)
-            .Where(x => GetActivityVolume(x) > 0L)
-            .OrderByDescending(GetActivityVolume)
-            .ThenByDescending(x => (x.Ltp - x.Close) / x.Close)
-            .ThenByDescending(x => x.Open > 0m ? (x.Ltp - x.Open) / x.Open : decimal.MinValue)
-            .ThenBy(x => x.Ltp)
-            .Take(Math.Max(0, count))
-            .ToList();
+                .Where(x => x.Ltp > 0m && x.Ltp <= 20m)
+                .Where(x => GetActivityVolume(x) > 0L)
+                .OrderByDescending(GetActivityVolume)
+                .ThenBy(x => x.Ltp)
+                .ToList();
         }
 
         /// <summary>
@@ -868,47 +865,15 @@ namespace CodeName399.Kite.API.Application.Services
                             ? loadedCandles
                             : new List<Candle>();
 
-                        // Entry is evaluated only against completed candles for an EMA9/EMA21 bullish crossover.
+                        // Re-evaluate the lowest low of the latest ten completed candles on every candle close.
                         var entrySatisfied = EntryStrategyService.TryGetEntryReason(
-                            quote, quoteCandles, out var entryReason, out var entryDiagnostics);
-                        var diagnosticCandles = quoteCandles
-                            .Where(c => c != null && c.Close > 0m)
-                            .GroupBy(c => c.Timestamp)
-                            .Select(g => g.Last())
-                            .OrderBy(c => c.Timestamp)
-                            .ToList();
-                        var previousCandleClose = diagnosticCandles.Count > 1
-                            ? diagnosticCandles[^2].Close
-                            : 0m;
-
+                            quote, quoteCandles, out var entryPrice, out var entryReason);
                         _logger.LogInformation(
-                            "ENTRY STRATEGY EVALUATION IST={EvaluationTime:yyyy-MM-dd HH:mm:ss.fff} Symbol={Symbol} Token={Token} LTP={Ltp:F4} QuoteTimeUtc={QuoteTimeUtc:O} CandleCount={ValidCandlesLoaded} PreviousCandleTime={PreviousCandleTime:yyyy-MM-dd HH:mm:ss} PreviousCandleClose={PreviousCandleClose:F4} PreviousEMA9={PreviousEMA9:F6} PreviousEMA21={PreviousEMA21:F6} PreviousGap={PreviousGap:F6} LastCandleTime={LastCandleTime:yyyy-MM-dd HH:mm:ss} LastClose={LastClose:F4} EMA9={EMA9:F6} EMA21={EMA21:F6} CurrentGap={CurrentGap:F6} CrossoverDetected={CrossoverDetected} EntryConditionSatisfied={EntryConditionSatisfied} EntryRejectionReason={EntryRejectionReason}",
-                            GetIndianTime(), quote.TradingSymbol, quote.SymbolToken, quote.Ltp,
-                            quote.QuoteTimeUtc, entryDiagnostics.ValidCandlesLoaded,
-                            entryDiagnostics.PreviousCandleTime,
-                            previousCandleClose,
-                            entryDiagnostics.PreviousEma9, entryDiagnostics.PreviousEma21,
-                            (entryDiagnostics.PreviousEma9 ?? 0m) - (entryDiagnostics.PreviousEma21 ?? 0m),
-                            entryDiagnostics.LastCandleTime, entryDiagnostics.LastClose,
-                            entryDiagnostics.Ema9, entryDiagnostics.Ema21,
-                            (entryDiagnostics.Ema9 ?? 0m) - (entryDiagnostics.Ema21 ?? 0m),
-                            entryDiagnostics.EntryConditionSatisfied,
-                            entryDiagnostics.EntryConditionSatisfied,
-                            entryDiagnostics.EntryRejectionReason);
+                            "ENTRY PRICE EVALUATION IST={Time:yyyy-MM-dd HH:mm:ss.fff} Symbol={Symbol} Token={Token} LTP={Ltp:F2} EntryPrice={EntryPrice:F2} CandleCount={CandleCount} EntryConditionSatisfied={Satisfied} Reason={Reason}",
+                            GetIndianTime(), quote.TradingSymbol, quote.SymbolToken, quote.Ltp, entryPrice, quoteCandles.Count, entrySatisfied, entryReason);
+                        if (!entrySatisfied) return;
 
-                        if (!entrySatisfied)
-                        {
-                            _logger.LogDebug(
-                                "BUY SKIPPED after EMA9/EMA21 crossover evaluation. Symbol={Symbol} Token={Token} Reason={Reason}",
-                                quote.TradingSymbol, quote.SymbolToken, entryDiagnostics.EntryRejectionReason);
-                            return;
-                        }
-
-                        _logger.LogInformation(
-                            "BUY ELIGIBILITY PASSED Symbol={Symbol} Token={Token} EntryReason={EntryReason}; starting quantity, margin and profitability checks.",
-                            quote.TradingSymbol, quote.SymbolToken, entryReason);
-
-                        var (quantity, margin, ltp) = await GetQuantitesAndMargin(quote, quoteCandles);
+                        var (quantity, margin, ltp) = await GetQuantitesAndMargin(quote, quoteCandles, entryPrice);
 
                         if (quantity <= 0)
                         {
@@ -925,15 +890,9 @@ namespace CodeName399.Kite.API.Application.Services
 
                             var tradeOrder = MarketQuoteData.ToTradeOrder(quote, _settings.Current.EnableAutoTrading);
                             tradeOrder.EntryReason = entryReason;
-                            tradeOrder.StopLoss = CalculateInitialStopLoss(
-                                tradeOrder.EntryPrice, 0m, 1.0m);
-                            _logger.LogInformation(
-                                "INITIAL HARD STOP LOSS SET Symbol={Symbol} EntryPrice={EntryPrice:F4} StopLossPercent={StopLossPercent:F2} StopLoss={StopLoss:F4}",
-                                tradeOrder.Symbol, tradeOrder.EntryPrice, 1.0m, tradeOrder.StopLoss);
-                            tradeOrder.TargetPrice = tradeOrder.EntryPrice + tradeOrder.LowestPriceChange;
-                            tradeOrder.HighestPriceSinceEntry = tradeOrder.EntryPrice;
-                            tradeOrder.TrailingActivated = false;
-                            tradeOrder.TrailingStopPrice = tradeOrder.TargetPrice;
+                            tradeOrder.EntryPrice = entryPrice;
+                            tradeOrder.StopLoss = Math.Round(entryPrice - 0.02m, 2, MidpointRounding.AwayFromZero);
+                            tradeOrder.TargetPrice = Math.Round(entryPrice + 0.01m, 2, MidpointRounding.AwayFromZero);
 
                             _logger.LogInformation(
                                 "BUY DECISION ACCEPTED IST={Time:yyyy-MM-dd HH:mm:ss.fff} Symbol={Symbol} Token={Token} Quantity={Quantity} EntryPrice={EntryPrice:F4} Margin={Margin:F2} StopLoss={StopLoss:F4} TargetPrice={TargetPrice:F4} AutoTrading={AutoTrading} ExecutionMode={ExecutionMode} EntryReason={EntryReason}",
@@ -1022,130 +981,52 @@ namespace CodeName399.Kite.API.Application.Services
         }
 
         private async Task<(int Quantity, decimal Margin, decimal Ltp)> GetQuantitesAndMargin(
-            MarketQuoteData quote,
-            List<Candle> candles)
+            MarketQuoteData quote, List<Candle> candles, decimal entryPrice)
         {
-            // LTP is retained as a reference, but a MARKET BUY is estimated from
-            // the ask-side order book. The weighted average ask price is used for
-            // margin, charges and expected P&L rather than assuming every share fills at LTP.
-            var marginalPrice = await _angel.GetLtpDataAsync(
-                quote.Exchange, quote.TradingSymbol, quote.SymbolToken);
+            if (entryPrice <= 0m) return (0, 0m, 0m);
 
-            if (!marginalPrice.HasValue || marginalPrice.Value <= 0m)
-            {
-                _logger.LogWarning(
-                    "ORDER BLOCKED Symbol={Symbol} Gate=MarginalPrice Reason=PriceUnavailable",
-                    quote.TradingSymbol);
-                return (0, 0m, 0m);
-            }
-
-            var referencePrice = marginalPrice.Value;
-            var lowestPriceChange = GetLowestPriceChange(quote, candles);
-            quote.LowestPriceChange = lowestPriceChange;
-
-            // A negative or zero worst candle body is not a positive expected move.
-            // Rejecting it is intentional: do not turn a falling candle into a gain.
-            if (lowestPriceChange <= 0m)
-            {
-                _logger.LogWarning(
-                    "ORDER BLOCKED Symbol={Symbol} Gate=LowestPriceChange Reason=LowestSignedCandleChangeNotPositive LowestChange={LowestChange:F6}",
-                    quote.TradingSymbol, lowestPriceChange);
-                return (0, 0m, 0m);
-            }
-
-            var askLevels = GetValidAskLevels(quote);
-            var maximumMarketQuantity = (int)Math.Min(int.MaxValue,
-                askLevels.Sum(x => x.Quantity));
-            if (maximumMarketQuantity <= 0)
-            {
-                _logger.LogWarning(
-                    "ORDER BLOCKED Symbol={Symbol} Gate=MarketDepth Reason=NoAvailableAskQuantity ReferencePrice={Price:F4}",
-                    quote.TradingSymbol, referencePrice);
-                return (0, 0m, 0m);
-            }
-
+            // q1: maximum quantity affordable from the broker-reported available balance.
             var availableBalance = await _angel.GetAvailableBalanceAsync();
             if (availableBalance <= 0m)
             {
-                _logger.LogWarning(
-                    "ORDER BLOCKED Symbol={Symbol} Gate=AvailableBalance Reason=NoFunds AvailableBalance={Balance:F2}",
-                    quote.TradingSymbol, availableBalance);
+                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Reason=NoAvailableBalance Balance={Balance:F2}", quote.TradingSymbol, availableBalance);
                 return (0, 0m, 0m);
             }
+            var q1 = await FindMaximumAffordableQuantityAsync(quote, int.MaxValue, availableBalance, entryPrice);
+            if (q1.Quantity <= 0) return (0, 0m, 0m);
 
-            // Find the greatest quantity whose broker-calculated intraday margin
-            // fits the available balance. Searching only up to market depth is
-            // equivalent for the final min(affordable, market-available) rule.
-            var affordable = await FindMaximumAffordableQuantityAsync(
-                quote, maximumMarketQuantity, availableBalance, referencePrice);
-
-            var quantity = Math.Min(affordable.Quantity, maximumMarketQuantity);
+            // q2: sum displayed ask quantity available at or below the planned entry price.
+            var askLevels = GetValidAskLevels(quote);
+            var q2Long = askLevels.Where(x => x.Price <= entryPrice).Sum(x => (long)x.Quantity);
+            var q2 = (int)Math.Clamp(q2Long, 0L, int.MaxValue);
+            var quantity = Math.Min(q1.Quantity, q2);
             if (quantity <= 0)
             {
-                _logger.LogWarning(
-                    "ORDER BLOCKED Symbol={Symbol} Gate=AffordableQuantity Reason=NoQuantityWithinAvailableBalance MarketAvailable={MarketAvailable} AvailableBalance={Balance:F2}",
-                    quote.TradingSymbol, maximumMarketQuantity, availableBalance);
+                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Reason=NoMarketQuantityAtEntryPrice EntryPrice={EntryPrice:F2} Q1={Q1} Q2={Q2}", quote.TradingSymbol, entryPrice, q1.Quantity, q2);
                 return (0, 0m, 0m);
             }
 
-            // Reuse the margin returned for the selected maximum affordable
-            // quantity. The helper's search is bounded by market depth, so the
-            // selected quantity is the same quantity for which this margin was checked.
-            var margin = affordable.Margin;
-            var executionPrice = referencePrice;
-            if (executionPrice <= 0m || margin <= 0m)
-            {
-                _logger.LogWarning(
-                    "ORDER BLOCKED Symbol={Symbol} Gate=ExecutionEstimate Reason=InvalidDepthWeightedPriceOrMargin Quantity={Quantity} Price={ExecutionPrice:F4} Margin={Margin:F2}",
-                    quote.TradingSymbol, quantity, executionPrice, margin);
-                return (0, 0m, 0m);
-            }
-
-            var buyCharges = await _brokerage.CalculateAsync(
-                quote.TradingSymbol, quote.SymbolToken, executionPrice, quantity,
-                BrokerageTransactionType.Buy, quote.Exchange, "INTRADAY");
-
-            var estimatedSellPrice = executionPrice + lowestPriceChange;
-            var sellCharges = await _brokerage.CalculateAsync(
-                quote.TradingSymbol, quote.SymbolToken, estimatedSellPrice, quantity,
-                BrokerageTransactionType.Sell, quote.Exchange, "INTRADAY");
-
-            var buyValue = quantity * executionPrice;
-            var estimatedSellValue = quantity * estimatedSellPrice;
+            var margin = quantity == q1.Quantity ? q1.Margin : await _angel.GetRequiredMarginAsync(
+                quote.SymbolToken, quantity, entryPrice, quote.Exchange, "INTRADAY", "BUY");
+            var buyCharges = await _brokerage.CalculateAsync(quote.TradingSymbol, quote.SymbolToken, entryPrice, quantity, BrokerageTransactionType.Buy, quote.Exchange, "INTRADAY");
+            var sellCharges = await _brokerage.CalculateAsync(quote.TradingSymbol, quote.SymbolToken, entryPrice + 0.01m, quantity, BrokerageTransactionType.Sell, quote.Exchange, "INTRADAY");
             var totalCharges = buyCharges.TotalCharges + sellCharges.TotalCharges;
-            var requiredProfitPercent = Math.Max(0m, _settings.Current.RequiredProfitPercent);
-            var requiredSellValue = buyValue + totalCharges + (buyValue * requiredProfitPercent / 100m);
+
+            _logger.LogInformation("QUANTITY CHECK Symbol={Symbol} EntryPrice={EntryPrice:F2} Q1Affordable={Q1} Q2Market={Q2} Quantity={Quantity} Balance={Balance:F2} Margin={Margin:F2} BuyCharges={BuyCharges:F2} SellCharges={SellCharges:F2} MoveValue={MoveValue:F2}",
+                quote.TradingSymbol, entryPrice, q1.Quantity, q2, quantity, availableBalance, margin, buyCharges.TotalCharges, sellCharges.TotalCharges, quantity * 0.01m);
+
+            if (quantity * 0.01m <= totalCharges)
+            {
+                _logger.LogWarning("ORDER BLOCKED Symbol={Symbol} Reason=ExpectedOnePaisaMoveDoesNotCoverCharges Quantity={Quantity} MoveValue={MoveValue:F2} TotalCharges={Charges:F2}", quote.TradingSymbol, quantity, quantity * 0.01m, totalCharges);
+                return (0, 0m, 0m);
+            }
 
             quote.EstimatedCharges = totalCharges;
             quote.Quantity = quantity;
             quote.TotalInvestment = margin;
-            quote.Ltp = executionPrice;
-
-            _logger.LogInformation(
-                "QUANTITY PROFITABILITY CHECK Symbol={Symbol} Quantity={Quantity} ReferenceLtp={ReferenceLtp:F4} EstimatedBuyVwap={EstimatedBuyVwap:F4} LowestSignedPriceChange={LowestPriceChange:F6} MaximumAffordableQuantity={MaximumAffordableQuantity} MaximumMarketQuantity={MaximumMarketQuantity} AvailableBalance={AvailableBalance:F2} Margin={Margin:F2} BuyValue={BuyValue:F2} EstimatedSellPrice={EstimatedSellPrice:F4} EstimatedSellValue={EstimatedSellValue:F2} BuyCharges={BuyCharges:F2} SellCharges={SellCharges:F2} TotalCharges={TotalCharges:F2} RequiredSellValue={RequiredSellValue:F2}",
-                quote.TradingSymbol, quantity, referencePrice, executionPrice, lowestPriceChange,
-                affordable.Quantity, maximumMarketQuantity, availableBalance,
-                margin, buyValue, estimatedSellPrice, estimatedSellValue,
-                buyCharges.TotalCharges, sellCharges.TotalCharges,
-                totalCharges, requiredSellValue);
-
-            if (estimatedSellValue <= requiredSellValue)
-            {
-                _logger.LogWarning(
-                    "ORDER BLOCKED Symbol={Symbol} Gate=RoundTripProfitability Quantity={Quantity} EstimatedSellValue={SellValue:F2} RequiredSellValue={RequiredValue:F2} TotalCharges={Charges:F2} Reason=ExpectedMoveDoesNotCoverBuyAndSellCharges",
-                    quote.TradingSymbol, quantity, estimatedSellValue,
-                    requiredSellValue, totalCharges);
-                quote.Quantity = 0;
-                quote.TotalInvestment = 0m;
-                return (0, 0m, 0m);
-            }
-
-            _logger.LogInformation(
-                "QUANTITY ACCEPTED Symbol={Symbol} Quantity={Quantity} Margin={Margin:F2} BuyCharges={BuyCharges:F2} SellCharges={SellCharges:F2} TotalCharges={TotalCharges:F2}",
-                quote.TradingSymbol, quantity, margin,
-                buyCharges.TotalCharges, sellCharges.TotalCharges, totalCharges);
-
-            return (quantity, margin, executionPrice);
+            quote.Ltp = entryPrice;
+            quote.LowestPriceChange = 0.01m;
+            return (quantity, margin, entryPrice);
         }
 
         private async Task<(int Quantity, decimal Margin)> FindMaximumAffordableQuantityAsync(
@@ -1157,54 +1038,66 @@ namespace CodeName399.Kite.API.Application.Services
             if (maximumMarketQuantity <= 0 || availableBalance <= 0m || marginalPrice <= 0m)
                 return (0, 0m);
 
-            var low = 1;
-            var high = maximumMarketQuantity;
-            var bestQuantity = 0;
-            var bestMargin = 0m;
-
-            // Margin generally increases with quantity. Binary search finds the
-            // largest quantity the broker says is affordable without exceeding
-            // the actual displayed market depth.
-            while (low <= high)
+            async Task<decimal?> GetMarginAsync(int quantity)
             {
-                var quantity = low + (high - low) / 2;
-                var estimatedBuyVwap = marginalPrice;
-
-                decimal requiredMargin;
                 try
                 {
-                    requiredMargin = await _angel.GetRequiredMarginAsync(
-                        quote.SymbolToken, quantity, estimatedBuyVwap,
+                    var margin = await _angel.GetRequiredMarginAsync(
+                        quote.SymbolToken, quantity, marginalPrice,
                         quote.Exchange, "INTRADAY", "BUY");
+                    _logger.LogInformation(
+                        "INTRADAY MARGIN CHECK Symbol={Symbol} Token={Token} Quantity={Quantity} Price={Price:F2} RequiredMargin={RequiredMargin:F2} AvailableBalance={AvailableBalance:F2}",
+                        quote.TradingSymbol, quote.SymbolToken, quantity, marginalPrice, margin, availableBalance);
+                    return margin;
                 }
                 catch (Exception ex)
                 {
-                    // An API/rate-limit failure is not evidence that the order is unaffordable.
-                    // Abort this symbol's sizing attempt instead of continuing to hammer the API.
                     _logger.LogError(ex,
                         "ORDER BLOCKED Symbol={Symbol} Gate=MarginApi Reason=MarginCalculationFailed Quantity={Quantity}; no buy order will be submitted.",
                         quote.TradingSymbol, quantity);
-                    return (0, 0m);
-                }
-
-                _logger.LogInformation(
-                    "INTRADAY MARGIN CHECK Symbol={Symbol} Token={Token} Quantity={Quantity} EstimatedBuyVwap={EstimatedBuyVwap:F4} RequiredMargin={RequiredMargin:F2} AvailableBalance={AvailableBalance:F2}",
-                    quote.TradingSymbol, quote.SymbolToken, quantity,
-                    estimatedBuyVwap, requiredMargin, availableBalance);
-
-                if (requiredMargin > 0m && requiredMargin <= availableBalance)
-                {
-                    bestQuantity = quantity;
-                    bestMargin = requiredMargin;
-                    low = quantity + 1;
-                }
-                else
-                {
-                    high = quantity - 1;
+                    return null;
                 }
             }
 
-            return (bestQuantity, bestMargin);
+            // Exponential search first avoids asking the broker to estimate an
+            // implausibly huge quantity, then binary-searches the affordable range.
+            var affordableQuantity = 0;
+            var affordableMargin = 0m;
+            var low = 1;
+            var high = 1;
+            while (high <= maximumMarketQuantity)
+            {
+                var margin = await GetMarginAsync(high);
+                if (!margin.HasValue) return (0, 0m);
+                if (margin.Value <= 0m || margin.Value > availableBalance) break;
+
+                affordableQuantity = high;
+                affordableMargin = margin.Value;
+                if (high == maximumMarketQuantity) return (affordableQuantity, affordableMargin);
+                low = high + 1;
+                high = high > maximumMarketQuantity / 2 ? maximumMarketQuantity : high * 2;
+            }
+
+            var left = low;
+            var right = Math.Min(maximumMarketQuantity, high - 1);
+            while (left <= right)
+            {
+                var quantity = left + (right - left) / 2;
+                var margin = await GetMarginAsync(quantity);
+                if (!margin.HasValue) return (0, 0m);
+                if (margin.Value > 0m && margin.Value <= availableBalance)
+                {
+                    affordableQuantity = quantity;
+                    affordableMargin = margin.Value;
+                    left = quantity + 1;
+                }
+                else
+                {
+                    right = quantity - 1;
+                }
+            }
+
+            return (affordableQuantity, affordableMargin);
         }
 
         private decimal GetLowestPriceChange(MarketQuoteData quote, List<Candle> candles)
@@ -1270,8 +1163,8 @@ namespace CodeName399.Kite.API.Application.Services
             if (entryPrice <= 0m)
                 return 0m;
 
-            // Fixed hard protective stop: 1% below entry, independent of candle movement.
-            return Math.Round(entryPrice * 0.99m, 2, MidpointRounding.AwayFromZero);
+            // Fixed protective stop: two paise below the planned entry price.
+            return Math.Round(entryPrice - 0.02m, 2, MidpointRounding.AwayFromZero);
         }
 
         public bool ValidateSell(TradeOrder trade, Candle currentCandle, out string outcome)
@@ -1286,21 +1179,13 @@ namespace CodeName399.Kite.API.Application.Services
                     trade.LowestPriceChange,
                     1.0m);
 
-            if (!_settings.Current.EnableTrailingStop && trade.TargetPrice > 0m && currentCandle.Close >= trade.TargetPrice)
+            if (trade.TargetPrice > 0m && currentCandle.Close >= trade.TargetPrice)
             {
-                outcome = "LOWEST_PRICE_CHANGE_TARGET";
+                outcome = "TARGET";
                 return true;
             }
 
-            // Once activated, the trailing stop is evaluated against every live tick.
-            if (_settings.Current.EnableTrailingStop && trade.TrailingActivated && trade.TrailingStopPrice > 0m && currentCandle.Close <= trade.TrailingStopPrice)
-            {
-                outcome = "TRAILING_STOP";
-                return true;
-            }
-
-            // Preserve the protective initial stop for positions before trailing activates.
-            if ((!_settings.Current.EnableTrailingStop || !trade.TrailingActivated) && trade.StopLoss > 0m && currentCandle.Close <= trade.StopLoss)
+            if (trade.StopLoss > 0m && currentCandle.Close <= trade.StopLoss)
             {
                 outcome = "STOP_LOSS";
                 return true;
@@ -1315,61 +1200,9 @@ namespace CodeName399.Kite.API.Application.Services
             if (trade == null || ltp <= 0m || trade.Quantity <= 0 || trade.EntryPrice <= 0m)
                 return;
 
-            var changed = false;
-
-            // Existing/reconciled positions may predate the configured stop-loss field.
-            // Initialise and persist the same protective stop on their first live tick.
-            if (trade.StopLoss <= 0m)
-            {
-                trade.StopLoss = CalculateInitialStopLoss(
-                    trade.EntryPrice,
-                    trade.LowestPriceChange,
-                    1.0m);
-                changed = trade.StopLoss > 0m;
-                if (changed)
-                {
-                    _logger.LogInformation(
-                        "INITIAL STOP LOSS BACKFILLED Symbol={Symbol} EntryPrice={EntryPrice:F4} LowestPriceChange={LowestPriceChange:F6} Multiplier={Multiplier:F2} StopLoss={StopLoss:F4}",
-                        trade.Symbol, trade.EntryPrice,
-                        trade.LowestPriceChange, 2m, trade.StopLoss);
-                }
-            }
-
-            if (ltp > trade.HighestPriceSinceEntry)
-            {
-                trade.HighestPriceSinceEntry = ltp;
-                changed = true;
-            }
-
-            var settings = _settings.Current;
-            var trailingEnabled = settings.EnableTrailingStop;
-            var targetEnabled = !trailingEnabled && trade.TargetPrice > 0m;
-
-            if (trailingEnabled)
-            {
-                // Activate once price reaches entry + the conservative candle move.
-                // Thereafter trail upward by the same move; never lower the stop.
-                var activationPrice = trade.EntryPrice + Math.Max(trade.LowestPriceChange, 0.01m);
-                if (!trade.TrailingActivated && ltp >= activationPrice)
-                {
-                    trade.TrailingActivated = true;
-                    trade.TrailingStopPrice = activationPrice;
-                    changed = true;
-                }
-                else if (trade.TrailingActivated)
-                {
-                    var nextStop = Math.Max(activationPrice, trade.HighestPriceSinceEntry - Math.Max(trade.LowestPriceChange, 0.01m));
-                    if (nextStop > trade.TrailingStopPrice) { trade.TrailingStopPrice = nextStop; changed = true; }
-                }
-            }
-
-            if (changed) await _tradeOrderFileRepository.UpdateAsync(trade);
-
             string? exitReason = null;
-            if (trailingEnabled && trade.TrailingActivated && trade.TrailingStopPrice > 0m && ltp <= trade.TrailingStopPrice)
-                exitReason = "TRAILING_STOP";
-            else if (!trailingEnabled && targetEnabled && ltp >= trade.TargetPrice)
-                exitReason = "LOWEST_PRICE_CHANGE_TARGET";
+            if (trade.TargetPrice > 0m && ltp >= trade.TargetPrice)
+                exitReason = "TARGET";
             else if (trade.StopLoss > 0m && ltp <= trade.StopLoss)
                 exitReason = "STOP_LOSS";
 

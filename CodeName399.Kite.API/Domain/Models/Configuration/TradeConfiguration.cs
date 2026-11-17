@@ -14,9 +14,6 @@ namespace CodeName399.Kite.API.Models.Configuration
         public int MaxTrades { get; set; } = 1;
         /// <summary>Initial protective stop as a percentage below the actual entry reference price.</summary>
         public decimal StopLossPercent { get; set; } = 1.0m;
-        public bool EnableTrailingStop { get; set; } = false;
-        public bool EnableTargetExit { get; set; } = false;
-        public decimal TargetLowestPriceChangeMultiplier { get; set; } = 2m;
         public int ChargeCoverLowestPriceChangeCandles { get; set; } = 5;
         public decimal RequiredProfitPercent { get; set; } = 2.0m;
         public TimeSpan MarketOpenTime { get; set; } = new TimeSpan(9, 15, 0);
@@ -27,9 +24,7 @@ namespace CodeName399.Kite.API.Models.Configuration
         public List<DateOnly> TradingHolidays { get; set; } = new();
         public List<string> ExcludedSymbols { get; set; } =
             new List<string> { "TATSILV-EQ", "AONEGOLD-EQ", "ACUTAAS-EQ", "IDEA-EQ" };
-        public int MaxCandidates { get; set; } = 10;
         /// <summary>Minimum LTP required for a stock to qualify for the top quote candidates.</summary>
-        public decimal MinimumStockPrice { get; set; } = 999999m;
         public int CandleBatchSize { get; set; } = 2;
         public int BatchDelay { get; set; } = 1;
         public int BuyBatchSize { get; set; } = 5;
