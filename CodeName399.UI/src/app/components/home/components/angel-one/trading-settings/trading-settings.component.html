@@ -26,6 +26,7 @@
       <div class="grid-4" *ngIf="openSection === 'trading'">
         <label class="toggle-field"><input type="checkbox" formControlName="enableAutoTrading"><span>Enable auto trading</span></label>
         <label class="toggle-field"><input type="checkbox" formControlName="enableNotification"><span>Enable notifications</span></label>
+         <label class="toggle-field"><input type="checkbox" formControlName="enableStopLossExecution"><span>Enable stop-loss execution</span></label>
          <label><span>Maximum open trades</span><input type="number" formControlName="maxTrades" min="1"></label>
          <label><span>Stop-loss percent</span><input type="number" formControlName="stopLossPercent" min="0" step="0.01"></label>
          <label><span>Required profit percent</span><input type="number" formControlName="requiredProfitPercent" min="0" step="0.01"></label>
@@ -72,6 +73,7 @@
         <label><span>Delay between batches (seconds)</span><input type="number" formControlName="batchDelay" min="0"></label>
         <label><span>Buy batch size</span><input type="number" formControlName="buyBatchSize" min="1"></label>
         <label><span>Lowest price-change lookback candles</span><input type="number" formControlName="chargeCoverLowestPriceChangeCandles" min="1"></label>
+         <label><span>Maximum stock price for candidates</span><input type="number" formControlName="minimumStockPrice" min="0.01" step="0.01"></label>
         <label class="wide-field"><span>Excluded symbols (comma separated)</span><input type="text" formControlName="excludedSymbols"></label>
       </div>
     </section>

@@ -3,6 +3,7 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
     using CodeName399.Kite.API.Application.Services;
     using CodeName399.Kite.API.Services;
     using CodeName399.Kite.API.Services.Interface;
+    using CodeName399.Kite.API.WebSocket.Interface;
 
     public class InitialBackgroundService : BackgroundService
     {
@@ -13,6 +14,7 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
         private readonly TradingSettingsProvider _settings;
         private readonly IMarketHoursService _marketHours;
         private readonly MarketQuotePublisher _quotePublisher;
+        private readonly IAngelWebSocketClient _webSocket;
 
         public InitialBackgroundService(
             ILogger<InitialBackgroundService> logger,
@@ -21,7 +23,8 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
             IAngelOneService angel,
             TradingSettingsProvider settings,
             IMarketHoursService marketHours,
-            MarketQuotePublisher quotePublisher)
+            MarketQuotePublisher quotePublisher,
+            IAngelWebSocketClient webSocket)
         {
             _logger = logger;
             _commonService = commonService;
@@ -30,6 +33,7 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
             _settings = settings;
             _marketHours = marketHours;
             _quotePublisher = quotePublisher;
+            _webSocket = webSocket;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -75,6 +79,7 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
                     nextCandleClose = nextCandleClose.AddMinutes(1);
                     if (!_marketHours.IsOpen())
                     {
+                        _commonService.ClearEntryWatchlist("MarketClosed");
                         _logger.LogDebug("Skipping buy cycle: market is closed. Time={Time} IST", candleCloseTime);
                         continue;
                     }
@@ -83,6 +88,7 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
                     // enforces the configured 30-minute intraday entry cutoff.
                     if (!_marketHours.IsNewEntryOpen())
                     {
+                        _commonService.ClearEntryWatchlist("EntryCutoffReached");
                         _logger.LogInformation("Skipping buy cycle: intraday entry cutoff reached. Time={Time} IST", candleCloseTime);
                         continue;
                     }
@@ -110,7 +116,18 @@ namespace CodeName399.Kite.API.Application.BackgroundServices
                         Math.Clamp(_settings.Current.CandleBatchSize, 1, 3),
                         Math.Max(0, _settings.Current.BatchDelay));
 
-                    await _commonService.PlaceBuyOrders(quotes.ToHashSet(), candles, login.JwtToken);
+                    // Candle closes refresh entry levels. WebSocket ticks trigger entries.
+                    _commonService.ConfigureEntryWatchlist(quotes, candles);
+                    var candidateTokens = quotes
+                        .Where(q => !string.IsNullOrWhiteSpace(q.SymbolToken))
+                        .Select(q => q.SymbolToken)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+                    if (candidateTokens.Count > 0)
+                        await _webSocket.SubscribeAsync(candidateTokens, "NSE");
+
+                    _logger.LogInformation("TICK ENTRY WATCH READY Candidates={CandidateCount} SubscribedTokens={TokenCount}",
+                        quotes.Count, candidateTokens.Count);
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {

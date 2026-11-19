@@ -4,7 +4,7 @@ using CodeName399.Kite.API.Models.Indicator;
 
 namespace CodeName399.Kite.API.Application.Services;
 
-/// <summary>Persistent JSON storage for candles downloaded from the historical API.</summary>
+/// <summary>Persistent JSON storage for candles downloaded from the historical API; creates its storage directory on demand.</summary>
 public sealed class CandleFileStoreService
 {
     private readonly ILogger<CandleFileStoreService> _logger;
@@ -16,9 +16,12 @@ public sealed class CandleFileStoreService
     {
         _logger = logger;
         var configured = Environment.GetEnvironmentVariable("CODENAME399_CANDLE_STORAGE_PATH");
-        if (string.IsNullOrWhiteSpace(configured))
-            throw new InvalidOperationException("CODENAME399_CANDLE_STORAGE_PATH is not set. Configure this environment variable for historical candle storage.");
-        _directory = Path.GetFullPath(configured.Trim());
+        // A missing environment variable must not prevent the trading service from
+        // starting. Use a deterministic local folder, while honoring the configured
+        // production path whenever it is supplied.
+        _directory = Path.GetFullPath(string.IsNullOrWhiteSpace(configured)
+            ? Path.Combine(AppContext.BaseDirectory, "Candles")
+            : Environment.ExpandEnvironmentVariables(configured.Trim()));
         Directory.CreateDirectory(_directory);
         _logger.LogInformation("Historical candle JSON storage configured: {CandleDirectory}", _directory);
     }
@@ -26,6 +29,7 @@ public sealed class CandleFileStoreService
     public async Task<List<Candle>> GetAsync(string token, string symbol, string interval, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(token)) return [];
+        Directory.CreateDirectory(_directory);
         var gate = _locks.GetOrAdd(Key(token, interval), _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(ct);
         try { return await ReadFileAsync(GetPath(token, interval), ct); }
@@ -40,6 +44,7 @@ public sealed class CandleFileStoreService
     public async Task SaveAsync(string token, string symbol, string interval, IEnumerable<Candle> candles, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(token) || candles == null) return;
+        Directory.CreateDirectory(_directory);
         var gate = _locks.GetOrAdd(Key(token, interval), _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(ct);
         try
@@ -57,6 +62,12 @@ public sealed class CandleFileStoreService
 
     private async Task WriteFileAsync(string path, List<Candle> candles, CancellationToken ct)
     {
+        // Recreate the directory immediately before writing as deployments may
+        // clean/recreate storage folders while the service is running.
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrWhiteSpace(directory))
+            Directory.CreateDirectory(directory);
+
         var temp = path + $".{Guid.NewGuid():N}.tmp";
         try
         {

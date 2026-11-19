@@ -11,8 +11,10 @@ export interface TradingConfiguration {
   id: string;
   enableAutoTrading: boolean;
   enableNotification: boolean;
+  enableStopLossExecution: boolean;
   maxTrades: number;
   stopLossPercent: number;
+  minimumStockPrice: number;
   chargeCoverLowestPriceChangeCandles: number;
   requiredProfitPercent: number;
   marketOpenTime: string;
