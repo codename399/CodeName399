@@ -309,14 +309,18 @@ namespace CodeName399.Kite.API.Application.Services
             int batchSize = 1,
             int batchDelay = 0)
         {
-            // The active entry strategy needs only the latest ten completed candles.
-            // Do not require EMA warm-up candles or make separate warm-up + tail calls.
             const int minimumEntryCandles = 10;
+            const int maximumReturnedCandles = 500;
+
             var candlesByToken = new Dictionary<string, List<Candle>>(StringComparer.OrdinalIgnoreCase);
             if (quotes == null || quotes.Count == 0 || instruments == null || instruments.Count == 0)
                 return candlesByToken;
             if (string.IsNullOrWhiteSpace(jwtToken))
                 throw new ArgumentException("JWT token is required to download historical candles.", nameof(jwtToken));
+            if (toDate < fromDate)
+                throw new ArgumentException("toDate must be greater than or equal to fromDate.");
+
+            batchSize = Math.Clamp(batchSize, 1, 3);
 
             var byToken = instruments
                 .Where(x => !string.IsNullOrWhiteSpace(x.token))
@@ -325,82 +329,180 @@ namespace CodeName399.Kite.API.Application.Services
 
             var duration = CandleFileStoreService.IntervalDuration(interval);
             var intervalMinutes = Math.Max(1, (int)duration.TotalMinutes);
-            var expectedLast = new DateTime(toDate.Year, toDate.Month, toDate.Day,
-                toDate.Hour, (toDate.Minute / intervalMinutes) * intervalMinutes, 0).Subtract(duration);
+            var expectedLast = new DateTime(
+                toDate.Year, toDate.Month, toDate.Day,
+                toDate.Hour, (toDate.Minute / intervalMinutes) * intervalMinutes, 0)
+                .Subtract(duration);
 
-            var requestedCount = quotes.Count(q => !string.IsNullOrWhiteSpace(q.SymbolToken));
+            var requestedQuotes = quotes
+                .Where(q => !string.IsNullOrWhiteSpace(q.SymbolToken))
+                .ToList();
+
             var rateLimited = false;
 
-            foreach (var quote in quotes.Where(q => !string.IsNullOrWhiteSpace(q.SymbolToken)))
+            // Process a maximum of three instruments at once. Each symbol is independently
+            // recovered from its JSON cache, backfilled at the beginning, and refreshed at
+            // the end. A rate-limit response stops subsequent batches but preserves cache data.
+            for (var offset = 0; offset < requestedQuotes.Count; offset += batchSize)
             {
-                var token = quote.SymbolToken.Trim();
-                if (!byToken.TryGetValue(token, out var instrument))
+                if (rateLimited || RequestHelper.IsEndpointCoolingDown(AngelApiUrlConstant.historicalDataUrl))
                 {
-                    _logger.LogWarning("CANDLE LOAD SKIPPED Symbol={Symbol} Token={Token} Reason=InstrumentNotFound",
-                        quote.TradingSymbol, token);
-                    continue;
+                    _logger.LogWarning(
+                        "CANDLE DOWNLOAD PAUSED Remaining={Remaining} Reason=HistoricalEndpointCoolingDown",
+                        requestedQuotes.Count - offset);
+                    break;
                 }
 
-                var exchange = string.IsNullOrWhiteSpace(instrument.exch_seg) ? "NSE" : instrument.exch_seg.Trim().ToUpperInvariant();
-                var cached = await _candleStore.GetAsync(token, instrument.symbol, interval);
-                cached = cached.Where(c => c.Close > 0m && c.Low > 0m && c.High >= c.Low)
-                    .GroupBy(c => c.Timestamp).Select(g => g.Last()).OrderBy(c => c.Timestamp).ToList();
-
-                var latest = cached.Count == 0 ? (DateTime?)null : cached[^1].Timestamp;
-                var needsDownload = cached.Count < minimumEntryCandles || !latest.HasValue || latest.Value < expectedLast;
-
-                if (needsDownload && !rateLimited && !RequestHelper.IsEndpointCoolingDown(AngelApiUrlConstant.historicalDataUrl))
+                var batch = requestedQuotes.Skip(offset).Take(batchSize).ToList();
+                var tasks = batch.Select(async quote =>
                 {
-                    // One request per symbol: fetch the missing tail, or a bounded
-                    // five-day window when there is not enough history for the strategy.
-                    var fetchFrom = cached.Count >= minimumEntryCandles && latest.HasValue
-                        ? latest.Value.Add(duration)
-                        : fromDate;
-
-                    if (fetchFrom <= toDate)
+                    var token = quote.SymbolToken.Trim();
+                    if (!byToken.TryGetValue(token, out var instrument))
                     {
-                        try
-                        {
-                            var downloaded = await DownloadCandleAsync(token, jwtToken, interval, fetchFrom, toDate, exchange);
-                            if (downloaded.Count > 0)
-                                await _candleStore.SaveAsync(token, instrument.symbol, interval, downloaded);
-                            cached = await _candleStore.GetAsync(token, instrument.symbol, interval);
-                            cached = cached.Where(c => c.Close > 0m && c.Low > 0m && c.High >= c.Low)
-                                .GroupBy(c => c.Timestamp).Select(g => g.Last()).OrderBy(c => c.Timestamp).ToList();
-                            _logger.LogInformation("CANDLE DOWNLOAD RESULT Symbol={Symbol} Token={Token} Downloaded={Downloaded} Total={Total} Latest={Latest}",
-                                instrument.symbol, token, downloaded.Count, cached.Count,
-                                cached.Count > 0 ? cached[^1].Timestamp : null);
-                        }
-                        catch (Exception ex)
-                        {
-                            rateLimited = IsHistoricalRateLimitException(ex);
-                            _logger.LogWarning(ex, "CANDLE LOAD FAILED Symbol={Symbol} Token={Token} CachedFallbackCount={Count} RateLimited={RateLimited}",
-                                instrument.symbol, token, cached.Count, rateLimited);
-                        }
+                        _logger.LogWarning(
+                            "CANDLE LOAD SKIPPED Symbol={Symbol} Token={Token} Reason=InstrumentNotFound",
+                            quote.TradingSymbol, token);
+                        return (Token: token, Candles: new List<Candle>(), RateLimited: false);
                     }
-                }
-                else if (needsDownload)
+
+                    var symbol = string.IsNullOrWhiteSpace(instrument.symbol)
+                        ? quote.TradingSymbol
+                        : instrument.symbol;
+                    var exchange = string.IsNullOrWhiteSpace(instrument.exch_seg)
+                        ? "NSE"
+                        : instrument.exch_seg.Trim().ToUpperInvariant();
+
+                    var cached = (await _candleStore.GetAsync(token, symbol, interval))
+                        .Where(IsValidHistoricalCandle)
+                        .GroupBy(c => c.Timestamp)
+                        .Select(g => g.Last())
+                        .OrderBy(c => c.Timestamp)
+                        .ToList();
+
+                    var downloadedCount = 0;
+                    try
+                    {
+                        // Match the historical loader's initial-load behaviour: an empty
+                        // cache downloads the full caller-supplied lookback window.
+                        if (cached.Count == 0)
+                        {
+                            if (fromDate <= toDate)
+                            {
+                                var initial = await DownloadCandleAsync(
+                                    token, jwtToken, interval, fromDate, toDate, exchange);
+                                downloadedCount += initial.Count;
+                                if (initial.Count > 0)
+                                    await _candleStore.SaveAsync(token, symbol, interval, initial);
+                            }
+                        }
+                        else
+                        {
+                            // Backfill older history if the persisted file starts later than
+                            // the requested lookback. This keeps warm-up history after restart.
+                            var earliest = cached[0].Timestamp;
+                            if (earliest > fromDate)
+                            {
+                                var backfillTo = earliest.Subtract(duration);
+                                if (backfillTo >= fromDate)
+                                {
+                                    var backfill = await DownloadCandleAsync(
+                                        token, jwtToken, interval, fromDate, backfillTo, exchange);
+                                    downloadedCount += backfill.Count;
+                                    if (backfill.Count > 0)
+                                        await _candleStore.SaveAsync(token, symbol, interval, backfill);
+                                }
+                            }
+
+                            // Refresh from the latest stored candle (not latest + interval),
+                            // deliberately overlapping one candle so a provider correction or
+                            // a candle that was still forming at the previous read is replaced.
+                            cached = (await _candleStore.GetAsync(token, symbol, interval))
+                                .Where(IsValidHistoricalCandle)
+                                .GroupBy(c => c.Timestamp)
+                                .Select(g => g.Last())
+                                .OrderBy(c => c.Timestamp)
+                                .ToList();
+
+                            var latest = cached.Count == 0 ? fromDate.Subtract(duration) : cached[^1].Timestamp;
+                            var refreshFrom = latest < fromDate ? fromDate : latest;
+                            var isBehindExpectedClose = latest < expectedLast;
+                            if (refreshFrom <= toDate && (isBehindExpectedClose || latest == default))
+                            {
+                                var fresh = await DownloadCandleAsync(
+                                    token, jwtToken, interval, refreshFrom, toDate, exchange);
+                                downloadedCount += fresh.Count;
+                                if (fresh.Count > 0)
+                                    await _candleStore.SaveAsync(token, symbol, interval, fresh);
+                            }
+                        }
+
+                        cached = (await _candleStore.GetAsync(token, symbol, interval))
+                            .Where(IsValidHistoricalCandle)
+                            .GroupBy(c => c.Timestamp)
+                            .Select(g => g.Last())
+                            .OrderBy(c => c.Timestamp)
+                            .TakeLast(maximumReturnedCandles)
+                            .ToList();
+
+                        _logger.LogInformation(
+                            "CANDLE LOAD RESULT Symbol={Symbol} Token={Token} Interval={Interval} Downloaded={Downloaded} Cached={Cached} Earliest={Earliest} Latest={Latest} ExpectedLatest={ExpectedLatest}",
+                            symbol, token, interval, downloadedCount, cached.Count,
+                            cached.Count > 0 ? cached[0].Timestamp : null,
+                            cached.Count > 0 ? cached[^1].Timestamp : null,
+                            expectedLast);
+                    }
+                    catch (Exception ex)
+                    {
+                        var wasRateLimited = IsHistoricalRateLimitException(ex);
+                        _logger.LogWarning(
+                            ex,
+                            "CANDLE LOAD FAILED Symbol={Symbol} Token={Token} CachedFallbackCount={Count} RateLimited={RateLimited}",
+                            symbol, token, cached.Count, wasRateLimited);
+                        return (Token: token, Candles: cached.TakeLast(maximumReturnedCandles).ToList(), RateLimited: wasRateLimited);
+                    }
+
+                    return (Token: token, Candles: cached, RateLimited: false);
+                }).ToList();
+
+                var results = await Task.WhenAll(tasks);
+                foreach (var result in results)
                 {
-                    _logger.LogWarning("CANDLE DOWNLOAD SKIPPED Symbol={Symbol} Token={Token} CachedCount={Count} Latest={Latest} Reason={Reason}",
-                        instrument.symbol, token, cached.Count, latest,
-                        rateLimited || RequestHelper.IsEndpointCoolingDown(AngelApiUrlConstant.historicalDataUrl)
-                            ? "HistoricalEndpointCoolingDown" : "NoDownloadRequired");
+                    candlesByToken[result.Token] = result.Candles;
+                    var quote = batch.FirstOrDefault(q =>
+                        string.Equals(q.SymbolToken?.Trim(), result.Token, StringComparison.OrdinalIgnoreCase));
+                    if (quote != null)
+                        UpdateQuoteIndicators(quote, result.Candles, interval);
+
+                    if (result.Candles.Count < minimumEntryCandles)
+                    {
+                        _logger.LogWarning(
+                            "ENTRY CANDLES INSUFFICIENT Token={Token} Required={Required} Available={Available}",
+                            result.Token, minimumEntryCandles, result.Candles.Count);
+                    }
+                    rateLimited |= result.RateLimited;
                 }
 
-                candlesByToken[token] = cached;
-                UpdateQuoteIndicators(quote, cached, interval);
-
-                if (cached.Count < minimumEntryCandles)
-                    _logger.LogWarning("ENTRY CANDLES INSUFFICIENT Symbol={Symbol} Token={Token} Required={Required} Available={Available}",
-                        instrument.symbol, token, minimumEntryCandles, cached.Count);
+                if (batchDelay > 0 && offset + batchSize < requestedQuotes.Count && !rateLimited)
+                    await Task.Delay(TimeSpan.FromSeconds(batchDelay));
             }
 
             var loaded = candlesByToken.Count(x => x.Value.Count > 0);
             var ready = candlesByToken.Count(x => x.Value.Count >= minimumEntryCandles);
-            _logger.LogInformation("CANDLE LOAD SUMMARY Loaded={Loaded}/{Requested} EntryReady={Ready}/{Requested} MinimumCandles={Minimum} Interval={Interval}",
-                loaded, requestedCount, ready, requestedCount, minimumEntryCandles, interval);
+            _logger.LogInformation(
+                "CANDLE LOAD SUMMARY Loaded={Loaded}/{Requested} EntryReady={Ready}/{Requested} MinimumCandles={Minimum} Interval={Interval} BatchSize={BatchSize}",
+                loaded, requestedQuotes.Count, ready, requestedQuotes.Count, minimumEntryCandles, interval, batchSize);
+
             return candlesByToken;
         }
+
+        private static bool IsValidHistoricalCandle(Candle candle) =>
+            candle != null
+            && candle.Open > 0m
+            && candle.High > 0m
+            && candle.Low > 0m
+            && candle.Close > 0m
+            && candle.High >= candle.Low
+            && candle.Volume >= 0m;
 
         public async Task<Dictionary<string, List<Candle>>> DownloadCandlesInBatchesAsync(
             HashSet<string> ownedQuotes,
