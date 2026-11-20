@@ -39,7 +39,6 @@
 
   <ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.1" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.19" />
     <Compile Remove="Domain\Models\Dto\**" />
     <Content Remove="Domain\Models\Dto\**" />
     <Content Remove="Shared\Json\**" />
@@ -64,6 +63,7 @@
 		<PackageReference Include="FluentValidation" Version="12.1.1" />
 		<PackageReference Include="FluentValidation.AspNetCore" Version="11.3.1" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.19" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.19" />
 		<PackageReference Include="Microsoft.IdentityModel.Tokens" Version="7.1.2" />
 		<PackageReference Include="MongoDB.Driver" Version="3.9.0" />
 		<PackageReference Include="Otp.NET" Version="1.4.1" />

@@ -1,6 +1,7 @@
 using CodeName399.Kite.API.Models;
 using CodeName399.Kite.API.Models.Configuration;
 using CodeName399.Kite.API.Models.Enum;
+using CodeName399.Kite.API.Models.Indicator;
 using DatabaseRepository.Common.Utilities;
 using DatabaseRepository.Model;
 using Serilog;
@@ -301,6 +302,86 @@ thead th { background:#0d6efd; color:#fff; }
         {{rows}}
       </tbody>
     </table>
+  </div>
+</div>
+</body>
+</html>
+""";
+        }
+
+        public static string BuildStopLossAlertEmail(
+            TradeOrder trade,
+            Candle closedCandle,
+            bool stopLossExecutionEnabled)
+        {
+            ArgumentNullException.ThrowIfNull(trade);
+            ArgumentNullException.ThrowIfNull(closedCandle);
+
+            var rows = new StringBuilder();
+            foreach (var property in typeof(TradeOrder).GetProperties(
+                         System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
+                     .OrderBy(p => p.MetadataToken))
+            {
+                if (!property.CanRead || property.GetIndexParameters().Length != 0)
+                    continue;
+
+                object? value;
+                try
+                {
+                    value = property.GetValue(trade);
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "Unable to read TradeOrder property for stop-loss alert. Property={Property}", property.Name);
+                    value = "<unavailable>";
+                }
+
+                rows.Append("<tr><th>")
+                    .Append(H(property.Name))
+                    .Append("</th><td>")
+                    .Append(H(FormatValue(property.Name, value)))
+                    .AppendLine("</td></tr>");
+            }
+
+            return $$"""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body { font-family: Arial, Helvetica, sans-serif; background:#fff3cd; color:#1f2937; margin:0; padding:12px; }
+.container { width:100%; margin:0 auto; background:#fff; border-radius:8px; overflow:hidden; }
+.header { background:#dc3545; color:#fff; padding:20px 24px; }
+.header h2 { margin:0 0 6px; }
+.header p { margin:0; }
+.content { padding:20px 24px 24px; }
+table { border-collapse:collapse; width:100%; table-layout:fixed; }
+th, td { border:1px solid #e5e7eb; padding:9px 10px; text-align:left; vertical-align:top; overflow-wrap:anywhere; }
+th { width:34%; background:#f8f9fa; }
+td { width:66%; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h2>STOP-LOSS ALERT — AUTO-SELL DISABLED</h2>
+    <p>{{H(trade.Symbol)}} · {{H(trade.Exchange)}} · {{H(trade.ExecutionMode)}}</p>
+  </div>
+  <div class="content">
+    <p>The completed candle closed at or below the configured stop-loss. No sell order was submitted because stop-loss execution is disabled.</p>
+    <h3>Stop-Loss Evaluation</h3>
+    <table>
+      <tr><th>Stop-loss execution enabled</th><td>{{stopLossExecutionEnabled}}</td></tr>
+      <tr><th>Candle timestamp</th><td>{{H(FormatValue(nameof(closedCandle.Timestamp), closedCandle.Timestamp))}}</td></tr>
+      <tr><th>Candle open</th><td>{{H(FormatValue(nameof(closedCandle.Open), closedCandle.Open))}}</td></tr>
+      <tr><th>Candle high</th><td>{{H(FormatValue(nameof(closedCandle.High), closedCandle.High))}}</td></tr>
+      <tr><th>Candle low</th><td>{{H(FormatValue(nameof(closedCandle.Low), closedCandle.Low))}}</td></tr>
+      <tr><th>Candle close</th><td>{{H(FormatValue(nameof(closedCandle.Close), closedCandle.Close))}}</td></tr>
+      <tr><th>Stop-loss price</th><td>{{H(FormatValue(nameof(trade.StopLoss), trade.StopLoss))}}</td></tr>
+    </table>
+    <h3>Trade Order Details</h3>
+    <table>{{rows}}</table>
   </div>
 </div>
 </body>

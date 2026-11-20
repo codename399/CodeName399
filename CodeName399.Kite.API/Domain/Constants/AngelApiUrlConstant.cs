@@ -10,8 +10,6 @@
             "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json";
         public const string generateTokenUrl =
             "https://apiconnect.angelone.in/rest/auth/angelbroking/jwt/v1/generateTokens";
-        public const string historicalDataUrl =
-            "/rest/secure/angelbroking/historical/v1/getCandleData";
         public const string positionUrl = "/rest/secure/angelbroking/order/v1/getPosition";
         public const string holdingsUrl = "/rest/secure/angelbroking/portfolio/v1/getHolding";
         public const string ltpDataUrl = "https://apiconnect.angelone.in/order-service/rest/secure/angelbroking/order/v1/getLtpData";

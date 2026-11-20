@@ -11,6 +11,7 @@ namespace CodeName399.Kite.API.Models
         public string SymbolToken { get; set; } = "";
         public string Exchange { get; set; } = "NSE";
         public string OrderType { get; set; } = "MARKET";
+        public string ProductType { get; set; } = "INTRADAY";
         public int Quantity { get; set; }
         public decimal EntryPrice { get; set; }
         public decimal StopLoss { get; set; }
@@ -24,9 +25,6 @@ namespace CodeName399.Kite.API.Models
         public DateTime? ExitTime { get; set; }
         public decimal EstimatedCharges { get; set; }
         public decimal BreakEvenPrice { get; set; }
-        public bool TrailingActivated { get; set; }
-        public decimal HighestPriceSinceEntry { get; set; }
-        public decimal TrailingStopPrice { get; set; }
         public decimal TargetPrice { get; set; }
         public string ExecutionMode { get; set; } = TradeExecutionMode.Paper.ToString();
         public decimal LowestPriceChange { get; set; }

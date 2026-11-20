@@ -1,7 +1,4 @@
 using CodeName399.Kite.API.Application.Services;
-using CodeName399.Kite.API.Models.Indicator;
-using CodeName399.Kite.API.Services.Interface;
-
 namespace CodeName399.Kite.API.Services;
 
 public sealed class SquareOffService
@@ -10,23 +7,16 @@ public sealed class SquareOffService
     private readonly TradingSettingsProvider _settings;
     private readonly MarketClock _marketClock;
     private readonly ILogger<SquareOffService> _logger;
-    private readonly IAngelOneService _angel;
-    private readonly IInstrumentService _instrumentService;
-
-    public SquareOffService(
+public SquareOffService(
         CommonService commonService,
         TradingSettingsProvider settings,
         MarketClock marketClock,
-        ILogger<SquareOffService> logger,
-        IAngelOneService angel,
-        IInstrumentService instrumentService)
+        ILogger<SquareOffService> logger)
     {
         _commonService = commonService;
         _settings = settings;
         _marketClock = marketClock;
         _logger = logger;
-        _angel = angel;
-        _instrumentService = instrumentService;
     }
 
     /// <summary>
@@ -50,9 +40,8 @@ public sealed class SquareOffService
         var interval = string.IsNullOrWhiteSpace(_settings.Current.CandleInterval)
             ? "ONE_MINUTE"
             : _settings.Current.CandleInterval;
-        var login = await _angel.GetLoginDataAsync();
-        var instruments = await _instrumentService.LoadInstruments();
-        var candles = new Dictionary<string, List<Candle>>();
+        var candles = await _commonService.LoadOwnedCandlesFromCandleBuilderAsync(
+            ownedStocks, interval, token);
 
         token.ThrowIfCancellationRequested();
         await _commonService.PlaceSellOrder(ownedStocks, candles, forceSquareOff: true);

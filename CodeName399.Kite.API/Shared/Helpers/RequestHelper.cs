@@ -19,7 +19,9 @@ public class RequestHelper
     private static readonly ConcurrentDictionary<string, EndpointState> EndpointStates = new(StringComparer.OrdinalIgnoreCase);
     private static readonly TimeSpan RateLimitCooldown = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan QuoteRequestSpacing = TimeSpan.FromSeconds(1.1);
-    private static readonly TimeSpan HistoricalRequestSpacing = TimeSpan.FromSeconds(1.2);
+    // Margin estimation is called repeatedly during affordable-quantity search.
+    // Serialize and pace these calls so parallel symbols cannot burst the endpoint.
+    private static readonly TimeSpan MarginRequestSpacing = TimeSpan.FromMilliseconds(400);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -131,15 +133,17 @@ public class RequestHelper
         if (path.Contains("/market/v1/quote", StringComparison.OrdinalIgnoreCase))
             return ("market-quotes", QuoteRequestSpacing);
 
-        if (path.Contains("/historical/v1/getCandleData", StringComparison.OrdinalIgnoreCase))
-            return ("historical-candles", HistoricalRequestSpacing);
+
+        if (path.Contains("/margin/v1/batch", StringComparison.OrdinalIgnoreCase))
+            return ("margin-calculator", MarginRequestSpacing);
 
         return null;
     }
 
     public static bool IsEndpointCoolingDown(string url)
     {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            && !Uri.TryCreate(AngelApiUrlConstant.baseUrl + url, UriKind.Absolute, out uri))
             return false;
 
         var endpoint = GetRateLimitedEndpoint(uri);

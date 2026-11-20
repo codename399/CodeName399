@@ -11,12 +11,10 @@ namespace CodeName399.Kite.API.Models.Configuration
 
         public bool EnableAutoTrading { get; set; } = false;
         public bool EnableNotification { get; set; } = true;
+        public bool EnableStopLossExecution { get; set; } = false;
         public int MaxTrades { get; set; } = 1;
         /// <summary>Initial protective stop as a percentage below the actual entry reference price.</summary>
         public decimal StopLossPercent { get; set; } = 1.0m;
-        public bool EnableTrailingStop { get; set; } = false;
-        public bool EnableTargetExit { get; set; } = false;
-        public decimal TargetLowestPriceChangeMultiplier { get; set; } = 2m;
         public int ChargeCoverLowestPriceChangeCandles { get; set; } = 5;
         public decimal RequiredProfitPercent { get; set; } = 2.0m;
         public TimeSpan MarketOpenTime { get; set; } = new TimeSpan(9, 15, 0);
@@ -27,9 +25,8 @@ namespace CodeName399.Kite.API.Models.Configuration
         public List<DateOnly> TradingHolidays { get; set; } = new();
         public List<string> ExcludedSymbols { get; set; } =
             new List<string> { "TATSILV-EQ", "AONEGOLD-EQ", "ACUTAAS-EQ", "IDEA-EQ" };
-        public int MaxCandidates { get; set; } = 10;
-        /// <summary>Minimum LTP required for a stock to qualify for the top quote candidates.</summary>
-        public decimal MinimumStockPrice { get; set; } = 999999m;
+        /// <summary>Maximum LTP allowed for a stock to qualify for the top quote candidates.</summary>
+        public decimal MinimumStockPrice { get; set; } = 15m;
         public int CandleBatchSize { get; set; } = 2;
         public int BatchDelay { get; set; } = 1;
         public int BuyBatchSize { get; set; } = 5;
@@ -45,6 +42,9 @@ namespace CodeName399.Kite.API.Models.Configuration
         public List<string>? VisibleColumns { get; set; } = [];
         public bool AutoSquareOff { get; set; } = true;
         public decimal PaperTradingBalance { get; set; } = 100000m;
+        public string ResearchDataVersion { get; set; } = "v1";
+        public int MaxCandidates { get; set; } = 10;
+        public RawMarketDataSettings RawMarketData { get; set; } = new();
     }
 
     public class RawMarketDataSettings

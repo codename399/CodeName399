@@ -41,7 +41,7 @@ public sealed class AngelWebSocketBackgroundService : BackgroundService
                 if (!_socket.IsConnected) await _socket.StartAsync(stoppingToken);
                 var loginData = await _angelOneService.GetLoginDataAsync();
                 var equity = await _instruments.LoadInstruments();
-                var quotes = GetTopQuotes(await GetQuotesAsync(equity, loginData.JwtToken), 1000);
+                var quotes = GetTopQuotes(await GetQuotesAsync(equity, loginData.JwtToken), 5);
                 foreach (var batch in quotes.Chunk(100))
                 {
                     await _socket.SubscribeAsync(batch.Select(x => x.SymbolToken), batch.First().Exchange);
@@ -161,13 +161,11 @@ public sealed class AngelWebSocketBackgroundService : BackgroundService
     public List<MarketQuoteData> GetTopQuotes(List<MarketQuoteData> quotes, int count)
     {
         return quotes
-            .Where(x => x.Close > 0m && x.Ltp > x.Close)
-        .Where(x => GetActivityVolume(x) > 0L)
-        .OrderByDescending(GetActivityVolume)
-        .ThenByDescending(x => (x.Ltp - x.Close) / x.Close)
-        .ThenByDescending(x => x.Open > 0m ? (x.Ltp - x.Open) / x.Open : decimal.MinValue)
-        .ThenBy(x => x.Ltp)
-        .Take(Math.Max(0, count))
-        .ToList();
+                .Where(x => x.Ltp > 0m && x.Ltp < 5m)
+                .Where(x => GetActivityVolume(x) > 0L)
+                .OrderByDescending(GetActivityVolume)
+                .ThenBy(x => x.Ltp)
+                .Take(count)
+                .ToList();
     }
 }
